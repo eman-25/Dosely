@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "644937207033",
+    "project_id": "dosley-76bd1",
+    "storage_bucket": "dosley-76bd1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:644937207033:android:f4299b0bf0ecda92ab6628",
+        "android_client_info": {
+          "package_name": "com.UOB.Dosely"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBgZbmZovaHQXVH9hfy8wYjXqIbwVS7VJo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
