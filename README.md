@@ -1,4 +1,4 @@
-# healthscanai
+# Dosely
 
 A new Flutter project.
 
