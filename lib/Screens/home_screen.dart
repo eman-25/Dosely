@@ -25,6 +25,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final PageController _pageController = PageController(viewportFraction: 0.88);
   int _pageIndex = 0;
+  double _hDragDx = 0;
 
   // Dummy reminders (UI only)
   final reminders = const [
@@ -127,6 +128,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: GestureDetector(
+        // Let child (PageView) get horizontal gestures first
+        behavior: HitTestBehavior.deferToChild,
         onVerticalDragUpdate: _handleVerticalDragUpdate,
         onVerticalDragEnd: _handleVerticalDragEnd,
         child: Container(
@@ -149,24 +152,59 @@ class _HomeScreenState extends State<HomeScreen> {
                 // PageView (swipe left/right)
                 SizedBox(
                   height: MediaQuery.of(context).size.height * 0.36,
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: features.length,
-                    onPageChanged: (i) => setState(() => _pageIndex = i),
-                    itemBuilder: (context, i) {
-                      final data = features[i];
-                      return AnimatedPadding(
-                        duration: const Duration(milliseconds: 250),
-                        curve: Curves.easeOut,
-                        padding: EdgeInsets.only(
-                          left: i == _pageIndex ? 6 : 14,
-                          right: i == _pageIndex ? 6 : 14,
-                          top: i == _pageIndex ? 0 : 10,
-                          bottom: i == _pageIndex ? 0 : 10,
-                        ),
-                        child: _FeatureCard(data: data),
-                      );
+                  // Add a horizontal detector around the PageView to ensure swipes
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onHorizontalDragUpdate: (d) => _hDragDx += d.delta.dx,
+                    onHorizontalDragEnd: (d) {
+                      const threshold = 40; // px
+                      // ignore: avoid_print
+                      print('PageView wrapper horizontal end dx=' + _hDragDx.toString());
+                      if (_hDragDx > threshold) {
+                        // swipe right -> previous
+                        final prev = (_pageController.page ?? _pageIndex).round() - 1;
+                        final target = prev.clamp(0, features.length - 1);
+                        _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+                      } else if (_hDragDx < -threshold) {
+                        // swipe left -> next
+                        final next = (_pageController.page ?? _pageIndex).round() + 1;
+                        final target = next.clamp(0, features.length - 1);
+                        _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+                      }
+                      _hDragDx = 0;
                     },
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: features.length,
+                      physics: const PageScrollPhysics(),
+                      onPageChanged: (i) => setState(() => _pageIndex = i),
+                      itemBuilder: (context, i) {
+                        final data = features[i];
+                        return AnimatedPadding(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOut,
+                          padding: EdgeInsets.only(
+                            left: i == _pageIndex ? 6 : 14,
+                            right: i == _pageIndex ? 6 : 14,
+                            top: i == _pageIndex ? 0 : 10,
+                            bottom: i == _pageIndex ? 0 : 10,
+                          ),
+                          child: _FeatureCard(
+                            data: data,
+                            onSwipeLeft: () {
+                              final next = (_pageController.page ?? _pageIndex).round() + 1;
+                              final target = next.clamp(0, features.length - 1);
+                              _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+                            },
+                            onSwipeRight: () {
+                              final prev = (_pageController.page ?? _pageIndex).round() - 1;
+                              final target = prev.clamp(0, features.length - 1);
+                              _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -281,11 +319,42 @@ class _FeatureCardData {
 
 class _FeatureCard extends StatelessWidget {
   final _FeatureCardData data;
-  const _FeatureCard({required this.data});
+  final VoidCallback? onSwipeLeft;
+  final VoidCallback? onSwipeRight;
+
+  const _FeatureCard({required this.data, this.onSwipeLeft, this.onSwipeRight});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    double _startX = 0;
+    double _accDx = 0;
+    return Listener(
+      onPointerDown: (ev) {
+        _startX = ev.position.dx;
+        _accDx = 0;
+      },
+      onPointerMove: (ev) {
+        _accDx += ev.delta.dx;
+      },
+      onPointerUp: (ev) {
+        const threshold = 40;
+        // debug
+        // ignore: avoid_print
+        print('FeatureCard pointer up, dx=' + _accDx.toString());
+        if (_accDx < -threshold) {
+          // ignore: avoid_print
+          print('FeatureCard swipe left');
+          if (onSwipeLeft != null) onSwipeLeft!();
+        } else if (_accDx > threshold) {
+          // ignore: avoid_print
+          print('FeatureCard swipe right');
+          if (onSwipeRight != null) onSwipeRight!();
+        }
+        _startX = 0;
+        _accDx = 0;
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
         color: AppColors.card.withOpacity(0.95),
@@ -352,9 +421,10 @@ class _FeatureCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-        ],
+          ],
       ),
-    );
+    ),
+  );
   }
 }
 
