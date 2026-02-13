@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
+import '../home_screen.dart';
 
 class MedicineTableScreen extends StatelessWidget {
   const MedicineTableScreen({super.key});
