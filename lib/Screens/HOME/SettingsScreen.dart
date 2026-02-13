@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/feature_card.dart';
 import '../../widgets/header.dart';
-import '../home_screen.dart';
+import 'home_screen.dart';
 
 
 class SettingsScreen extends StatelessWidget {

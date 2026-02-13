@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'Screens/home_screen.dart';
+import 'Screens/HOME/home_screen.dart';
 
 void main() {
   runApp(const DoselyApp());
