@@ -9,24 +9,24 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double _dragDy = 0;
+    double dragDy = 0;
 
-    void _handleVerticalDragUpdate(DragUpdateDetails d) {
-      _dragDy += d.delta.dy;
+    void handleVerticalDragUpdate(DragUpdateDetails d) {
+      dragDy += d.delta.dy;
     }
 
-    void _handleVerticalDragEnd(DragEndDetails d) {
+    void handleVerticalDragEnd(DragEndDetails d) {
       const threshold = 80.0;
       // If user swipes up sufficiently, pop back to Home
-      if (_dragDy < -threshold) Navigator.of(context).pop();
-      _dragDy = 0;
+      if (dragDy < -threshold) Navigator.of(context).pop();
+      dragDy = 0;
     }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8),
       body: GestureDetector(
-        onVerticalDragUpdate: _handleVerticalDragUpdate,
-        onVerticalDragEnd: _handleVerticalDragEnd,
+        onVerticalDragUpdate: handleVerticalDragUpdate,
+        onVerticalDragEnd: handleVerticalDragEnd,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),

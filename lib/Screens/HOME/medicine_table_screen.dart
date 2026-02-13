@@ -87,7 +87,7 @@ class MedicineTableScreen extends StatelessWidget {
 }
 
 class _CalendarCard extends StatelessWidget {
-  const _CalendarCard({Key? key}) : super(key: key);
+  const _CalendarCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +153,7 @@ class _CalendarCard extends StatelessWidget {
 
 class _DayLabel extends StatelessWidget {
   final String t;
-  const _DayLabel(this.t, {Key? key}) : super(key: key);
+  const _DayLabel(this.t, {super.key});
 
   @override
   Widget build(BuildContext context) {

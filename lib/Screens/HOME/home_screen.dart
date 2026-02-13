@@ -159,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onHorizontalDragEnd: (d) {
                       const threshold = 40; // px
                       // ignore: avoid_print
-                      print('PageView wrapper horizontal end dx=' + _hDragDx.toString());
+                      print('PageView wrapper horizontal end dx=$_hDragDx');
                       if (_hDragDx > threshold) {
                         // swipe right -> previous
                         final prev = (_pageController.page ?? _pageIndex).round() - 1;
@@ -326,32 +326,32 @@ class _FeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double _startX = 0;
-    double _accDx = 0;
+    double startX = 0;
+    double accDx = 0;
     return Listener(
       onPointerDown: (ev) {
-        _startX = ev.position.dx;
-        _accDx = 0;
+        startX = ev.position.dx;
+        accDx = 0;
       },
       onPointerMove: (ev) {
-        _accDx += ev.delta.dx;
+        accDx += ev.delta.dx;
       },
       onPointerUp: (ev) {
         const threshold = 40;
         // debug
         // ignore: avoid_print
-        print('FeatureCard pointer up, dx=' + _accDx.toString());
-        if (_accDx < -threshold) {
+        print('FeatureCard pointer up, dx=' + accDx.toString());
+        if (accDx < -threshold) {
           // ignore: avoid_print
           print('FeatureCard swipe left');
           if (onSwipeLeft != null) onSwipeLeft!();
-        } else if (_accDx > threshold) {
+        } else if (accDx > threshold) {
           // ignore: avoid_print
           print('FeatureCard swipe right');
           if (onSwipeRight != null) onSwipeRight!();
         }
-        _startX = 0;
-        _accDx = 0;
+        startX = 0;
+        accDx = 0;
       },
       behavior: HitTestBehavior.translucent,
       child: Container(

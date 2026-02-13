@@ -72,7 +72,7 @@ class FeatureCard extends StatelessWidget {
               ).copyWith(
                 backgroundColor: buttonGradient == null
                     ? null
-                    : MaterialStateProperty.all(Colors.transparent),
+                    : WidgetStateProperty.all(Colors.transparent),
               ),
               onPressed: onPressed,
               child: Ink(
