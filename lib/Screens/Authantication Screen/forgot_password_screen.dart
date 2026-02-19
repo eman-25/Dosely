@@ -24,12 +24,8 @@ class _ForgotPasswordScreenState
   }
 
   void sendResetLink() {
-    // حالياً فقط ينتقل لشاشة التحقق
     Navigator.pushNamed(context, '/verification');
 
-    // لاحقاً نربطه مع Firebase 👇
-    // FirebaseAuth.instance
-    //     .sendPasswordResetEmail(email: emailController.text.trim());
   }
 
   @override
