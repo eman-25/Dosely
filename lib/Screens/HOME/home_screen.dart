@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
 import 'medicine_table_screen.dart';
 import 'SettingsScreen.dart';
 
@@ -22,10 +24,18 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final PageController _pageController = PageController(viewportFraction: 0.88);
   int _pageIndex = 0;
   double _hDragDx = 0;
+
+  // Header key so we can align the sheet visually
+  final GlobalKey _headerKey = GlobalKey();
+
+  // Sheet state
+  double _maxSheetHeight = 0.0;
+  double _sheetHeight = 0.0; // 0 = hidden, _maxSheetHeight = fully open
+  late AnimationController _sheetAnimController;
 
   // Dummy reminders (UI only)
   final reminders = const [
@@ -90,141 +100,286 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   ];
 
-  // Swipe up/down detection
-  double _dragDy = 0;
-
-  void _handleVerticalDragUpdate(DragUpdateDetails d) {
-    _dragDy += d.delta.dy;
+  @override
+  void initState() {
+    super.initState();
+    _sheetAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final h = MediaQuery.of(context).size.height;
+      _maxSheetHeight = h * 0.64; // adjustable
+      setState(() {});
+    });
   }
 
-  void _handleVerticalDragEnd(DragEndDetails d) {
-    // Threshold
-    const threshold = 80.0;
-
-    if (_dragDy > threshold) {
-      // Swiped DOWN -> Settings (slide from top)
-      Navigator.of(context).push(PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const SettingsScreen(),
-        transitionsBuilder: (_, animation, __, child) {
-          final offset = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero).animate(animation);
-          return SlideTransition(position: offset, child: child);
-        },
-      ));
-    } else if (_dragDy < -threshold) {
-      // Swiped UP -> Medicine Table (slide from bottom)
-      Navigator.of(context).push(PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const MedicineTableScreen(),
-        transitionsBuilder: (_, animation, __, child) {
-          final offset = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(animation);
-          return SlideTransition(position: offset, child: child);
-        },
-      ));
-    }
-
-    _dragDy = 0;
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _sheetAnimController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GestureDetector(
-        // Let child (PageView) get horizontal gestures first
-        behavior: HitTestBehavior.deferToChild,
-        onVerticalDragUpdate: _handleVerticalDragUpdate,
-        onVerticalDragEnd: _handleVerticalDragEnd,
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppColors.c1, AppColors.c2, AppColors.c3, AppColors.c4, AppColors.c5],
-              stops: [0.14, 0.31, 0.50, 0.72, 0.95],
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.c1, AppColors.c2, AppColors.c3, AppColors.c4, AppColors.c5],
+            stops: [0.14, 0.31, 0.50, 0.72, 0.95],
           ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                _TopHeader(
-                  name: 'Sara',
-                  onArrowTap: () {},
+        ),
+        child: SafeArea(
+          left: false,
+          right: false,
+          child: Stack(
+            children: [
+              // Main scrollable content
+              NotificationListener<ScrollNotification>(
+                onNotification: (n) {
+                  if (n is OverscrollNotification) {
+                    final metrics = n.metrics;
+                    if (metrics.pixels <= metrics.minScrollExtent && n.overscroll < 0) {
+                      // open the sheet when user pulls down at top
+                      _animateOpenSheet();
+                      return true;
+                    }
+                  }
+                  return false;
+                },
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          // Top header - full bleed (no outer horizontal padding)
+                          Container(
+                            key: _headerKey,
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                            child: _TopHeader(
+                              name: 'Sara',
+                              onArrowTap: _toggleSheet,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          // PageView (swipe left/right)
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.36,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onHorizontalDragUpdate: (d) => _hDragDx += d.delta.dx,
+                              onHorizontalDragEnd: (d) {
+                                const threshold = 40; // px
+                                if (_hDragDx > threshold) {
+                                  final prev = (_pageController.page ?? _pageIndex).round() - 1;
+                                  final target = prev.clamp(0, features.length - 1);
+                                  _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+                                } else if (_hDragDx < -threshold) {
+                                  final next = (_pageController.page ?? _pageIndex).round() + 1;
+                                  final target = next.clamp(0, features.length - 1);
+                                  _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+                                }
+                                _hDragDx = 0;
+                              },
+                              child: PageView.builder(
+                                controller: _pageController,
+                                itemCount: features.length,
+                                physics: const PageScrollPhysics(),
+                                onPageChanged: (i) => setState(() => _pageIndex = i),
+                                itemBuilder: (context, i) {
+                                  final data = features[i];
+                                  return AnimatedPadding(
+                                    duration: const Duration(milliseconds: 250),
+                                    curve: Curves.easeOut,
+                                    padding: EdgeInsets.only(
+                                      left: i == _pageIndex ? 6 : 14,
+                                      right: i == _pageIndex ? 6 : 14,
+                                      top: i == _pageIndex ? 0 : 10,
+                                      bottom: i == _pageIndex ? 0 : 10,
+                                    ),
+                                    child: _FeatureCard(
+                                      data: data,
+                                      onSwipeLeft: () {
+                                        final next = (_pageController.page ?? _pageIndex).round() + 1;
+                                        final target = next.clamp(0, features.length - 1);
+                                        _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+                                      },
+                                      onSwipeRight: () {
+                                        final prev = (_pageController.page ?? _pageIndex).round() - 1;
+                                        final target = prev.clamp(0, features.length - 1);
+                                        _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                        ],
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      sliver: SliverToBoxAdapter(
+                        child: _RemindersCard(reminders: reminders),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: const [
+                          SizedBox(height: 14),
+                          Icon(Icons.keyboard_arrow_up_rounded, color: Colors.black38),
+                          SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                  ],
                 ),
-                const SizedBox(height: 14),
-                // PageView (swipe left/right)
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.36,
-                  // Add a horizontal detector around the PageView to ensure swipes
+              ),
+
+              // Top draggable settings sheet implemented as AnimatedPositioned
+              if (_maxSheetHeight > 0)
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOut,
+                  left: 0,
+                  right: 0,
+                  top: -_maxSheetHeight + _sheetHeight,
+                  height: _maxSheetHeight,
                   child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onHorizontalDragUpdate: (d) => _hDragDx += d.delta.dx,
-                    onHorizontalDragEnd: (d) {
-                      const threshold = 40; // px
-                      // ignore: avoid_print
-                      print('PageView wrapper horizontal end dx=$_hDragDx');
-                      if (_hDragDx > threshold) {
-                        // swipe right -> previous
-                        final prev = (_pageController.page ?? _pageIndex).round() - 1;
-                        final target = prev.clamp(0, features.length - 1);
-                        _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-                      } else if (_hDragDx < -threshold) {
-                        // swipe left -> next
-                        final next = (_pageController.page ?? _pageIndex).round() + 1;
-                        final target = next.clamp(0, features.length - 1);
-                        _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-                      }
-                      _hDragDx = 0;
+                    behavior: HitTestBehavior.translucent,
+                    onVerticalDragUpdate: (d) {
+                      setState(() {
+                        _sheetHeight = (_sheetHeight + d.delta.dy).clamp(0.0, _maxSheetHeight);
+                      });
                     },
-                    child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: features.length,
-                      physics: const PageScrollPhysics(),
-                      onPageChanged: (i) => setState(() => _pageIndex = i),
-                      itemBuilder: (context, i) {
-                        final data = features[i];
-                        return AnimatedPadding(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOut,
-                          padding: EdgeInsets.only(
-                            left: i == _pageIndex ? 6 : 14,
-                            right: i == _pageIndex ? 6 : 14,
-                            top: i == _pageIndex ? 0 : 10,
-                            bottom: i == _pageIndex ? 0 : 10,
+                    onVerticalDragEnd: (d) {
+                      final velocity = d.primaryVelocity ?? 0.0;
+                      if (velocity > 300) {
+                        // quick swipe down -> open
+                        _openSheet();
+                      } else if (velocity < -300) {
+                        // quick swipe up -> close
+                        _closeSheet();
+                      } else {
+                        // snap based on midpoint
+                        if (_sheetHeight > _maxSheetHeight * 0.35) {
+                          _openSheet();
+                        } else {
+                          _closeSheet();
+                        }
+                      }
+                    },
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        // Top edge is flush; rounded corners only on bottom
+                        decoration: BoxDecoration(
+                          color: AppColors.card.withOpacity(0.98),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(20),
+                            bottomRight: Radius.circular(20),
                           ),
-                          child: _FeatureCard(
-                            data: data,
-                            onSwipeLeft: () {
-                              final next = (_pageController.page ?? _pageIndex).round() + 1;
-                              final target = next.clamp(0, features.length - 1);
-                              _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-                            },
-                            onSwipeRight: () {
-                              final prev = (_pageController.page ?? _pageIndex).round() - 1;
-                              final target = prev.clamp(0, features.length - 1);
-                              _pageController.animateToPage(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-                            },
-                          ),
-                        );
-                      },
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.12 * (_sheetHeight / (_maxSheetHeight + 1))),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            )
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Small grab handle to visually connect with header
+                            const SizedBox(height: 12),
+                            Container(
+                              width: 36,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade400,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Settings content (keep as simple for demo)
+                            Expanded(
+                              child: SingleChildScrollView(
+                                physics: const ClampingScrollPhysics(),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Settings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.text)),
+                                      const SizedBox(height: 8),
+                                      const Text('Account, Notifications, Appearance, and more', style: TextStyle(color: AppColors.subText)),
+                                      const SizedBox(height: 16),
+                                      ListTile(
+                                        leading: const Icon(Icons.person_outline),
+                                        title: const Text('Account'),
+                                        onTap: () {},
+                                      ),
+                                      ListTile(
+                                        leading: const Icon(Icons.notifications_none),
+                                        title: const Text('Notifications'),
+                                        onTap: () {},
+                                      ),
+                                      ListTile(
+                                        leading: const Icon(Icons.color_lens_outlined),
+                                        title: const Text('Appearance'),
+                                        onTap: () {},
+                                      ),
+                                      const SizedBox(height: 200),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
-                // Reminders
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    child: _RemindersCard(reminders: reminders),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                // Small hint arrows like mockup
-                const Icon(Icons.keyboard_arrow_up_rounded, color: Colors.black38),
-                const SizedBox(height: 8),
-              ],
-            ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  void _toggleSheet() {
+    if (_sheetHeight <= 0) {
+      _openSheet();
+    } else {
+      _closeSheet();
+    }
+  }
+
+  void _openSheet() {
+    setState(() {
+      _sheetHeight = _maxSheetHeight;
+    });
+    _sheetAnimController.forward(from: 0);
+  }
+
+  void _animateOpenSheet() {
+    setState(() {
+      _sheetHeight = math.max(_sheetHeight, _maxSheetHeight * 0.42);
+    });
+    _sheetAnimController.forward(from: 0);
+  }
+
+  void _closeSheet() {
+    setState(() {
+      _sheetHeight = 0.0;
+    });
+    _sheetAnimController.reverse(from: 1);
   }
 }
 
@@ -236,68 +391,64 @@ class _TopHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 16, 14, 10),
-        decoration: BoxDecoration(
-          color: AppColors.card.withOpacity(0.96),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(32),
-            bottomRight: Radius.circular(32),
-            topLeft: Radius.circular(18),
-            topRight: Radius.circular(18),
+    return Container(
+      // full-bleed container; internal padding only
+      padding: const EdgeInsets.fromLTRB(18, 16, 14, 10),
+      decoration: BoxDecoration(
+        color: AppColors.card.withOpacity(0.96),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(22),
+          bottomRight: Radius.circular(22),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Greetings, $name !',
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'How can MedAI help you today?',
+                      style: TextStyle(
+                        color: AppColors.subText,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.c3,
+                child: Icon(Icons.person_rounded, color: Colors.white),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            )
-          ],
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Greetings, $name !',
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'How can MedAI help you today?',
-                        style: TextStyle(
-                          color: AppColors.subText,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppColors.c3,
-                  child: Icon(Icons.person_rounded, color: Colors.white),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            GestureDetector(
-              onTap: onArrowTap,
-              child: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.black45),
-            ),
-          ],
-        ),
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: onArrowTap,
+            child: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.black45),
+          ),
+        ],
       ),
     );
   }
@@ -338,16 +489,9 @@ class _FeatureCard extends StatelessWidget {
       },
       onPointerUp: (ev) {
         const threshold = 40;
-        // debug
-        // ignore: avoid_print
-        print('FeatureCard pointer up, dx=' + accDx.toString());
         if (accDx < -threshold) {
-          // ignore: avoid_print
-          print('FeatureCard swipe left');
           if (onSwipeLeft != null) onSwipeLeft!();
         } else if (accDx > threshold) {
-          // ignore: avoid_print
-          print('FeatureCard swipe right');
           if (onSwipeRight != null) onSwipeRight!();
         }
         startX = 0;
@@ -355,76 +499,76 @@ class _FeatureCard extends StatelessWidget {
       },
       behavior: HitTestBehavior.translucent,
       child: Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      decoration: BoxDecoration(
-        color: AppColors.card.withOpacity(0.95),
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.10),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 4),
-          Container(
-            height: 74,
-            width: 74,
-            decoration: BoxDecoration(
-              color: AppColors.c5,
-              borderRadius: BorderRadius.circular(22),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+        decoration: BoxDecoration(
+          color: AppColors.card.withOpacity(0.95),
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.10),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
             ),
-            child: Icon(data.icon, size: 44, color: AppColors.c2),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            data.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.text,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
+          ],
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 4),
+            Container(
+              height: 74,
+              width: 74,
+              decoration: BoxDecoration(
+                color: AppColors.c5,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Icon(data.icon, size: 44, color: AppColors.c2),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            data.desc,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.subText,
-              fontSize: 12.2,
-              fontWeight: FontWeight.w500,
-              height: 1.25,
+            const SizedBox(height: 14),
+            Text(
+              data.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.text,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: 140,
-            height: 42,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.c3,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
+            const SizedBox(height: 10),
+            Text(
+              data.desc,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.subText,
+                fontSize: 12.2,
+                fontWeight: FontWeight.w500,
+                height: 1.25,
+              ),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: 140,
+              height: 42,
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.c3,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                child: Text(
+                  data.buttonText,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-              child: Text(
-                data.buttonText,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
             ),
-          ),
-          const SizedBox(height: 6),
+            const SizedBox(height: 6),
           ],
+        ),
       ),
-    ),
-  );
+    );
   }
 }
 
