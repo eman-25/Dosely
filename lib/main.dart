@@ -9,7 +9,7 @@ import 'screens/Authantication Screen/verification_screen.dart';
 import 'screens/Authantication Screen/change_password_screen.dart';
 import 'screens/Authantication Screen/password_changed_screen.dart';
 import 'Screens/HOME/home_screen.dart';
-
+import 'package:flutter/gestures.dart';
 
 void main() {
   runApp(const DoselyApp());
@@ -40,6 +40,20 @@ class DoselyApp extends StatelessWidget {
         '/passwordChanged': (context) => PasswordChangedScreen(),
         '/home': (context) => HomeScreen(),
       },
+    // ✅ IMPORTANT: allow mouse + trackpad dragging (Windows/Web/Desktop)
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.trackpad,
+        },
+      ),
+
+      home: const HomeScreen(userName: 'Sara'),
+    
+    
+    
+    
     );
   }
 }
