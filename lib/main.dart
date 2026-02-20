@@ -49,11 +49,6 @@ class DoselyApp extends StatelessWidget {
         },
       ),
 
-      home: const HomeScreen(userName: 'Sara'),
-    
-    
-    
-    
     );
   }
 }
