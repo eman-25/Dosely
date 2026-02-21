@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:dosely/Screens/Search/search.dart';
 import 'package:flutter/material.dart';
 import 'settings_panel.dart';
 import 'medicine_table_screen.dart';
@@ -346,7 +347,11 @@ class _FunctionCarousel extends StatelessWidget {
             subtitle:
                 'Search by medicine name or type to view trusted information, instructions, and safety details.',
             buttonText: 'Search',
-            onTap: onSearch,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
+              );
+            },
           ),
           _FunctionCard(
             icon: Icons.smart_toy_rounded,
