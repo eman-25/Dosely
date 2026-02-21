@@ -340,7 +340,7 @@ class _FeatureCard extends StatelessWidget {
         const threshold = 40;
         // debug
         // ignore: avoid_print
-        print('FeatureCard pointer up, dx=' + accDx.toString());
+        print('FeatureCard pointer up, dx=$accDx');
         if (accDx < -threshold) {
           // ignore: avoid_print
           print('FeatureCard swipe left');

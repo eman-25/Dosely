@@ -87,7 +87,7 @@ class MedicineTableScreen extends StatelessWidget {
 }
 
 class _CalendarCard extends StatelessWidget {
-  const _CalendarCard({super.key});
+  const _CalendarCard();
 
   @override
   Widget build(BuildContext context) {
@@ -108,9 +108,9 @@ class _CalendarCard extends StatelessWidget {
         children: [
           const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.black45),
           const SizedBox(height: 6),
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               _DayLabel('Sun'),
               _DayLabel('Mon'),
               _DayLabel('Tue'),
@@ -153,7 +153,7 @@ class _CalendarCard extends StatelessWidget {
 
 class _DayLabel extends StatelessWidget {
   final String t;
-  const _DayLabel(this.t, {super.key});
+  const _DayLabel(this.t);
 
   @override
   Widget build(BuildContext context) {

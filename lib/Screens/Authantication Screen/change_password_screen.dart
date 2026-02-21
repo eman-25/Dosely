@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/custom_textfield.dart';
-import 'password_changed_screen.dart';
 
 class ChangePasswordScreen extends StatelessWidget {
   const ChangePasswordScreen({super.key});

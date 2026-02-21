@@ -1,18 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'screens/Authantication Screen/welcome_screen.dart';
 import 'screens/Authantication Screen/login_screen.dart';
 import 'screens/Authantication Screen/register_screen.dart';
-import 'screens/Authantication Screen/personal_info_screen.dart'; 
+import 'screens/Authantication Screen/personal_info_screen.dart';
 import 'screens/Authantication Screen/register_success_screen.dart';
 import 'screens/Authantication Screen/forgot_password_screen.dart';
 import 'screens/Authantication Screen/verification_screen.dart';
 import 'screens/Authantication Screen/change_password_screen.dart';
 import 'screens/Authantication Screen/password_changed_screen.dart';
 import 'Screens/HOME/home_screen.dart';
+import 'models/user_data.dart';
 
+// Settings Screens
+import 'screens/settings/editprofile.dart';
+import 'screens/settings/edit_personalhealthinfo.dart';
+import 'screens/settings/privacy.dart';
+import 'screens/settings/language.dart';
+import 'screens/settings/Notifications.dart';
+import 'screens/settings/HelpandSupprot.dart';
+import 'screens/settings/aboutus.dart';
+import 'screens/settings/report_problem.dart';
+import 'screens/settings/logout.dart';
+import 'screens/settings/security.dart';
 
 void main() {
-  runApp(const DoselyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => UserData(),
+      child: const DoselyApp(),
+    ),
+  );
 }
 
 class DoselyApp extends StatelessWidget {
@@ -25,20 +44,32 @@ class DoselyApp extends StatelessWidget {
       title: 'Dosely',
       theme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'SF Pro Display', // optional; if not available, it falls back
+        fontFamily: 'SF Pro Display',
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => WelcomeScreen(),
-        '/login': (context) => LoginScreen(),
-        '/register': (context) => RegisterScreen(),
-        '/personalInfo': (context) => PersonalInfoScreen(),
-        '/registerSuccess': (context) => RegisterSuccessScreen(),
-        '/forgotPassword': (context) => ForgotPasswordScreen(),
-        '/verification': (context) => VerificationScreen(),
+        '/': (context) => const WelcomeScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/personalInfo': (context) => const PersonalInfoScreen(),
+        '/registerSuccess': (context) => const RegisterSuccessScreen(),
+        '/forgotPassword': (context) => const ForgotPasswordScreen(),
+        '/verification': (context) => const VerificationScreen(),
         '/change-password': (context) => const ChangePasswordScreen(),
-        '/passwordChanged': (context) => PasswordChangedScreen(),
-        '/home': (context) => HomeScreen(),
+        '/passwordChanged': (context) => const PasswordChangedScreen(),
+        '/home': (context) => const HomeScreen(),
+
+        // Settings Routes
+        '/editProfile': (context) => const EditProfileScreen(),
+        '/editPersonalHealthInfo': (context) => const EditPersonalHealthInfoScreen(),
+        '/privacy': (context) => const PrivacyScreen(),
+        '/language': (context) => const LanguageScreen(),
+        '/security': (context) => const SecurityScreen(),
+        '/notifications': (context) => const NotificationsScreen(),
+        '/helpSupport': (context) => const HelpSupportScreen(),
+        '/aboutUs': (context) => const AboutUsScreen(),
+        '/reportProblem': (context) => const ReportProblemScreen(),
+        '/logout': (context) => const LogoutScreen(),
       },
     );
   }

@@ -31,8 +31,15 @@ class WelcomeScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.medication, size: 80),
-                const SizedBox(height: 40),
+                Image.asset(
+                          'assets/images/dosely_logo.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback if image not found
+                            return const Icon(
+                              Icons.medication_liquid_rounded, size: 80);
+                          },
+                        ),
                 CustomButton(
                   text: "Login",
                   onPressed: () =>

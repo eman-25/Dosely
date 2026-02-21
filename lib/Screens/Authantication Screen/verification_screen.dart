@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
-import '../../Widgets/custom_textfield.dart';
 
 class VerificationScreen extends StatefulWidget {
   const VerificationScreen({super.key});

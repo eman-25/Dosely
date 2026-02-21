@@ -48,7 +48,7 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                _Section(title: 'Account', tiles: const [
+                const _Section(title: 'Account', tiles: [
                   _Tile(icon: Icons.edit_rounded, title: 'Edit profile'),
                   _Tile(icon: Icons.health_and_safety_rounded, title: 'Personal Health Information'),
                   _Tile(icon: Icons.lock_rounded, title: 'Security'),
@@ -56,12 +56,12 @@ class SettingsScreen extends StatelessWidget {
                   _Tile(icon: Icons.privacy_tip_rounded, title: 'Privacy'),
                 ]),
                 const SizedBox(height: 14),
-                _Section(title: 'Support & About', tiles: const [
+                const _Section(title: 'Support & About', tiles: [
                   _Tile(icon: Icons.help_rounded, title: 'Help & Support'),
                   _Tile(icon: Icons.info_rounded, title: 'About Us'),
                 ]),
                 const SizedBox(height: 14),
-                _Section(title: 'Actions', tiles: const [
+                const _Section(title: 'Actions', tiles: [
                   _Tile(icon: Icons.report_rounded, title: 'Report a problem'),
                   _Tile(icon: Icons.logout_rounded, title: 'Log out'),
                 ]),
@@ -73,8 +73,8 @@ class SettingsScreen extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(22),
                   ),
-                  child: Row(
-                    children: const [
+                  child: const Row(
+                    children: [
                       Expanded(
                         child: Text(
                           'Greetings, Sara !\nHow can MedAI help you today?',
@@ -127,7 +127,60 @@ class _Section extends StatelessWidget {
                   leading: Icon(t.icon, color: Colors.black54),
                   title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w700)),
                   trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {},
+                  onTap: () {
+                    switch (t.title) {
+                    case 'Edit profile':
+                    Navigator.pushNamed(context, '/editProfile');
+                    break;
+                    case 'Personal Health Information':
+                    Navigator.pushNamed(context, '/editPersonalHealthInfo');
+                    break;
+                    case 'Privacy':
+                    Navigator.pushNamed(context, '/privacy');
+                    break;
+                    case 'Language':
+                    Navigator.pushNamed(context, '/language');
+                    break;
+                    case 'Notifications':
+                    Navigator.pushNamed(context, '/notifications');
+                    break;
+                    case 'Security':
+                    Navigator.pushNamed(context, '/security');
+                    break;
+                    case 'Help & Support':
+                    Navigator.pushNamed(context, '/helpSupport');
+                    break;
+                    case 'About Us':
+                    Navigator.pushNamed(context, '/aboutUs');
+                    break;
+                    case 'Report a problem':
+                    Navigator.pushNamed(context, '/reportProblem');
+                    break;
+                    case 'Log out':
+                   // Simple confirmation dialog (or navigate to logout screen)
+                    showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                    title: const Text('Log Out'),
+                    content: const Text('Are you sure you want to log out?'),
+                    actions: [
+                        TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                        onPressed: () {
+                // TODO: Clear auth / provider / shared prefs
+                Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+              },
+              child: const Text('Log Out', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+      break;
+  }
+  },
                 ),
               ),
             )),
