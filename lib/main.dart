@@ -11,8 +11,20 @@ import 'screens/Authantication Screen/verification_screen.dart';
 import 'screens/Authantication Screen/change_password_screen.dart';
 import 'screens/Authantication Screen/password_changed_screen.dart';
 import 'Screens/HOME/home_screen.dart';
+import 'models/user_data.dart';
 
-
+// Settings Screens
+import 'screens/settings/editprofile.dart';
+import 'screens/settings/edit_personalhealthinfo.dart';
+import 'screens/settings/Security.dart';
+import 'screens/settings/privacy.dart';
+import 'screens/settings/language.dart';
+import 'screens/settings/Notifications.dart';
+import 'screens/settings/HelpandSupprot.dart';
+import 'screens/settings/aboutus.dart';
+import 'screens/settings/report_problem.dart';
+import 'screens/settings/logout.dart';
+import 'screens/HOME/settings_panel.dart';
 void main() {
   runApp(
     ChangeNotifierProvider(
@@ -46,28 +58,21 @@ class DoselyApp extends StatelessWidget {
         '/change-password': (context) => const ChangePasswordScreen(),
         '/passwordChanged': (context) => const PasswordChangedScreen(),
         '/home': (context) => const HomeScreen(),
+        '/settings': (context) => const SettingsPanel(),
 
         // Settings Routes
         '/editProfile': (context) => const EditProfileScreen(),
         '/editPersonalHealthInfo': (context) => const EditPersonalHealthInfoScreen(),
         '/privacy': (context) => const PrivacyScreen(),
         '/language': (context) => const LanguageScreen(),
-        '/security': (context) => const SecurityScreen(),
         '/notifications': (context) => const NotificationsScreen(),
         '/helpSupport': (context) => const HelpSupportScreen(),
         '/aboutUs': (context) => const AboutUsScreen(),
         '/reportProblem': (context) => const ReportProblemScreen(),
         '/logout': (context) => const LogoutScreen(),
+        '/security': (context) => const SecurityScreen(),
+        
       },
-    // ✅ IMPORTANT: allow mouse + trackpad dragging (Windows/Web/Desktop)
-      scrollBehavior: const MaterialScrollBehavior().copyWith(
-        dragDevices: {
-          PointerDeviceKind.touch,
-          PointerDeviceKind.mouse,
-          PointerDeviceKind.trackpad,
-        },
-      ),
-
     );
   }
 }

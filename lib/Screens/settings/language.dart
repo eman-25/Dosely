@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '/theme.dart';
 
+
 class LanguageScreen extends StatefulWidget {
   const LanguageScreen({super.key});
 
@@ -10,7 +11,7 @@ class LanguageScreen extends StatefulWidget {
 }
 
 class _LanguageScreenState extends State<LanguageScreen> {
-  String _selectedLanguage = 'English'; // default
+  String _selectedLanguage = 'English';
 
   final List<Map<String, String>> _languages = [
     {'code': 'en', 'name': 'English'},
@@ -53,7 +54,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                   ),
                 ),
                 trailing: isSelected
-                    ? Icon(Icons.check_circle, color: AppColors.primaryGreen)
+                    ? const Icon(Icons.check_circle, color: Colors.green)
                     : null,
                 onTap: () {
                   setState(() {
@@ -65,8 +66,6 @@ class _LanguageScreenState extends State<LanguageScreen> {
                       duration: const Duration(seconds: 2),
                     ),
                   );
-                  // TODO: save to shared_preferences / provider
-                  // TODO: call setLocale / restart app logic if using intl + easy_localization
                 },
               ),
             );

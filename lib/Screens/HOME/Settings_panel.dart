@@ -1,101 +1,94 @@
+// lib/screens/HOME/Settings_panel.dart
 import 'package:flutter/material.dart';
 
 class SettingsPanel extends StatelessWidget {
-  final double topSpacing;
-  final double bottomSpacing;
-
-  const SettingsPanel({
-    super.key,
-    this.topSpacing = 12,
-    this.bottomSpacing = 12,
-  });
+  const SettingsPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // This widget is meant to be placed INSIDE the settings sheet area.
-    // So we keep it clean (no outer rounded container), just spacing + list.
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, topSpacing, 16, bottomSpacing),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
+    return Column(
+      children: [
+        // Header
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+          child: Row(
             children: [
-              Icon(Icons.settings, size: 18, color: Colors.black87),
-              SizedBox(width: 8),
+              Icon(Icons.settings_rounded, size: 24, color: Colors.black87),
+              SizedBox(width: 12),
               Text(
                 'Settings',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: Colors.black87,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: ListView(
-              physics: const BouncingScrollPhysics(),
-              children: [
-                _sectionTitle('Account'),
-                _tile(Icons.edit, 'Edit profile'),
-                _tile(Icons.health_and_safety, 'Personal Health Information'),
-                _tile(Icons.security, 'Security'),
+        ),
 
-                const SizedBox(height: 10),
-                _sectionTitle('App Preferences'),
-                _tile(Icons.language, 'Language'),
-                _tile(Icons.notifications, 'Notifications'),
+        // Scrollable Content
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            physics: const BouncingScrollPhysics(),
+            children: [
+              _sectionTitle('Account'),
+              _tile(context, Icons.edit, 'Edit profile', '/editProfile'),
+              _tile(context, Icons.health_and_safety, 'Personal Health Information', '/editPersonalHealthInfo'),
+              _tile(context, Icons.security, 'Security', '/security'),
+              _tile(context, Icons.privacy_tip, 'Privacy', '/privacy'),
 
-                const SizedBox(height: 10),
-                _sectionTitle('Support & About'),
-                _tile(Icons.help_outline, 'Help & Support'),
-                _tile(Icons.info_outline, 'About Us'),
+              const SizedBox(height: 16),
+              _sectionTitle('App Preferences'),
+              _tile(context, Icons.language, 'Language', '/language'),
+              _tile(context, Icons.notifications, 'Notifications', '/notifications'),
 
-                const SizedBox(height: 10),
-                _sectionTitle('Actions'),
-                _tile(Icons.report_gmailerrorred, 'Report a problem'),
-                _tile(Icons.logout, 'Log out'),
-              ],
-            ),
+              const SizedBox(height: 16),
+              _sectionTitle('Support & About'),
+              _tile(context, Icons.help_outline, 'Help & Support', '/helpSupport'),
+              _tile(context, Icons.info_outline, 'About Us', '/aboutUs'),
+
+              const SizedBox(height: 16),
+              _sectionTitle('Actions'),
+              _tile(context, Icons.report_gmailerrorred, 'Report a problem', '/reportProblem'),
+              _tile(context, Icons.logout, 'Log out', '/logout'),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  static Widget _sectionTitle(String text) {
+  Widget _sectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 2, bottom: 6),
+      padding: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
       child: Text(
-        text,
+        title,
         style: const TextStyle(
-          fontSize: 12.5,
+          fontSize: 13,
           fontWeight: FontWeight.w800,
-          color: Colors.black87,
+          color: Colors.black54,
         ),
       ),
     );
   }
 
-  static Widget _tile(IconData icon, String text) {
+  Widget _tile(BuildContext context, IconData icon, String title, String route) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F3F5),
-        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: ListTile(
         dense: true,
-        visualDensity: const VisualDensity(vertical: -3),
-        leading: Icon(icon, size: 18, color: Colors.black87),
-        title: Text(
-          text,
-          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
-        ),
+        leading: Icon(icon, color: Colors.black87),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         trailing: const Icon(Icons.chevron_right_rounded, color: Colors.black45),
-        onTap: () {},
+        onTap: () {
+          Navigator.pushNamed(context, route);
+        },
       ),
     );
   }

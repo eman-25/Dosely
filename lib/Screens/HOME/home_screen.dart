@@ -179,10 +179,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ignoring: _openFactor(context) < 0.05, // when closed, don't catch touches
       child: SizedBox(
         height: sheetMax,
-        child: SettingsPanel(
-          topSpacing: 12,
-          bottomSpacing: 12,
-        ),
+        child: const SettingsPanel(),
       ),
     ),
 

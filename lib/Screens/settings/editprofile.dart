@@ -134,7 +134,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 fillColor: Colors.grey.shade100,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
               ),
-              items: ["Male", "Female", "Other"]
+              items: ["Male", "Female"]
                   .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                   .toList(),
               onChanged: (v) => setState(() => _selectedGender = v),

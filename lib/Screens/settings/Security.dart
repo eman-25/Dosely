@@ -33,16 +33,16 @@ class _SecurityScreenState extends State<SecurityScreen> {
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             color: const Color(0xFFE8F5E9),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+            child: const Padding(
+              padding: EdgeInsets.all(16),
               child: Row(
                 children: [
                   Icon(Icons.shield, color: AppColors.primaryGreen, size: 40),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           'Your account is protected',
                           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
