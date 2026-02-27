@@ -3,10 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/medicine_service.dart';
 import '../../models/user_data.dart';
-import '../../Widgets/custom_textfield.dart';
-import '../../Widgets/custom_button.dart';
-import '/theme.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'medicine_result_screen.dart';
 
 class Scan extends StatefulWidget {

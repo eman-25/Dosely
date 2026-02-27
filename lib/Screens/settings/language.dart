@@ -62,14 +62,14 @@ class _LanguageScreenState extends State<LanguageScreen> {
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Language changed to ${_selectedLanguage}'),
+                      content: Text('Language changed to $_selectedLanguage'),
                       duration: const Duration(seconds: 2),
                     ),
                   );
                 },
               ),
             );
-          }).toList(),
+          }),
 
           const SizedBox(height: 24),
           const Divider(),

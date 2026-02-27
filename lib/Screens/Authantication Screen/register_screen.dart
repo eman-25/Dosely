@@ -6,7 +6,7 @@ import '/theme.dart'; // Assuming this contains AppColors
 import '../../models/user_data.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/custom_textfield.dart';
-import 'personal_info_screen.dart'; // Importing the next screen to navigate to
+// Importing the next screen to navigate to
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -146,7 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 16),
 
                     DropdownButtonFormField<String>(
-                      value: _selectedGender,
+                      initialValue: _selectedGender,
                       hint: const Text("Gender"),
                       isExpanded: true,
                       decoration: InputDecoration(

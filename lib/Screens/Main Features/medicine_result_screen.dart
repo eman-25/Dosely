@@ -44,7 +44,7 @@ class MedicineResultScreen extends StatelessWidget {
             if (!safe) ...[
               const SizedBox(height: 20),
               const Text('⚠️ Reason based on your profile:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('• Allergy / Chronic condition match'),
+              const Text('• Allergy / Chronic condition match'),
             ],
 
             const SizedBox(height: 40),

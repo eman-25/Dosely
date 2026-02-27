@@ -57,7 +57,7 @@ class _ReportProblemScreenState extends State<ReportProblemScreen> {
             const SizedBox(height: 24),
 
             DropdownButtonFormField<String>(
-              value: _selectedIssueType,
+              initialValue: _selectedIssueType,
               hint: const Text('Select issue type'),
               isExpanded: true,
               decoration: InputDecoration(
@@ -84,7 +84,7 @@ class _ReportProblemScreenState extends State<ReportProblemScreen> {
 
             Row(
               children: [
-                Icon(Icons.attach_file, color: AppColors.primaryBlue),
+                const Icon(Icons.attach_file, color: AppColors.primaryBlue),
                 const SizedBox(width: 8),
                 TextButton(
                   onPressed: () {

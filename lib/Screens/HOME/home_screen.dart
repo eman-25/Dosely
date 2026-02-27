@@ -223,7 +223,6 @@ class _GreetingHandle extends StatelessWidget {
   final bool showUp;
 
   const _GreetingHandle({
-    super.key,
     required this.height,
     required this.name,
     required this.avatar,
@@ -301,7 +300,6 @@ class _FunctionCarousel extends StatelessWidget {
   final VoidCallback onScan, onUpload, onSearch, onChat;
 
   const _FunctionCarousel({
-    super.key,
     required this.onScan,
     required this.onUpload,
     required this.onSearch,
@@ -356,7 +354,6 @@ class _FunctionCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _FunctionCard({
-    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -421,11 +418,11 @@ class _RemindersCard extends StatelessWidget {
   final VoidCallback onDragUp;
   final VoidCallback onArrowTap;
 
-  const _RemindersCard({super.key, required this.onDragUp, required this.onArrowTap});
+  const _RemindersCard({required this.onDragUp, required this.onArrowTap});
 
   @override
   Widget build(BuildContext context) {
-    final bool hasMedicines = false; // Will be dynamic later
+    const bool hasMedicines = false; // Will be dynamic later
 
     return GestureDetector(
       onVerticalDragEnd: (details) {

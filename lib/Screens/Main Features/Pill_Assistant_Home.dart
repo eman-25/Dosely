@@ -19,8 +19,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
 
     // Smart rule-based + future Grok/xAI integration point
     String reply = "I'm Pillo, your AI medication assistant.\n";
-    if (text.toLowerCase().contains("safe")) reply = "✅ According to your profile, this medicine is safe.";
-    else if (text.toLowerCase().contains("dose")) reply = "Typical dose: 1 tablet every 6-8 hours.";
+    if (text.toLowerCase().contains("safe")) {
+      reply = "✅ According to your profile, this medicine is safe.";
+    } else if (text.toLowerCase().contains("dose")) reply = "Typical dose: 1 tablet every 6-8 hours.";
     else if (text.toLowerCase().contains("side")) reply = "Common side effects: mild nausea. Always check with doctor.";
 
     Future.delayed(const Duration(milliseconds: 700), () {

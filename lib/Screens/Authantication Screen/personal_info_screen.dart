@@ -168,9 +168,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                 .toList(),
             selectedItems: selected,
             onChanged: onChanged,
-            popupProps: PopupPropsMultiSelection.menu(
+            popupProps: const PopupPropsMultiSelection.menu(
               showSearchBox: true,
-              searchFieldProps: const TextFieldProps(
+              searchFieldProps: TextFieldProps(
                 decoration: InputDecoration(
                   hintText: "Search...",
                   prefixIcon: Icon(Icons.search),
