@@ -4,7 +4,6 @@ plugins {
     id("com.google.gms.google-services")
     // Add all other plugins here
 }
-
 allprojects {
     repositories {
         google()
