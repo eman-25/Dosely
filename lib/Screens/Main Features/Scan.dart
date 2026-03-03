@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:dosely/Screens/Main%20Features/scan_result_sxreen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'ocr_text_screen.dart';
 
 class Scan extends StatefulWidget {
   const Scan({super.key});
@@ -67,18 +68,17 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
       final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
       final RecognizedText recognizedText =
-          await textRecognizer.processImage(inputImage);
+        await textRecognizer.processImage(inputImage);
 
       await textRecognizer.close();
-
       if (!mounted) return;
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ScanResultScreen(
+          builder: (_) => OcrTextScreen(
             imagePath: imageFile.path,
-            recognizedText: recognizedText.text,
+            text: recognizedText.text,
           ),
         ),
       );
