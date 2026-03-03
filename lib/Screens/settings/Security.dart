@@ -70,7 +70,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
           SwitchListTile(
             title: const Text('Biometric authentication'),
             subtitle: const Text('Use fingerprint or face recognition'),
-            secondary: Icon(Icons.fingerprint, color: AppColors.primaryBlue),
+            secondary: const Icon(Icons.fingerprint, color: AppColors.primaryBlue),
             value: _biometricsEnabled,
             onChanged: (v) => setState(() => _biometricsEnabled = v),
           ),
@@ -78,7 +78,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
           SwitchListTile(
             title: const Text('App lock'),
             subtitle: const Text('Require PIN or pattern'),
-            secondary: Icon(Icons.lock_outline, color: AppColors.primaryBlue),
+            secondary: const Icon(Icons.lock_outline, color: AppColors.primaryBlue),
             value: _appLockEnabled,
             onChanged: (v) => setState(() => _appLockEnabled = v),
           ),
@@ -86,7 +86,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
           SwitchListTile(
             title: const Text('Two-factor authentication'),
             subtitle: const Text('Extra security with SMS / authenticator'),
-            secondary: Icon(Icons.phonelink_lock, color: AppColors.primaryBlue),
+            secondary: const Icon(Icons.phonelink_lock, color: AppColors.primaryBlue),
             value: _twoFactorAuth,
             onChanged: (v) => setState(() => _twoFactorAuth = v),
           ),

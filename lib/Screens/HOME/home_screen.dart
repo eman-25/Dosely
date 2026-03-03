@@ -1,32 +1,32 @@
 import 'dart:math';
-import 'package:dosely/Screens/Search/search.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../models/user_data.dart';
 import 'settings_panel.dart';
 import 'medicine_table_screen.dart';
 
-class HomeScreen extends StatefulWidget {
-  final String userName;
-  final ImageProvider? avatar;
+// Main Features
+import '../Main Features/Scan.dart';
+import '../Main Features/Upload.dart';
+import '../Main Features/Search.dart';
+import '../Main Features/Pill_Assistant_Home.dart';
 
-  const HomeScreen({
-    super.key,
-    this.userName = 'Sara',
-    this.avatar,
-  });
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  // Palette (your screenshots)
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   static const c1 = Color(0xFF48466E);
   static const c2 = Color(0xFF3E84A8);
   static const c3 = Color(0xFF4ACED0);
   static const c4 = Color(0xFFACEDD9);
   static const c5 = Color(0xFFE0FBF4);
 
-  // Sheet drag value: 0 = closed, sheetMax = open
   double _dragY = 0.0;
 
   late final AnimationController _snap = AnimationController(
@@ -38,10 +38,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   static const double _headerHeight = 112;
 
-  double _sheetMax(BuildContext context) {
-    final h = MediaQuery.of(context).size.height;
-    return min(520.0, h * 0.62); // settings content height (not including header)
-  }
+  double _sheetMax(BuildContext context) =>
+      min(520.0, MediaQuery.of(context).size.height * 0.62);
 
   double _openFactor(BuildContext context) {
     final maxY = _sheetMax(context);
@@ -52,13 +50,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _snap.stop();
     _anim = Tween<double>(begin: _dragY, end: target).animate(
       CurvedAnimation(parent: _snap, curve: Curves.easeOutCubic),
-    )..addListener(() {
-        setState(() => _dragY = _anim!.value);
-      });
+    )..addListener(() => setState(() => _dragY = _anim!.value));
 
-    _snap
-      ..reset()
-      ..forward();
+    _snap.reset();
+    _snap.forward();
   }
 
   void _snapSheet(BuildContext context) {
@@ -77,9 +72,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       reverseTransitionDuration: const Duration(milliseconds: 220),
       pageBuilder: (_, __, ___) => page,
       transitionsBuilder: (_, animation, __, child) {
-        final tween = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-            .chain(CurveTween(curve: Curves.easeOutCubic));
-        return SlideTransition(position: animation.drive(tween), child: child);
+        return SlideTransition(
+          position: animation.drive(
+            Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeOutCubic)),
+          ),
+          child: child,
+        );
       },
     );
   }
@@ -92,21 +91,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final userData = Provider.of<UserData>(context);
+
     final sheetMax = _sheetMax(context);
     final open = _openFactor(context);
-
-    // Sheet total height = settings content (sheetMax) + header handle
     final sheetTotalHeight = sheetMax + _headerHeight;
-
-    // When closed: sheet is moved up by sheetMax, leaving only header visible.
-    // When open: sheet top becomes 0.
     final sheetTop = -sheetMax + _dragY;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Background gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -121,12 +116,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           SafeArea(
             child: Stack(
               children: [
-                // =========================
-                //  HOME CONTENT (stays put)
-                // =========================
+                // HOME CONTENT
                 Positioned.fill(
                   child: IgnorePointer(
-                    ignoring: open > 0.15, // disable home taps when settings is open
+                    ignoring: open > 0.15,
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 160),
                       opacity: (1 - open * 0.92).clamp(0.0, 1.0),
@@ -139,10 +132,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               child: Column(
                                 children: [
                                   _FunctionCarousel(
-                                    onScan: () {},
-                                    onUpload: () {},
-                                    onSearch: () {},
-                                    onChat: () {},
+                                    onScan: () => Navigator.push(
+                                        context, MaterialPageRoute(builder: (_) => const Scan())),
+                                    onUpload: () => Navigator.push(
+                                        context, MaterialPageRoute(builder: (_) => const Upload())),
+                                    onSearch: () => Navigator.push(
+                                        context, MaterialPageRoute(builder: (_) => const SearchScreen())),
+                                    onChat: () => Navigator.push(
+                                        context, MaterialPageRoute(builder: (_) => const PillAssistantHome())),
                                   ),
                                   const SizedBox(height: 14),
                                   _RemindersCard(
@@ -160,54 +157,51 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                 ),
 
-                // =========================
-                //  SETTINGS SHEET (above home)
-                //  settings + greeting header (handle) attached at bottom
-                // =========================
+                // SETTINGS SHEET
                 Positioned(
                   left: 18,
                   right: 18,
-                  top: sheetTop + 8, // +8 for a little breathing room inside SafeArea
+                  top: sheetTop + 8,
                   height: sheetTotalHeight,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(26),
                     child: Material(
                       color: Colors.white.withOpacity(0.96),
                       child: Column(
-  children: [
-    // ✅ Settings list area (ONLY clickable when sheet is open)
-    IgnorePointer(
-      ignoring: _openFactor(context) < 0.05, // when closed, don't catch touches
-      child: SizedBox(
-        height: sheetMax,
-        child: const SettingsPanel(),
-      ),
-    ),
-
-    // ✅ Greeting header handle (ALWAYS draggable)
-    GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onVerticalDragUpdate: (details) {
-        setState(() {
-          _dragY = (_dragY + details.delta.dy).clamp(0.0, sheetMax);
-        });
-      },
-      onVerticalDragEnd: (_) => _snapSheet(context),
-      onTap: () {
-        final isOpen = _openFactor(context) > 0.5;
-        _animateTo(context, isOpen ? 0.0 : sheetMax);
-      },
-      child: _GreetingHandle(
-        height: _headerHeight,
-        name: widget.userName,
-        avatar: widget.avatar,
-        showDown: _openFactor(context) < 0.15,
-        showUp: _openFactor(context) > 0.85,
-      ),
-    ),
-  ],
-),
-
+                        children: [
+                          IgnorePointer(
+                            ignoring: _openFactor(context) < 0.05,
+                            child: SizedBox(
+                              height: sheetMax,
+                              child: const SettingsPanel(),
+                            ),
+                          ),
+                          GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onVerticalDragUpdate: (details) {
+                              setState(
+                                () => _dragY = (_dragY + details.delta.dy)
+                                    .clamp(0.0, sheetMax),
+                              );
+                            },
+                            onVerticalDragEnd: (_) => _snapSheet(context),
+                            onTap: () {
+                              final isOpen = _openFactor(context) > 0.5;
+                              _animateTo(context, isOpen ? 0.0 : sheetMax);
+                            },
+                            child: _GreetingHandle(
+                              height: _headerHeight,
+                              // Real username from registration / edit profile
+                              name: (userData.name ?? '').trim().isNotEmpty
+                              ? (userData.name ?? '').trim()
+                              : 'User',
+                              avatar: userData.avatar,
+                              showDown: _openFactor(context) < 0.15,
+                              showUp: _openFactor(context) > 0.85,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -220,9 +214,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 }
 
-// =========================
-// Greeting handle (bottom of settings sheet)
-// =========================
+// ====================== Greeting Handle ======================
 class _GreetingHandle extends StatelessWidget {
   final double height;
   final String name;
@@ -303,14 +295,9 @@ class _GreetingHandle extends StatelessWidget {
   }
 }
 
-// =========================
-// Middle functions carousel (left/right)
-// =========================
+// ====================== Function Carousel ======================
 class _FunctionCarousel extends StatelessWidget {
-  final VoidCallback onScan;
-  final VoidCallback onUpload;
-  final VoidCallback onSearch;
-  final VoidCallback onChat;
+  final VoidCallback onScan, onUpload, onSearch, onChat;
 
   const _FunctionCarousel({
     required this.onScan,
@@ -328,36 +315,28 @@ class _FunctionCarousel extends StatelessWidget {
           _FunctionCard(
             icon: Icons.camera_alt_rounded,
             title: 'Scan Your Medicine Using\nCamera',
-            subtitle:
-                'Take a clear photo of the medicine and let Dosely identify it and provide detailed information.',
+            subtitle: 'Take a clear photo of the medicine and let Dosely identify it and provide detailed information.',
             buttonText: 'Scan',
             onTap: onScan,
           ),
           _FunctionCard(
             icon: Icons.cloud_upload_rounded,
             title: 'Upload a Photo of the\nMedicine',
-            subtitle:
-                'Upload an existing image of the medicine to receive accurate details, usage information, and warnings.',
+            subtitle: 'Upload an existing image of the medicine to receive accurate details, usage information, and warnings.',
             buttonText: 'Upload',
             onTap: onUpload,
           ),
           _FunctionCard(
             icon: Icons.manage_search_rounded,
             title: 'Search for a Medicine\nManually',
-            subtitle:
-                'Search by medicine name or type to view trusted information, instructions, and safety details.',
+            subtitle: 'Search by medicine name or type to view trusted information, instructions, and safety details.',
             buttonText: 'Search',
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const SearchScreen()),
-              );
-            },
+            onTap: onSearch,
           ),
           _FunctionCard(
             icon: Icons.smart_toy_rounded,
             title: 'Pillo Assistant',
-            subtitle:
-                'Get instant answers about medicines, usage, and safety information to help you take them correctly and confidently.',
+            subtitle: 'Get instant answers about medicines, usage, and safety information to help you take them correctly and confidently.',
             buttonText: 'Chat',
             onTap: onChat,
           ),
@@ -385,202 +364,117 @@ class _FunctionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-  child: SizedBox(
-    height: 330, // ✅ smaller card height (adjust between 300-350)
-    child: Container(
-      constraints: const BoxConstraints(maxWidth: 520),
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-        decoration: BoxDecoration(
-  borderRadius: BorderRadius.circular(28),
-  color: Colors.white, // ✅ solid white
-  boxShadow: [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.08),
-      blurRadius: 22,
-      offset: const Offset(0, 10),
-    ),
-  ],
-),
-
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              height: 60,
-              width: 65,
-              decoration: BoxDecoration(
-                color: const Color(0xFFACEDD9).withOpacity(0.45),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Icon(icon, size: 40, color: const Color(0xFF3E84A8)),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11.5,
-                height: 1.35,
-                color: Color.fromARGB(136, 59, 59, 92),
-              ),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              height: 34,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.65),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
+      child: SizedBox(
+        height: 290,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 520),
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 22, offset: const Offset(0, 10)),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                height: 60,
+                width: 65,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFACEDD9).withOpacity(0.45),
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                onPressed: onTap,
-                child: Text(
-                  buttonText,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w700,
+                child: Icon(icon, size: 40, color: const Color(0xFF3E84A8)),
+              ),
+              const SizedBox(height: 14),
+              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.black87)),
+              const SizedBox(height: 8),
+              Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11.5, height: 1.35, color: Color.fromARGB(136, 59, 59, 92))),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 34,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.65),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                   ),
+                  onPressed: onTap,
+                  child: Text(buttonText, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w700)),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),);
+    );
   }
 }
 
-// =========================
-// Bottom reminders (swipe up -> medicine table)
-// =========================
+// ====================== Reminders Card – EMPTY by default ======================
 class _RemindersCard extends StatelessWidget {
   final VoidCallback onDragUp;
   final VoidCallback onArrowTap;
 
-  const _RemindersCard({
-    required this.onDragUp,
-    required this.onArrowTap,
-  });
-@override
-Widget build(BuildContext context) {
-  return GestureDetector(
-    onVerticalDragEnd: (details) {
-      if (details.velocity.pixelsPerSecond.dy < -220) onDragUp();
-    },
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14), // bigger padding
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        color: Colors.white.withOpacity(0.85),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 25,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'Medicine Reminders',
-            style: TextStyle(
-              fontSize: 16, // bigger title
-              fontWeight: FontWeight.w800,
+  const _RemindersCard({required this.onDragUp, required this.onArrowTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const bool hasMedicines = false; // Will be dynamic later
+
+    return GestureDetector(
+      onVerticalDragEnd: (details) {
+        if (details.velocity.pixelsPerSecond.dy < -220) onDragUp();
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          color: Colors.white.withOpacity(0.85),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 25, offset: const Offset(0, 10)),
+          ],
+        ),
+        child: Column(
+          children: [
+            const Text('Medicine Reminders', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 14),
+
+            hasMedicines
+                ? const SizedBox.shrink() // Will show real list later
+                : _buildEmptyState(context),
+
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: onArrowTap,
+              child: const Icon(Icons.keyboard_arrow_up_rounded, size: 26, color: Colors.black54),
             ),
-          ),
-          const SizedBox(height: 14),
-
-          _row(
-            leading: _redBox(),
-            name: 'Panadol Extra , 500 g',
-            time: '9:30 am  (LATE)',
-            nameColor: const Color(0xFFB3261E),
-            timeColor: const Color(0xFFB3261E),
-          ),
-          const SizedBox(height: 12),
-
-          _row(
-            leading: const Icon(Icons.alarm, size: 20, color: Colors.black54),
-            name: 'Augmentin , 1 g',
-            time: '10:00 am',
-          ),
-          const SizedBox(height: 12),
-
-          _row(
-            leading: const Icon(Icons.check_box, size: 20, color: Colors.black87),
-            name: 'Olfèn  - 100SR',
-            time: '8:00 am',
-          ),
-          const SizedBox(height: 12),
-
-          _row(
-            leading: const Icon(Icons.check_box, size: 20, color: Colors.black87),
-            name: 'Artelac advanced - 1 drop',
-            time: '8:00 am',
-          ),
-
-          const SizedBox(height: 12),
-          InkWell(
-            onTap: onArrowTap,
-            child: const Icon(
-              Icons.keyboard_arrow_up_rounded,
-              size: 26,
-              color: Colors.black54,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-  static Widget _redBox() {
-    return Container(
-      height: 16,
-      width: 16,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: const Color(0xFFB3261E), width: 1.4),
+          ],
+        ),
       ),
     );
   }
 
-  static Widget _row({
-    required Widget leading,
-    required String name,
-    required String time,
-    Color nameColor = Colors.black87,
-    Color timeColor = Colors.black87,
-  }) {
-    return Row(
+  Widget _buildEmptyState(BuildContext context) {
+    return Column(
       children: [
-        leading,
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            name,
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: nameColor),
-            overflow: TextOverflow.ellipsis,
+        const Icon(Icons.medical_services_outlined, size: 48, color: Colors.black38),
+        const SizedBox(height: 12),
+        const Text('No medications yet', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black54)),
+        const SizedBox(height: 4),
+        const Text('Add your first medicine from the schedule', style: TextStyle(fontSize: 12, color: Colors.black45), textAlign: TextAlign.center),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: () => onArrowTap(),
+          icon: const Icon(Icons.add),
+          label: const Text('Add Medicine'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF4ACED0),
+            foregroundColor: Colors.white,
           ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          time,
-          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: timeColor),
         ),
       ],
     );
