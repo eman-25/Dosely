@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() =>
-      _ForgotPasswordScreenState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState
-    extends State<ForgotPasswordScreen> {
-
-  final TextEditingController emailController =
-      TextEditingController();
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final TextEditingController emailController = TextEditingController();
 
   @override
   void dispose() {
@@ -22,9 +19,47 @@ class _ForgotPasswordScreenState
     super.dispose();
   }
 
-  void sendResetLink() {
-    Navigator.pushNamed(context, '/verification');
+  void sendResetLink() async {
+    if (emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Please enter your email")));
+      return;
+    }
 
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: emailController.text.trim(),
+      );
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Check Your Email"),
+          content: const Text(
+            "A password reset link has been sent to your email.\n\n"
+            "Please open your email, reset your password, "
+            "then return to the app and log in with your new password.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (route) => false,
+                );
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message ?? "Error")));
+    }
   }
 
   @override
@@ -33,10 +68,7 @@ class _ForgotPasswordScreenState
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              AppColors.primaryBlue,
-              AppColors.primaryGreen,
-            ],
+            colors: [AppColors.primaryBlue, AppColors.primaryGreen],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -52,16 +84,16 @@ class _ForgotPasswordScreenState
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.lock_reset,
-                    size: 70, color: AppColors.primaryBlue),
+                const Icon(
+                  Icons.lock_reset,
+                  size: 70,
+                  color: AppColors.primaryBlue,
+                ),
                 const SizedBox(height: 20),
 
                 const Text(
                   "Forgot Password?",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
 
                 const SizedBox(height: 10),
@@ -88,17 +120,17 @@ class _ForgotPasswordScreenState
 
                 const SizedBox(height: 30),
 
-                CustomButton(
-                  text: "Send Code",
-                  onPressed: sendResetLink,
-                ),
+                CustomButton(text: "Send Reset Link", onPressed: sendResetLink),
 
                 const SizedBox(height: 15),
 
                 TextButton(
                   onPressed: () {
                     Navigator.pushNamedAndRemoveUntil(
-                        context, '/login', (route) => false);
+                      context,
+                      '/login',
+                      (route) => false,
+                    );
                   },
                   child: const Text("Back to Login"),
                 ),
