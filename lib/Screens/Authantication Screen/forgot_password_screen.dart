@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
 
@@ -6,15 +7,11 @@ class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() =>
-      _ForgotPasswordScreenState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState
-    extends State<ForgotPasswordScreen> {
-
-  final TextEditingController emailController =
-      TextEditingController();
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final TextEditingController emailController = TextEditingController();
 
   @override
   void dispose() {
@@ -24,7 +21,6 @@ class _ForgotPasswordScreenState
 
   void sendResetLink() {
     Navigator.pushNamed(context, '/verification');
-
   }
 
   @override
@@ -52,31 +48,22 @@ class _ForgotPasswordScreenState
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.lock_reset,
-                    size: 70, color: AppColors.primaryBlue),
+                const Icon(Icons.lock_reset, size: 70, color: AppColors.primaryBlue),
                 const SizedBox(height: 20),
-
-                const Text(
-                  "Forgot Password?",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Text(
+                  'forgot_password_title'.tr(),
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
-
                 const SizedBox(height: 10),
-
-                const Text(
-                  "Enter your email to receive a reset link",
+                Text(
+                  'forgot_password_subtitle'.tr(),
                   textAlign: TextAlign.center,
                 ),
-
                 const SizedBox(height: 25),
-
                 TextField(
                   controller: emailController,
                   decoration: InputDecoration(
-                    hintText: "Enter your email",
+                    hintText: 'enter_email'.tr(),
                     filled: true,
                     fillColor: Colors.grey.shade100,
                     border: OutlineInputBorder(
@@ -85,22 +72,18 @@ class _ForgotPasswordScreenState
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
                 CustomButton(
-                  text: "Send Code",
+                  text: 'send_code'.tr(),
                   onPressed: sendResetLink,
                 ),
-
                 const SizedBox(height: 15),
-
                 TextButton(
                   onPressed: () {
                     Navigator.pushNamedAndRemoveUntil(
                         context, '/login', (route) => false);
                   },
-                  child: const Text("Back to Login"),
+                  child: Text('back_to_login'.tr()),
                 ),
               ],
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
 
@@ -33,20 +34,18 @@ class RegisterSuccessScreen extends StatelessWidget {
                 const CircleAvatar(
                   radius: 50,
                   backgroundColor: Colors.green,
-                  child: Icon(Icons.check,
-                      size: 60, color: Colors.white),
+                  child: Icon(Icons.check, size: 60, color: Colors.white),
                 ),
                 const SizedBox(height: 30),
-                const Text(
-                  "You have been registered\nsuccessfully!",
+                Text(
+                  'register_success'.tr(),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 30),
                 CustomButton(
-                  text: "Back to Login",
+                  text: 'back_to_login'.tr(),
                   onPressed: () {
                     Navigator.pushNamedAndRemoveUntil(
                         context, '/login', (route) => false);

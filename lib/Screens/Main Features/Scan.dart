@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../services/medicine_service.dart';
 import '../../models/user_data.dart';
 import 'medicine_result_screen.dart';
@@ -37,7 +38,7 @@ class _ScanState extends State<Scan> {
 
       if (name.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not read medicine name')),
+          SnackBar(content: Text('could_not_read'.tr())),
         );
         return;
       }
@@ -55,16 +56,16 @@ class _ScanState extends State<Scan> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('error'.tr(namedArgs: {'error': e.toString()}))),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan Medicine')),
+      appBar: AppBar(title: Text('scan_medicine'.tr())),
       body: FutureBuilder<void>(
         future: _initFuture,
         builder: (context, snapshot) {

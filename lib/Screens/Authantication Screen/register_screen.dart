@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:provider/provider.dart';
-import '/theme.dart'; // Assuming this contains AppColors
+import 'package:easy_localization/easy_localization.dart';
+import '/theme.dart';
 import '../../models/user_data.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/custom_textfield.dart';
-// Importing the next screen to navigate to
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -16,16 +16,14 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // Controllers
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _dobController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  // State variables
   String? _selectedGender;
-  String _selectedCountry = "Select Country";
+  String? _selectedCountry;
 
   @override
   void dispose() {
@@ -44,7 +42,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
     );
-
     if (picked != null && mounted) {
       setState(() {
         _dobController.text = DateFormat('yyyy-MM-dd').format(picked);
@@ -57,7 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _emailController.text.trim().isNotEmpty &&
         _dobController.text.isNotEmpty &&
         _selectedGender != null &&
-        _selectedCountry != "Select Country" &&
+        _selectedCountry != null &&
         _passwordController.text.isNotEmpty &&
         _confirmPasswordController.text.isNotEmpty;
   }
@@ -95,43 +92,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Back button
                     IconButton(
                       icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
                       onPressed: () => Navigator.pop(context),
                     ),
                     const SizedBox(height: 16),
-
-                    // Title
-                    const Text(
-                      "Create Account",
-                      style: TextStyle(
+                    Text(
+                      'create_account'.tr(),
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.text, // ← prefer named color if available
+                        color: AppColors.text,
                       ),
                     ),
                     const SizedBox(height: 32),
-
-                    // Form fields
                     CustomTextField(
-                      hint: "Username",
+                      hint: 'username'.tr(),
                       controller: _usernameController,
                     ),
                     const SizedBox(height: 16),
-
                     CustomTextField(
-                      hint: "Email",
+                      hint: 'email'.tr(),
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 16),
-
                     TextField(
                       controller: _dobController,
                       readOnly: true,
                       decoration: InputDecoration(
-                        hintText: "Date of Birth",
+                        hintText: 'date_of_birth'.tr(),
                         suffixIcon: const Icon(Icons.calendar_today),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -144,10 +134,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onTap: () => _selectDate(context),
                     ),
                     const SizedBox(height: 16),
-
                     DropdownButtonFormField<String>(
-                      initialValue: _selectedGender,
-                      hint: const Text("Gender"),
+                      value: _selectedGender,
+                      hint: Text('gender'.tr()),
                       isExpanded: true,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
@@ -158,16 +147,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           vertical: 14,
                         ),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: "Male", child: Text("Male")),
-                        DropdownMenuItem(value: "Female", child: Text("Female")),
+                      items: [
+                        DropdownMenuItem(value: "Male", child: Text('male'.tr())),
+                        DropdownMenuItem(value: "Female", child: Text('female'.tr())),
                       ],
                       onChanged: (value) {
                         setState(() => _selectedGender = value);
                       },
                     ),
                     const SizedBox(height: 16),
-
                     GestureDetector(
                       onTap: () {
                         showCountryPicker(
@@ -193,10 +181,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              _selectedCountry,
+                              _selectedCountry ?? 'select_country'.tr(),
                               style: TextStyle(
                                 fontSize: 16,
-                                color: _selectedCountry == "Select Country"
+                                color: _selectedCountry == null
                                     ? Colors.grey.shade600
                                     : Colors.black87,
                               ),
@@ -207,48 +195,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
                     CustomTextField(
-                      hint: "Password",
+                      hint: 'password'.tr(),
                       isPassword: true,
                       controller: _passwordController,
                     ),
                     const SizedBox(height: 16),
-
                     CustomTextField(
-                      hint: "Confirm Password",
+                      hint: 'confirm_password'.tr(),
                       isPassword: true,
                       controller: _confirmPasswordController,
                     ),
                     const SizedBox(height: 32),
-
-                    // Next Button
                     CustomButton(
-                      text: "Next",
+                      text: 'next'.tr(),
                       onPressed: () {
                         if (!_isFormValid()) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Please complete all required fields"),
-                            ),
+                            SnackBar(content: Text('complete_fields'.tr())),
                           );
                           return;
                         }
-
                         if (_passwordController.text != _confirmPasswordController.text) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Passwords do not match")),
+                            SnackBar(content: Text('passwords_no_match'.tr())),
                           );
                           return;
                         }
-
                         final userData = Provider.of<UserData>(context, listen: false);
                         userData.username = _usernameController.text.trim();
                         userData.email = _emailController.text.trim();
                         userData.dob = _dobController.text;
                         userData.gender = _selectedGender ?? "Prefer not to say";
-                        userData.country = _selectedCountry;
-
+                        userData.country = _selectedCountry ?? '';
                         Navigator.pushNamed(context, '/personalInfo');
                       },
                     ),

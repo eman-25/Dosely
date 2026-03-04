@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../services/medicine_service.dart';
 import '../../models/user_data.dart';
-import 'package:provider/provider.dart';
 import 'medicine_result_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -22,7 +23,6 @@ class _SearchScreenState extends State<SearchScreen> {
   String _query = '';
   Timer? _debounce;
 
-  // Your beautiful gradient colors
   static const c1 = Color(0xFF48466E);
   static const c2 = Color(0xFF3E84A8);
   static const c3 = Color(0xFF4ACED0);
@@ -54,7 +54,6 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _onSearchChanged(String value) {
     setState(() => _query = value);
-
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
       if (value.length >= 2) _performSearch(value);
@@ -63,14 +62,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _performSearch(String name) async {
     if (name.trim().isEmpty) return;
-
     setState(() => _isLoading = true);
     await _saveRecentSearch(name.trim());
-
     final result = await MedicineService.fetchMedicineInfo(name.trim());
-
     setState(() {
-      _searchResults = [result]; // OpenFDA returns one main result
+      _searchResults = [result];
       _isLoading = false;
     });
   }
@@ -112,7 +108,6 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Search Bar
             Row(
               children: [
                 Expanded(
@@ -134,8 +129,8 @@ class _SearchScreenState extends State<SearchScreen> {
                             controller: _controller,
                             onChanged: _onSearchChanged,
                             onSubmitted: _performSearch,
-                            decoration: const InputDecoration(
-                              hintText: 'Search Medication',
+                            decoration: InputDecoration(
+                              hintText: 'search_medication'.tr(),
                               border: InputBorder.none,
                             ),
                           ),
@@ -173,28 +168,22 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
-            // Recent Searches Panel
             AnimatedCrossFade(
               firstChild: const SizedBox.shrink(),
               secondChild: _buildRecentPanel(theme),
               crossFadeState: _showRecent ? CrossFadeState.showSecond : CrossFadeState.showFirst,
               duration: const Duration(milliseconds: 220),
             ),
-
             const SizedBox(height: 12),
-
-            // Results / Loading
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator(color: Colors.white))
                   : _searchResults.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
-                            'Search for a medicine above',
-                            style: TextStyle(color: Colors.white70, fontSize: 16),
+                            'search_medicine_above'.tr(),
+                            style: const TextStyle(color: Colors.white70, fontSize: 16),
                           ),
                         )
                       : ListView.builder(
@@ -202,8 +191,8 @@ class _SearchScreenState extends State<SearchScreen> {
                           padding: const EdgeInsets.only(bottom: 24),
                           itemBuilder: (context, i) {
                             final m = _searchResults[i];
-                            final title = m['brand_name'] ?? m['openfda']?['brand_name']?[0] ?? 'Unknown';
-                            final desc = m['purpose']?.toString() ?? 'No description available';
+                            final title = m['brand_name'] ?? m['openfda']?['brand_name']?[0] ?? 'unknown'.tr();
+                            final desc = m['purpose']?.toString() ?? 'no_description'.tr();
                             return _buildMedicineCard(title, desc, theme);
                           },
                         ),
@@ -227,10 +216,10 @@ class _SearchScreenState extends State<SearchScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Recent searches', style: theme.textTheme.titleMedium),
+              Text('recent_searches'.tr(), style: theme.textTheme.titleMedium),
               TextButton(
                 onPressed: () => setState(() => _recent.clear()),
-                child: const Text('Clear'),
+                child: Text('clear'.tr()),
               ),
             ],
           ),
@@ -253,7 +242,6 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildMedicineCard(String title, String desc, ThemeData theme) {
     return GestureDetector(
       onTap: () {
-        // Find the full medicine data from results
         final medicine = _searchResults.firstWhere(
           (m) => (m['brand_name'] ?? '').toString() == title,
           orElse: () => _searchResults.first,
@@ -299,7 +287,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         alignment: Alignment.centerLeft,
                         child: OutlinedButton(
                           onPressed: () {},
-                          child: const Text('More info'),
+                          child: Text('more_info'.tr()),
                         ),
                       ),
                     ],

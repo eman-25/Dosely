@@ -1,5 +1,5 @@
-// lib/screens/helpandsupport.dart
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 
 class HelpSupportScreen extends StatelessWidget {
@@ -10,7 +10,7 @@ class HelpSupportScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8),
       appBar: AppBar(
-        title: const Text('Help & Support'),
+        title: Text('help_support'.tr()),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppColors.text,
@@ -18,61 +18,31 @@ class HelpSupportScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Quick actions
           _buildCard(
             icon: Icons.chat_bubble_outline,
-            title: 'Chat with Support',
-            subtitle: 'Get help from our team in real-time',
-            onTap: () {
-              // TODO: open chat (Intercom, Crisp, or custom form)
-              _showComingSoon(context);
-            },
+            title: 'chat_support'.tr(),
+            subtitle: 'chat_support_subtitle'.tr(),
+            onTap: () => _showComingSoon(context),
           ),
           const SizedBox(height: 12),
-
           _buildCard(
             icon: Icons.email_outlined,
-            title: 'Send us an email',
-            subtitle: 'support@dosely.app',
-            onTap: () {
-              // TODO: url_launcher → mailto:support@dosely.app
-              _showComingSoon(context);
-            },
+            title: 'email_support'.tr(),
+            subtitle: 'email_support_subtitle'.tr(),
+            onTap: () => _showComingSoon(context),
           ),
           const SizedBox(height: 24),
-
-          // FAQ section
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'Frequently Asked Questions',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              'faq'.tr(),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
           ),
-
-          _buildExpansionTile(
-            question: 'How does Dosely analyze my medications?',
-            answer:
-                'We combine your personal health information (allergies, chronic conditions, current medications) with up-to-date pharmacological data and AI models to detect potential interactions, contraindications, and safer alternatives.',
-          ),
-
-          _buildExpansionTile(
-            question: 'Is my health data safe?',
-            answer:
-                'Yes. All data is encrypted in transit and at rest. We follow best practices (GDPR/CCPA compliant where applicable) and never sell your personal information.',
-          ),
-
-          _buildExpansionTile(
-            question: 'Can I delete my account?',
-            answer:
-                'Yes — go to Settings → Privacy → Request data deletion. Your account and health data will be permanently removed within 30 days.',
-          ),
-
-          _buildExpansionTile(
-            question: 'Why do I need to provide health information?',
-            answer:
-                'Providing accurate allergies, conditions and medications allows Dosely to give much more personalized and safer recommendations.',
-          ),
+          _buildExpansionTile(question: 'faq_q1'.tr(), answer: 'faq_a1'.tr()),
+          _buildExpansionTile(question: 'faq_q2'.tr(), answer: 'faq_a2'.tr()),
+          _buildExpansionTile(question: 'faq_q3'.tr(), answer: 'faq_a3'.tr()),
+          _buildExpansionTile(question: 'faq_q4'.tr(), answer: 'faq_a4'.tr()),
         ],
       ),
     );
@@ -117,7 +87,7 @@ class HelpSupportScreen extends StatelessWidget {
 
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Feature coming soon • We are working on it')),
+      SnackBar(content: Text('coming_soon'.tr())),
     );
   }
 }

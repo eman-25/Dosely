@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../services/medicine_service.dart';
 import '../../models/user_data.dart';
-import 'package:provider/provider.dart';
 import 'medicine_result_screen.dart';
 
 class Upload extends StatefulWidget {
@@ -23,7 +24,8 @@ class _UploadState extends State<Upload> {
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not read medicine name')));
+        SnackBar(content: Text('could_not_read'.tr())),
+      );
       return;
     }
 
@@ -44,20 +46,22 @@ class _UploadState extends State<Upload> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Upload Photo')),
+      appBar: AppBar(title: Text('upload_photo'.tr())),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.cloud_upload, size: 120, color: Color(0xFF4ACED0)),
             const SizedBox(height: 24),
-            const Text('Select medicine photo from gallery',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(
+              'select_medicine_photo'.tr(),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 30),
             ElevatedButton.icon(
               onPressed: _upload,
               icon: const Icon(Icons.photo_library),
-              label: const Text('Choose Image'),
+              label: Text('choose_image'.tr()),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),

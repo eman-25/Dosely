@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import '../../models/user_data.dart';
 import 'settings_panel.dart';
@@ -116,7 +117,6 @@ class _HomeScreenState extends State<HomeScreen>
           SafeArea(
             child: Stack(
               children: [
-                // HOME CONTENT
                 Positioned.fill(
                   child: IgnorePointer(
                     ignoring: open > 0.15,
@@ -157,7 +157,6 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
 
-                // SETTINGS SHEET
                 Positioned(
                   left: 18,
                   right: 18,
@@ -191,10 +190,9 @@ class _HomeScreenState extends State<HomeScreen>
                             },
                             child: _GreetingHandle(
                               height: _headerHeight,
-                              // Real username from registration / edit profile
                               name: (userData.name ?? '').trim().isNotEmpty
-                              ? (userData.name ?? '').trim()
-                              : 'User',
+                                  ? (userData.name ?? '').trim()
+                                  : 'User',
                               avatar: userData.avatar,
                               showDown: _openFactor(context) < 0.15,
                               showUp: _openFactor(context) > 0.85,
@@ -254,7 +252,7 @@ class _GreetingHandle extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Greetings, $name !',
+                      'greetings'.tr(namedArgs: {'name': name}),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -262,9 +260,9 @@ class _GreetingHandle extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'How can Dosely help you today?',
-                      style: TextStyle(fontSize: 12.5, color: Colors.black54),
+                    Text(
+                      'how_can_help'.tr(),
+                      style: const TextStyle(fontSize: 12.5, color: Colors.black54),
                     ),
                   ],
                 ),
@@ -314,30 +312,30 @@ class _FunctionCarousel extends StatelessWidget {
         children: [
           _FunctionCard(
             icon: Icons.camera_alt_rounded,
-            title: 'Scan Your Medicine Using\nCamera',
-            subtitle: 'Take a clear photo of the medicine and let Dosely identify it and provide detailed information.',
-            buttonText: 'Scan',
+            title: 'scan_title'.tr(),
+            subtitle: 'scan_subtitle'.tr(),
+            buttonText: 'scan_btn'.tr(),
             onTap: onScan,
           ),
           _FunctionCard(
             icon: Icons.cloud_upload_rounded,
-            title: 'Upload a Photo of the\nMedicine',
-            subtitle: 'Upload an existing image of the medicine to receive accurate details, usage information, and warnings.',
-            buttonText: 'Upload',
+            title: 'upload_title'.tr(),
+            subtitle: 'upload_subtitle'.tr(),
+            buttonText: 'upload_btn'.tr(),
             onTap: onUpload,
           ),
           _FunctionCard(
             icon: Icons.manage_search_rounded,
-            title: 'Search for a Medicine\nManually',
-            subtitle: 'Search by medicine name or type to view trusted information, instructions, and safety details.',
-            buttonText: 'Search',
+            title: 'search_title'.tr(),
+            subtitle: 'search_subtitle'.tr(),
+            buttonText: 'search_btn'.tr(),
             onTap: onSearch,
           ),
           _FunctionCard(
             icon: Icons.smart_toy_rounded,
-            title: 'Pillo Assistant',
-            subtitle: 'Get instant answers about medicines, usage, and safety information to help you take them correctly and confidently.',
-            buttonText: 'Chat',
+            title: 'chat_title'.tr(),
+            subtitle: 'chat_subtitle'.tr(),
+            buttonText: 'chat_btn'.tr(),
             onTap: onChat,
           ),
         ],
@@ -413,7 +411,7 @@ class _FunctionCard extends StatelessWidget {
   }
 }
 
-// ====================== Reminders Card – EMPTY by default ======================
+// ====================== Reminders Card ======================
 class _RemindersCard extends StatelessWidget {
   final VoidCallback onDragUp;
   final VoidCallback onArrowTap;
@@ -422,7 +420,7 @@ class _RemindersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const bool hasMedicines = false; // Will be dynamic later
+    const bool hasMedicines = false;
 
     return GestureDetector(
       onVerticalDragEnd: (details) {
@@ -440,13 +438,9 @@ class _RemindersCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            const Text('Medicine Reminders', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            Text('medicine_reminders'.tr(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(height: 14),
-
-            hasMedicines
-                ? const SizedBox.shrink() // Will show real list later
-                : _buildEmptyState(context),
-
+            hasMedicines ? const SizedBox.shrink() : _buildEmptyState(context),
             const SizedBox(height: 12),
             InkWell(
               onTap: onArrowTap,
@@ -463,14 +457,14 @@ class _RemindersCard extends StatelessWidget {
       children: [
         const Icon(Icons.medical_services_outlined, size: 48, color: Colors.black38),
         const SizedBox(height: 12),
-        const Text('No medications yet', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black54)),
+        Text('no_medications'.tr(), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black54)),
         const SizedBox(height: 4),
-        const Text('Add your first medicine from the schedule', style: TextStyle(fontSize: 12, color: Colors.black45), textAlign: TextAlign.center),
+        Text('add_medicine_hint'.tr(), style: const TextStyle(fontSize: 12, color: Colors.black45), textAlign: TextAlign.center),
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: () => onArrowTap(),
           icon: const Icon(Icons.add),
-          label: const Text('Add Medicine'),
+          label: Text('add_medicine'.tr()),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF4ACED0),
             foregroundColor: Colors.white,

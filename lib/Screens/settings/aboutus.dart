@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 
 class AboutUsScreen extends StatelessWidget {
@@ -9,7 +10,7 @@ class AboutUsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8),
       appBar: AppBar(
-        title: const Text('About Us'),
+        title: Text('about_us'.tr()),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -24,28 +25,28 @@ class AboutUsScreen extends StatelessWidget {
               child: const Icon(Icons.medical_services, size: 60, color: AppColors.primaryBlue),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Dosely',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            Text(
+              'about_us_title'.tr(),
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Smart Medication Analysis Using AI and Patient Medical History',
+            Text(
+              'about_us_subtitle'.tr(),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 32),
-            const Text(
-              'Our Mission',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            Text(
+              'our_mission'.tr(),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'We help patients and healthcare providers avoid medication errors by combining personal health data with AI-powered analysis.',
+            Text(
+              'our_mission_text'.tr(),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            const Text('Version 1.0.0 • © 2026 Dosely'),
+            Text('version'.tr()),
             const SizedBox(height: 40),
           ],
         ),

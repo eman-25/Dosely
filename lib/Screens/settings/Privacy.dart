@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '/theme.dart'; // assuming AppColors exists
+import 'package:easy_localization/easy_localization.dart';
+import '/theme.dart';
 
 class PrivacyScreen extends StatelessWidget {
   const PrivacyScreen({super.key});
@@ -9,7 +10,7 @@ class PrivacyScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8),
       appBar: AppBar(
-        title: const Text('Privacy'),
+        title: Text('privacy'.tr()),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppColors.text,
@@ -17,27 +18,27 @@ class PrivacyScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildSection('Data Collection', [
-            'We collect personal health information to provide accurate medication analysis.',
-            'Email, username, date of birth, allergies, chronic conditions, current medications.',
+          _buildSection('data_collection'.tr(), [
+            'data_collection_1'.tr(),
+            'data_collection_2'.tr(),
           ]),
-          _buildSection('Data Usage', [
-            'Used only for AI-powered medication safety predictions.',
-            'Never sold to third parties.',
+          _buildSection('data_usage'.tr(), [
+            'data_usage_1'.tr(),
+            'data_usage_2'.tr(),
           ]),
-          _buildSection('Your Rights', [
-            'You can request deletion of your data at any time.',
-            'Manage permissions in device settings.',
+          _buildSection('your_rights'.tr(), [
+            'your_rights_1'.tr(),
+            'your_rights_2'.tr(),
           ]),
           const SizedBox(height: 24),
           SwitchListTile(
-            title: const Text('Allow analytics'),
-            subtitle: const Text('Helps us improve the app'),
-            value: true, // TODO: connect to real state
+            title: Text('allow_analytics'.tr()),
+            subtitle: Text('allow_analytics_subtitle'.tr()),
+            value: true,
             onChanged: (v) {},
           ),
           SwitchListTile(
-            title: const Text('Personalized recommendations'),
+            title: Text('personalized_recommendations'.tr()),
             value: true,
             onChanged: (v) {},
           ),
