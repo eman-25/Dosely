@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -19,8 +20,48 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void sendResetLink() {
-    Navigator.pushNamed(context, '/verification');
+  void sendResetLink() async {
+    if (emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Please enter your email")));
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: emailController.text.trim(),
+      );
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Check Your Email"),
+          content: const Text(
+            "A password reset link has been sent to your email.\n\n"
+            "Please open your email, reset your password, "
+            "then return to the app and log in with your new password.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (route) => false,
+                );
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message ?? "Error")));
+    }
+  }
   }
 
   @override
@@ -29,10 +70,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              AppColors.primaryBlue,
-              AppColors.primaryGreen,
-            ],
+            colors: [AppColors.primaryBlue, AppColors.primaryGreen],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -81,7 +119,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.pushNamedAndRemoveUntil(
-                        context, '/login', (route) => false);
+                      context,
+                      '/login',
+                      (route) => false,
+                    );
                   },
                   child: Text('back_to_login'.tr()),
                 ),
