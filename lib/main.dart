@@ -3,9 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart'; // ← Add this
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+<<<<<<< HEAD
 import 'package:easy_localization/easy_localization.dart';
+
+=======
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+>>>>>>> b074ae100517e3896060efa169b3da139901eaf1
 import 'screens/Authantication Screen/welcome_screen.dart';
 import 'screens/Authantication Screen/login_screen.dart';
 import 'screens/Authantication Screen/register_screen.dart';
@@ -29,6 +33,11 @@ import 'screens/settings/report_problem.dart';
 import 'screens/settings/logout.dart';
 import 'screens/HOME/settings_panel.dart';
 
+<<<<<<< HEAD
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
+=======
 // New: Email Verification Pending Screen (create a simple one or reuse VerificationScreen)
 class EmailVerificationPendingScreen extends StatelessWidget {
   const EmailVerificationPendingScreen({super.key});
@@ -111,13 +120,13 @@ class AuthWrapper extends StatelessWidget {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await EasyLocalization.ensureInitialized();
 
   // Initialize Firebase first
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Set persistence for staying logged in
   await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+>>>>>>> b074ae100517e3896060efa169b3da139901eaf1
 
   runApp(
     EasyLocalization(
@@ -154,6 +163,9 @@ class DoselyApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'SF Pro Display',
       ),
+=======
+      theme: ThemeData(useMaterial3: true, fontFamily: 'SF Pro Display'),
+>>>>>>> b074ae100517e3896060efa169b3da139901eaf1
       scrollBehavior: const MaterialScrollBehavior().copyWith(
         dragDevices: {
           PointerDeviceKind.touch,
@@ -170,8 +182,6 @@ class DoselyApp extends StatelessWidget {
         '/registerSuccess': (context) => const RegisterSuccessScreen(),
         '/forgotPassword': (context) => const ForgotPasswordScreen(),
         '/passwordChanged': (context) => const PasswordChangedScreen(),
-        '/verification': (context) => const VerificationScreen(),
-        '/change-password': (context) => const ChangePasswordScreen(),
         '/home': (context) => const HomeScreen(),
         '/settings': (context) => const SettingsPanel(),
 

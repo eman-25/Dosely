@@ -93,12 +93,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+<<<<<<< HEAD
+                CustomTextField(hint: 'enter_email'.tr()),
+                CustomTextField(
+                  hint: 'enter_password'.tr(),
+=======
                 CustomTextField(
                   hint: "Enter your email",
                   controller: _emailController,
                 ),
                 CustomTextField(
                   hint: "Enter your password",
+>>>>>>> b074ae100517e3896060efa169b3da139901eaf1
                   isPassword: true,
                   controller: _passwordController,
                 ),
@@ -113,8 +119,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 15),
                 CustomButton(
+<<<<<<< HEAD
+                  text: 'login'.tr(),
+                  onPressed: () {
+                    Navigator.pushReplacementNamed(context, '/home');
+                  },
+=======
                   text: "Login",
                   onPressed: _login, // ← Updated to use Firebase
+>>>>>>> b074ae100517e3896060efa169b3da139901eaf1
                 ),
                 Align(
                   alignment: Alignment.centerRight,

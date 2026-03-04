@@ -2,13 +2,16 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:dosely/Screens/Main%20Features/scan_result_sxreen.dart';
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../services/medicine_service.dart';
 import '../../models/user_data.dart';
 import 'medicine_result_screen.dart';
+=======
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'ocr_text_screen.dart';
+>>>>>>> b074ae100517e3896060efa169b3da139901eaf1
 
 class Scan extends StatefulWidget {
   const Scan({super.key});
@@ -37,11 +40,21 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
         orElse: () => cameras.first,
       );
 
+<<<<<<< HEAD
+      if (name.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('could_not_read'.tr())),
+        );
+        return;
+      }
+=======
       final controller = CameraController(
         back,
         ResolutionPreset.high,
         enableAudio: false,
       );
+>>>>>>> b074ae100517e3896060efa169b3da139901eaf1
+
       await controller.initialize();
 
       if (!mounted) return;
@@ -50,10 +63,12 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
         _initializing = false;
       });
     } catch (e) {
+<<<<<<< HEAD
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('error'.tr(namedArgs: {'error': e.toString()}))),
       );
     }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -151,6 +166,22 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
     _controller?.dispose();
     super.dispose();
   }
+<<<<<<< HEAD
+=======
+
+  @override
+  Widget build(BuildContext context) {
+    if (_initializing) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_controller == null) {
+      return const Scaffold(
+        body: Center(child: Text('No camera available')),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
