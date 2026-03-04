@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart'; // ← Add this
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/custom_textfield.dart';
@@ -85,26 +84,20 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'welcome_back'.tr(),
-                  style: const TextStyle(
+                const Text(
+                  "Welcome back!",
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 20),
-<<<<<<< HEAD
-                CustomTextField(hint: 'enter_email'.tr()),
-                CustomTextField(
-                  hint: 'enter_password'.tr(),
-=======
                 CustomTextField(
                   hint: "Enter your email",
                   controller: _emailController,
                 ),
                 CustomTextField(
                   hint: "Enter your password",
->>>>>>> b074ae100517e3896060efa169b3da139901eaf1
                   isPassword: true,
                   controller: _passwordController,
                 ),
@@ -114,27 +107,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: TextButton(
                     onPressed: () =>
                         Navigator.pushNamed(context, '/forgotPassword'),
-                    child: Text('forgot_password'.tr()),
+                    child: const Text("Forgot Password?"),
                   ),
                 ),
                 const SizedBox(height: 15),
+                
                 CustomButton(
-<<<<<<< HEAD
-                  text: 'login'.tr(),
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, '/home');
-                  },
-=======
                   text: "Login",
                   onPressed: _login, // ← Updated to use Firebase
->>>>>>> b074ae100517e3896060efa169b3da139901eaf1
                 ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () =>
                         Navigator.pushNamed(context, '/register'),
-                    child: Text('no_account'.tr()),
+                    child: const Text("Don’t have an account? Register ?"),
                   ),
                 ),
               ],

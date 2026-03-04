@@ -2,16 +2,8 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:dosely/Screens/Main%20Features/scan_result_sxreen.dart';
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-import 'package:provider/provider.dart';
-import 'package:easy_localization/easy_localization.dart';
-import '../../services/medicine_service.dart';
-import '../../models/user_data.dart';
-import 'medicine_result_screen.dart';
-=======
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'ocr_text_screen.dart';
->>>>>>> b074ae100517e3896060efa169b3da139901eaf1
 
 class Scan extends StatefulWidget {
   const Scan({super.key});
@@ -23,7 +15,7 @@ class Scan extends StatefulWidget {
 class _ScanState extends State<Scan> with WidgetsBindingObserver {
   CameraController? _controller;
   bool _initializing = true;
-  final bool _isTakingPhoto = false;
+  bool _isTakingPhoto = false;
 
   @override
   void initState() {
@@ -40,20 +32,11 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
         orElse: () => cameras.first,
       );
 
-<<<<<<< HEAD
-      if (name.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('could_not_read'.tr())),
-        );
-        return;
-      }
-=======
       final controller = CameraController(
         back,
         ResolutionPreset.high,
         enableAudio: false,
       );
->>>>>>> b074ae100517e3896060efa169b3da139901eaf1
 
       await controller.initialize();
 
@@ -63,41 +46,6 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
         _initializing = false;
       });
     } catch (e) {
-<<<<<<< HEAD
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('error'.tr(namedArgs: {'error': e.toString()}))),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('scan_medicine'.tr())),
-      body: FutureBuilder<void>(
-        future: _initFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return Stack(
-              children: [
-                CameraPreview(_controller!),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 40),
-                    child: FloatingActionButton.large(
-                      onPressed: _scan,
-                      child: const Icon(Icons.camera_alt, size: 40),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }
-          return const Center(child: CircularProgressIndicator());
-        },
-      ),
-=======
       if (!mounted) return;
       setState(() => _initializing = false);
       _showError('Camera failed: $e');
@@ -144,7 +92,6 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg)),
->>>>>>> b074ae100517e3896060efa169b3da139901eaf1
     );
   }
 
@@ -166,8 +113,6 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
     _controller?.dispose();
     super.dispose();
   }
-<<<<<<< HEAD
-=======
 
   @override
   Widget build(BuildContext context) {
@@ -229,5 +174,4 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
       ),
     );
   }
->>>>>>> b074ae100517e3896060efa169b3da139901eaf1
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -62,7 +61,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ).showSnackBar(SnackBar(content: Text(e.message ?? "Error")));
     }
   }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,22 +84,31 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.lock_reset, size: 70, color: AppColors.primaryBlue),
-                const SizedBox(height: 20),
-                Text(
-                  'forgot_password_title'.tr(),
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                const Icon(
+                  Icons.lock_reset,
+                  size: 70,
+                  color: AppColors.primaryBlue,
                 ),
+                const SizedBox(height: 20),
+
+                const Text(
+                  "Forgot Password?",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+
                 const SizedBox(height: 10),
-                Text(
-                  'forgot_password_subtitle'.tr(),
+
+                const Text(
+                  "Enter your email to receive a reset link",
                   textAlign: TextAlign.center,
                 ),
+
                 const SizedBox(height: 25),
+
                 TextField(
                   controller: emailController,
                   decoration: InputDecoration(
-                    hintText: 'enter_email'.tr(),
+                    hintText: "Enter your email",
                     filled: true,
                     fillColor: Colors.grey.shade100,
                     border: OutlineInputBorder(
@@ -110,12 +117,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 30),
-                CustomButton(
-                  text: 'send_code'.tr(),
-                  onPressed: sendResetLink,
-                ),
+
+                CustomButton(text: "Send Reset Link", onPressed: sendResetLink),
+
                 const SizedBox(height: 15),
+
                 TextButton(
                   onPressed: () {
                     Navigator.pushNamedAndRemoveUntil(
@@ -124,7 +132,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       (route) => false,
                     );
                   },
-                  child: Text('back_to_login'.tr()),
+                  child: const Text("Back to Login"),
                 ),
               ],
             ),

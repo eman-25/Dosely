@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  easy_localization: ^3.0.0
   
   # Core & State
   provider: ^6.1.2
@@ -18,7 +19,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   dropdown_search: ^6.0.1
   country_picker: ^2.0.27
-  intl: ^0.18.1
+  intl: ^0.20.2
   fluttertoast: ^8.2.8
   
   # Medicine Identification Engine
