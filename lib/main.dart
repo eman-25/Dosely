@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import 'screens/Authantication Screen/welcome_screen.dart';
 import 'screens/Authantication Screen/login_screen.dart';
@@ -26,11 +27,26 @@ import 'screens/settings/aboutus.dart';
 import 'screens/settings/report_problem.dart';
 import 'screens/settings/logout.dart';
 import 'screens/HOME/settings_panel.dart';
-void main() {
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
+
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => UserData(),
-      child: const DoselyApp(),
+    EasyLocalization(
+      supportedLocales: const [
+        Locale('en'),
+        Locale('ar'),
+        Locale('fr'),
+        Locale('es'),
+        Locale('ur'),
+      ],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('en'),
+      child: ChangeNotifierProvider(
+        create: (context) => UserData(),
+        child: const DoselyApp(),
+      ),
     ),
   );
 }
@@ -43,13 +59,16 @@ class DoselyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Dosely',
+      locale: context.locale,
+      supportedLocales: context.supportedLocales,
+      localizationsDelegates: context.localizationDelegates,
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'SF Pro Display',
       ),
       scrollBehavior: const MaterialScrollBehavior().copyWith(
         dragDevices: {
-          PointerDeviceKind.touch,
+          PointerDeviceKind.touch, 
           PointerDeviceKind.mouse,
           PointerDeviceKind.trackpad,
         },
@@ -79,7 +98,6 @@ class DoselyApp extends StatelessWidget {
         '/reportProblem': (context) => const ReportProblemScreen(),
         '/logout': (context) => const LogoutScreen(),
         '/security': (context) => const SecurityScreen(),
-        
       },
     );
   }

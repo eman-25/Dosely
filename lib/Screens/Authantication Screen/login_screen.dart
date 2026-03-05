@@ -1,5 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart'; // ← Add this
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/custom_textfield.dart';
@@ -31,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!credential.user!.emailVerified) {
         await FirebaseAuth.instance.signOut();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please verify your email first')),
+          SnackBar(content: Text('verify_email'.tr())),
         );
         return;
       }
@@ -40,21 +41,21 @@ class _LoginScreenState extends State<LoginScreen> {
       String message;
       switch (e.code) {
         case 'user-not-found':
-          message = 'No user found for that email.';
+          message = 'user_not_found'.tr();
           break;
         case 'wrong-password':
-          message = 'Wrong password provided.';
+          message = 'wrong_password'.tr();
           break;
         case 'invalid-credential':
-          message = 'Invalid credentials.';
+          message = 'invalid_credentials'.tr();
           break;
         default:
-          message = 'Login failed: ${e.message}';
+          message = 'login_failed'.tr(namedArgs: {'message': e.message ?? ''});
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text('error'.tr(namedArgs: {'error': e.toString()}))),
       );
     }
   }
@@ -65,10 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              AppColors.primaryBlue,
-              AppColors.primaryGreen,
-            ],
+            colors: [AppColors.primaryBlue, AppColors.primaryGreen],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -84,20 +82,17 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  "Welcome back!",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Text(
+                  'welcome_back'.tr(),
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
                 CustomTextField(
-                  hint: "Enter your email",
+                  hint: 'enter_email'.tr(),
                   controller: _emailController,
                 ),
                 CustomTextField(
-                  hint: "Enter your password",
+                  hint: 'enter_password'.tr(),
                   isPassword: true,
                   controller: _passwordController,
                 ),
@@ -105,23 +100,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/forgotPassword'),
-                    child: const Text("Forgot Password?"),
+                    onPressed: () => Navigator.pushNamed(context, '/forgotPassword'),
+                    child: Text('forgot_password'.tr()),
                   ),
                 ),
                 const SizedBox(height: 15),
-                
                 CustomButton(
-                  text: "Login",
-                  onPressed: _login, // ← Updated to use Firebase
+                  text: 'login'.tr(),
+                  onPressed: _login,
                 ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/register'),
-                    child: const Text("Don’t have an account? Register ?"),
+                    onPressed: () => Navigator.pushNamed(context, '/register'),
+                    child: Text('no_account'.tr()),
                   ),
                 ),
               ],
