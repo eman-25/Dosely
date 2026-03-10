@@ -185,5 +185,8 @@
 "device_iphone": "iPhone 14 • البحرين",
 "device_iphone_time": "اليوم الساعة 01:49 صباحاً • هذا الجهاز",
 "device_chrome": "Chrome على Windows",
-"device_chrome_time": "19 فبراير 2026"
+"device_chrome_time": "19 فبراير 2026",
+"email_already_used": "هذا البريد الإلكتروني مسجل بالفعل.",
+"weak_password": "يجب أن تكون كلمة المرور 6 أحرف على الأقل.",
+"invalid_email": "يرجى إدخال بريد إلكتروني صحيح."
 }

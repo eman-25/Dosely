@@ -185,5 +185,8 @@
 "device_iphone": "iPhone 14 • Bahréin",
 "device_iphone_time": "Hoy a las 01:49 AM • Este dispositivo",
 "device_chrome": "Chrome en Windows",
-"device_chrome_time": "19 de febrero de 2026"
+"device_chrome_time": "19 de febrero de 2026",
+"email_already_used": "Este correo ya está registrado.",
+"weak_password": "La contraseña debe tener al menos 6 caracteres.",
+"invalid_email": "Por favor ingresa un correo válido."
 }

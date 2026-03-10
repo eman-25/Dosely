@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '/theme.dart';
 import '../../models/user_data.dart';
 import '../../Widgets/custom_button.dart';
@@ -24,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _selectedGender;
   String? _selectedCountry;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -57,6 +59,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _selectedCountry != null &&
         _passwordController.text.isNotEmpty &&
         _confirmPasswordController.text.isNotEmpty;
+  }
+
+  Future<void> _register() async {
+    if (!_isFormValid()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('complete_fields'.tr())),
+      );
+      return;
+    }
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('passwords_no_match'.tr())),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Create account in Firebase
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      // Send verification email
+      await credential.user!.sendEmailVerification();
+
+      // Save data locally
+      final userData = Provider.of<UserData>(context, listen: false);
+      userData.username = _usernameController.text.trim();
+      userData.email = _emailController.text.trim();
+      userData.dob = _dobController.text;
+      userData.gender = _selectedGender ?? "Prefer not to say";
+      userData.country = _selectedCountry ?? '';
+
+      if (mounted) Navigator.pushNamed(context, '/personalInfo');
+
+    } on FirebaseAuthException catch (e) {
+      String message;
+      switch (e.code) {
+        case 'email-already-in-use':
+          message = 'email_already_used'.tr();
+          break;
+        case 'weak-password':
+          message = 'weak_password'.tr();
+          break;
+        case 'invalid-email':
+          message = 'invalid_email'.tr();
+          break;
+        default:
+          message = e.message ?? 'error'.tr(namedArgs: {'error': ''});
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -127,9 +189,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
+                          horizontal: 16, vertical: 14),
                       ),
                       onTap: () => _selectDate(context),
                     ),
@@ -143,17 +203,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
+                          horizontal: 16, vertical: 14),
                       ),
                       items: [
                         DropdownMenuItem(value: "Male", child: Text('male'.tr())),
                         DropdownMenuItem(value: "Female", child: Text('female'.tr())),
                       ],
-                      onChanged: (value) {
-                        setState(() => _selectedGender = value);
-                      },
+                      onChanged: (value) => setState(() => _selectedGender = value),
                     ),
                     const SizedBox(height: 16),
                     GestureDetector(
@@ -170,9 +226,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 18,
-                        ),
+                          horizontal: 16, vertical: 18),
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey.shade400),
                           borderRadius: BorderRadius.circular(16),
@@ -207,30 +261,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _confirmPasswordController,
                     ),
                     const SizedBox(height: 32),
-                    CustomButton(
-                      text: 'next'.tr(),
-                      onPressed: () {
-                        if (!_isFormValid()) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('complete_fields'.tr())),
-                          );
-                          return;
-                        }
-                        if (_passwordController.text != _confirmPasswordController.text) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('passwords_no_match'.tr())),
-                          );
-                          return;
-                        }
-                        final userData = Provider.of<UserData>(context, listen: false);
-                        userData.username = _usernameController.text.trim();
-                        userData.email = _emailController.text.trim();
-                        userData.dob = _dobController.text;
-                        userData.gender = _selectedGender ?? "Prefer not to say";
-                        userData.country = _selectedCountry ?? '';
-                        Navigator.pushNamed(context, '/personalInfo');
-                      },
-                    ),
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : CustomButton(
+                            text: 'next'.tr(),
+                            onPressed: _register,
+                          ),
                   ],
                 ),
               ),

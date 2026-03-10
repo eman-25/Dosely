@@ -185,5 +185,8 @@
 "device_iphone": "iPhone 14 • Bahrain",
 "device_iphone_time": "Today at 01:49 AM • This device",
 "device_chrome": "Chrome on Windows",
-"device_chrome_time": "February 19, 2026"
+"device_chrome_time": "February 19, 2026",
+"email_already_used": "This email is already registered.",
+"weak_password": "Password must be at least 6 characters.",
+"invalid_email": "Please enter a valid email address."
 }

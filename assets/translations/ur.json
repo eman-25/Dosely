@@ -185,5 +185,8 @@
 "device_iphone": "iPhone 14 • بحرین",
 "device_iphone_time": "آج 01:49 AM • یہ ڈیوائس",
 "device_chrome": "Chrome on Windows",
-"device_chrome_time": "19 فروری 2026"
+"device_chrome_time": "19 فروری 2026",
+"email_already_used": "یہ ای میل پہلے سے رجسٹرڈ ہے۔",
+"weak_password": "پاس ورڈ کم از کم 6 حروف کا ہونا چاہیے۔",
+"invalid_email": "براہ کرم ایک درست ای میل درج کریں۔"
 }
