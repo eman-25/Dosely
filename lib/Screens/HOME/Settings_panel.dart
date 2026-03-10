@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-class SettingsPanel extends StatelessWidget {
+class SettingsPanel extends StatefulWidget {
   const SettingsPanel({super.key});
 
   @override
+  State<SettingsPanel> createState() => _SettingsPanelState();
+}
+
+class _SettingsPanelState extends State<SettingsPanel> {
+  @override
   Widget build(BuildContext context) {
+    // This forces rebuild when locale changes
+    final _ = context.locale;
+
     return Column(
       children: [
-        // Header
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
           child: Row(
@@ -26,8 +33,6 @@ class SettingsPanel extends StatelessWidget {
             ],
           ),
         ),
-
-        // Scrollable Content
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -86,9 +91,7 @@ class SettingsPanel extends StatelessWidget {
         leading: Icon(icon, color: Colors.black87),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         trailing: const Icon(Icons.chevron_right_rounded, color: Colors.black45),
-        onTap: () {
-          Navigator.pushNamed(context, route);
-        },
+        onTap: () => Navigator.pushNamed(context, route),
       ),
     );
   }
