@@ -19,7 +19,7 @@
      <!-- Required to keep the device awake for reminders -->
      <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
      <!-- Required to restart reminders after device reboot -->
-     <uses-permission android:name="android.permission.CAMERA"/>
+     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/> 
     <application
         android:label="healthscanai"
         android:name="${applicationName}"

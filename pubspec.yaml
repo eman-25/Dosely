@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   easy_localization: ^3.0.0
-  
+
   # Core & State
   provider: ^6.1.2
   
