@@ -188,5 +188,6 @@
 "device_chrome_time": "February 19, 2026",
 "email_already_used": "This email is already registered.",
 "weak_password": "Password must be at least 6 characters.",
-"invalid_email": "Please enter a valid email address."
+"invalid_email": "Please enter a valid email address.",
+"upload_image": "Upload Image"
 }
