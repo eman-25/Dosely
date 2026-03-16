@@ -45,7 +45,6 @@ flutter:
   assets:
     - assets/images/dosely_logo.png
     - assets/translations/
-    
-    # Add more later:
-    # - assets/images/scan_background.png
-    # - assets/images/pillo_avatar.png
+    - assets/images/scan_icon.png
+
+ 
