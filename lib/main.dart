@@ -28,6 +28,7 @@ import 'screens/settings/aboutus.dart';
 import 'screens/settings/report_problem.dart';
 import 'screens/settings/logout.dart';
 import 'screens/HOME/settings_panel.dart';
+import 'Screens/Splash_Screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,8 +76,9 @@ class DoselyApp extends StatelessWidget {
           PointerDeviceKind.trackpad,
         },
       ),
-      initialRoute: '/',
+      initialRoute: '/splash',
       routes: {
+        '/splash': (context) => const SplashScreen(nextScreen: WelcomeScreen()),
         '/': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
