@@ -46,5 +46,11 @@ flutter:
     - assets/images/dosely_logo.png
     - assets/translations/
     - assets/images/scan_icon.png
+    - assets/images/search_icon.png
+    - assets/images/upload_icon.png
+    - assets/images/pillo_icon.png
+
+
+
 
  

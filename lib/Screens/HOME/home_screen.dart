@@ -304,29 +304,26 @@ class _FunctionCarousel extends StatelessWidget {
       child: PageView(
         physics: const BouncingScrollPhysics(),
         children: [
-          // ✅ Scan card — uses translation keys so language switching works
           _ScanCard(
             title: 'scan_title'.tr(),
             subtitle: 'scan_subtitle'.tr(),
             buttonText: 'scan_btn'.tr(),
             onTap: onScan,
           ),
-          _FunctionCard(
-            icon: Icons.cloud_upload_rounded,
+          _UploadCard(
             title: 'upload_title'.tr(),
             subtitle: 'upload_subtitle'.tr(),
             buttonText: 'upload_btn'.tr(),
             onTap: onUpload,
           ),
-          _FunctionCard(
-            icon: Icons.manage_search_rounded,
+          // ✅ Search card now uses image asset — same style as _ScanCard
+          _SearchCard(
             title: 'search_title'.tr(),
             subtitle: 'search_subtitle'.tr(),
             buttonText: 'search_btn'.tr(),
             onTap: onSearch,
           ),
-          _FunctionCard(
-            icon: Icons.smart_toy_rounded,
+          _ChatCard(
             title: 'chat_title'.tr(),
             subtitle: 'chat_subtitle'.tr(),
             buttonText: 'chat_btn'.tr(),
@@ -381,10 +378,7 @@ class _ScanCard extends StatelessWidget {
                 height: 120,
                 fit: BoxFit.contain,
               ),
-
               const SizedBox(height: 16),
-
-              // ✅ Uses .tr() translation key
               Text(
                 title,
                 textAlign: TextAlign.center,
@@ -395,10 +389,7 @@ class _ScanCard extends StatelessWidget {
                   height: 1.3,
                 ),
               ),
-
               const SizedBox(height: 8),
-
-              // ✅ Uses .tr() translation key
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
@@ -408,10 +399,7 @@ class _ScanCard extends StatelessWidget {
                   color: Color(0xFF666688),
                 ),
               ),
-
               const SizedBox(height: 20),
-
-              // ✅ Uses .tr() translation key
               SizedBox(
                 width: 160,
                 height: 44,
@@ -442,16 +430,14 @@ class _ScanCard extends StatelessWidget {
   }
 }
 
-// ====================== Generic Function Card ======================
-class _FunctionCard extends StatelessWidget {
-  final IconData icon;
+// ====================== Search Card ======================
+class _SearchCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final String buttonText;
   final VoidCallback onTap;
 
-  const _FunctionCard({
-    required this.icon,
+  const _SearchCard({
     required this.title,
     required this.subtitle,
     required this.buttonText,
@@ -464,9 +450,8 @@ class _FunctionCard extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 520),
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(32),
           color: Colors.white,
           boxShadow: [
             BoxShadow(
@@ -476,58 +461,260 @@ class _FunctionCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              height: 75,
-              width: 75,
-              decoration: BoxDecoration(
-                color: const Color(0xFFACEDD9).withOpacity(0.45),
-                borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/search_icon.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.contain,
               ),
-              child: Icon(icon, size: 42, color: const Color(0xFF3E84A8)),
-            ),
-            const SizedBox(height: 12),
-            Text(title,
+              const SizedBox(height: 16),
+              Text(
+                title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87)),
-            const SizedBox(height: 6),
-            Text(subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 11.5,
-                    height: 1.4,
-                    color: Color.fromARGB(136, 59, 59, 92))),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: 130,
-              height: 36,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB8EEE8),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87,
+                  height: 1.3,
                 ),
-                onPressed: onTap,
-                child: Text(buttonText,
-                    style: const TextStyle(
-                        color: Color(0xFF2A7A7A),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14)),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: Color(0xFF666688),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 160,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB8EEE8),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  onPressed: onTap,
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Color(0xFF1A7A70),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+// ====================== Upload Card ======================
+class _UploadCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String buttonText;
+  final VoidCallback onTap;
+
+  const _UploadCard({
+    required this.title,
+    required this.subtitle,
+    required this.buttonText,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(32),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/upload_icon.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: Color(0xFF666688),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 160,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB8EEE8),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  onPressed: onTap,
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Color(0xFF1A7A70),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ====================== Chat Card ======================
+class _ChatCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String buttonText;
+  final VoidCallback onTap;
+
+  const _ChatCard({
+    required this.title,
+    required this.subtitle,
+    required this.buttonText,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(32),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/pillo_icon.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: Color(0xFF666688),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 160,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB8EEE8),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  onPressed: onTap,
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Color(0xFF1A7A70),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 // ====================== Reminders Card ======================
 class _RemindersCard extends StatelessWidget {
