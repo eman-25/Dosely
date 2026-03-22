@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../models/user_data.dart';
+import 'package:dosely/services/user_service.dart';
+import 'package:dosely/data/health_data.dart';
 import '../../Widgets/custom_button.dart';
 import '/theme.dart';
 
@@ -10,23 +12,96 @@ class EditPersonalHealthInfoScreen extends StatefulWidget {
   const EditPersonalHealthInfoScreen({super.key});
 
   @override
-  State<EditPersonalHealthInfoScreen> createState() => _EditPersonalHealthInfoScreenState();
+  State<EditPersonalHealthInfoScreen> createState() =>
+      _EditPersonalHealthInfoScreenState();
 }
 
-class _EditPersonalHealthInfoScreenState extends State<EditPersonalHealthInfoScreen> {
-  String? _allergies;
-  String? _chronic;
-  String? _medications;
-  String? _special;
+class _EditPersonalHealthInfoScreenState
+    extends State<EditPersonalHealthInfoScreen> {
+  // Multi-select lists (mirrors personal_info_screen)
+  List<String> selectedAllergies = [];
+  List<String> selectedChronic = [];
+  List<String> selectedMeds = [];
+  List<String> selectedSpecial = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    // Pre-fill from Provider (already loaded from Firestore at login)
     final user = Provider.of<UserData>(context, listen: false);
-    _allergies = user.allergies.isNotEmpty ? user.allergies.split(',').first.trim() : null;
-    _chronic = user.chronicConditions.isNotEmpty ? user.chronicConditions.split(',').first.trim() : null;
-    _medications = user.currentMedications.isNotEmpty ? user.currentMedications.split(',').first.trim() : null;
-    _special = user.specialConditions.isNotEmpty ? user.specialConditions.split(',').first.trim() : null;
+
+    selectedAllergies = _splitToList(user.allergies);
+    selectedChronic = _splitToList(user.chronicConditions);
+    selectedMeds = _splitToList(user.currentMedications);
+    selectedSpecial = _splitToList(user.specialConditions);
+  }
+
+  // Converts the stored comma-separated string back to a list
+  List<String> _splitToList(String value) {
+    if (value.isEmpty) return [];
+    return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  }
+
+  // ─────────────────────────────────────────────
+  // None-exclusion rule:
+  // • User picks "None"        → clear all others, keep only "None"
+  // • User picks anything else → remove "None" if it was selected
+  // ─────────────────────────────────────────────
+  List<String> _enforceNoneRule(List<String> prev, List<String> next) {
+    final prevHadNone = prev.contains('None');
+    final nextHasNone = next.contains('None');
+
+    if (!prevHadNone && nextHasNone) {
+      return ['None'];
+    }
+    if (prevHadNone && nextHasNone && next.length > 1) {
+      return next.where((e) => e != 'None').toList();
+    }
+    return next;
+  }
+
+  Future<void> _saveChanges() async {
+    setState(() => _isLoading = true);
+
+    final allergies = selectedAllergies.join(', ');
+    final chronic = selectedChronic.join(', ');
+    final meds = selectedMeds.join(', ');
+    final special = selectedSpecial.join(', ');
+
+    try {
+      // 1️⃣ Save to Firestore
+      await UserService.updateHealthInfo(
+        allergies: allergies.isEmpty ? 'None' : allergies,
+        chronicConditions: chronic.isEmpty ? 'None' : chronic,
+        currentMedications: meds.isEmpty ? 'None' : meds,
+        specialConditions: special.isEmpty ? 'None' : special,
+      );
+
+      // 2️⃣ Update local provider
+      if (mounted) {
+        final userData = Provider.of<UserData>(context, listen: false);
+        userData.updateHealthInfo(
+          allergies: allergies,
+          chronicConditions: chronic,
+          currentMedications: meds,
+          specialConditions: special,
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('health_info_saved'.tr())),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -37,12 +112,14 @@ class _EditPersonalHealthInfoScreenState extends State<EditPersonalHealthInfoScr
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.text),
+          icon:
+              const Icon(Icons.arrow_back_ios, color: AppColors.text),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'personal_health_info'.tr(),
-          style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w700),
+          style: const TextStyle(
+              color: AppColors.text, fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
       ),
@@ -64,7 +141,8 @@ class _EditPersonalHealthInfoScreenState extends State<EditPersonalHealthInfoScr
                   Expanded(
                     child: Text(
                       'health_info_hint'.tr(),
-                      style: const TextStyle(fontSize: 13, color: Color(0xFF2E7D32)),
+                      style: const TextStyle(
+                          fontSize: 13, color: Color(0xFF2E7D32)),
                     ),
                   ),
                 ],
@@ -72,78 +150,117 @@ class _EditPersonalHealthInfoScreenState extends State<EditPersonalHealthInfoScr
             ),
             const SizedBox(height: 24),
             Text('health_personalization'.tr(),
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 16),
-            _buildDropdown(
+
+            _buildMultiDropdown(
               label: 'allergies'.tr(),
-              items: const ['Peanuts', 'Dairy', 'Shellfish', 'Pollen', 'Penicillin', 'None'],
-              selected: _allergies,
-              onChanged: (v) => setState(() => _allergies = v),
+              items: HealthData.allergies,
+              selected: selectedAllergies,
+              onChanged: (val) => setState(() {
+                selectedAllergies =
+                    _enforceNoneRule(selectedAllergies, val);
+              }),
             ),
             const SizedBox(height: 16),
-            _buildDropdown(
+            _buildMultiDropdown(
               label: 'chronic_conditions'.tr(),
-              items: const ['Asthma', 'Diabetes', 'Hypertension', 'Thyroid', 'None'],
-              selected: _chronic,
-              onChanged: (v) => setState(() => _chronic = v),
+              items: HealthData.chronicConditions,
+              selected: selectedChronic,
+              onChanged: (val) => setState(() {
+                selectedChronic =
+                    _enforceNoneRule(selectedChronic, val);
+              }),
             ),
             const SizedBox(height: 16),
-            _buildDropdown(
+            _buildMultiDropdown(
               label: 'current_medications'.tr(),
-              items: const ['Panadol', 'Metformin', 'Insulin', 'Amlodipine', 'None'],
-              selected: _medications,
-              onChanged: (v) => setState(() => _medications = v),
+              items: HealthData.medications,
+              selected: selectedMeds,
+              onChanged: (val) => setState(() {
+                selectedMeds = _enforceNoneRule(selectedMeds, val);
+              }),
             ),
             const SizedBox(height: 16),
-            _buildDropdown(
+            _buildMultiDropdown(
               label: 'special_conditions'.tr(),
-              items: const ['Pregnancy', 'Lactation', 'Elderly', 'Child', 'None'],
-              selected: _special,
-              onChanged: (v) => setState(() => _special = v),
+              items: HealthData.specialConditions,
+              selected: selectedSpecial,
+              onChanged: (val) => setState(() {
+                selectedSpecial =
+                    _enforceNoneRule(selectedSpecial, val);
+              }),
             ),
+
             const SizedBox(height: 40),
-            CustomButton(
-              text: 'save_changes'.tr(),
-              onPressed: () {
-                final userData = Provider.of<UserData>(context, listen: false);
-                userData.updateHealthInfo(
-                  allergies: _allergies,
-                  chronicConditions: _chronic,
-                  currentMedications: _medications,
-                  specialConditions: _special,
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('health_info_saved'.tr())),
-                );
-                Navigator.pop(context);
-              },
-            ),
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : CustomButton(
+                    text: 'save_changes'.tr(),
+                    onPressed: _saveChanges,
+                  ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDropdown({
+  Widget _buildMultiDropdown({
     required String label,
     required List<String> items,
-    required String? selected,
-    required ValueChanged<String?> onChanged,
+    required List<String> selected,
+    required Function(List<String>) onChanged,
   }) {
-    return DropdownSearch<String>(
-      items: (filter, infiniteScrollProps) => items
-          .where((item) => item.toLowerCase().contains(filter.toLowerCase()))
+    return DropdownSearch<String>.multiSelection(
+      items: (filter, _) => items
+          .where((item) =>
+              item.toLowerCase().contains(filter.toLowerCase()))
           .toList(),
-      selectedItem: selected,
+      selectedItems: selected,
       onChanged: onChanged,
-      popupProps: const PopupProps.menu(showSearchBox: true),
+      popupProps: PopupPropsMultiSelection.menu(
+        showSearchBox: true,
+        constraints: const BoxConstraints(maxHeight: 350),
+        searchFieldProps: TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'search'.tr(),
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
+        itemBuilder: (context, item, isSelected, isHighlighted) =>
+            ListTile(
+          leading: Icon(
+            isSelected
+                ? Icons.check_box
+                : Icons.check_box_outline_blank,
+            color:
+                isSelected ? AppColors.primaryBlue : Colors.grey,
+          ),
+          title: Text(
+            item,
+            style: TextStyle(
+              fontWeight:
+                  item == 'None' ? FontWeight.bold : FontWeight.normal,
+              color: item == 'None'
+                  ? Colors.grey.shade700
+                  : Colors.black87,
+            ),
+          ),
+        ),
+      ),
       decoratorProps: DropDownDecoratorProps(
         decoration: InputDecoration(
           labelText: label,
           filled: true,
           fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15)),
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16, vertical: 14),
         ),
       ),
     );

@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +5,7 @@ import 'package:country_picker/country_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/user_data.dart';
+import 'package:dosely/services/user_service.dart'; // ← NEW
 import '../../Widgets/custom_textfield.dart';
 import '../../Widgets/custom_button.dart';
 import '/theme.dart';
@@ -25,8 +25,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _selectedGender;
   String _selectedCountry = "Select Country";
 
-  // ── NEW: holds the picked image file ──
   File? _pickedImage;
+  bool _isLoading = false; // ← NEW
 
   @override
   void initState() {
@@ -37,8 +37,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController    = TextEditingController(text: user.email);
     _dobController      = TextEditingController(text: user.dob);
 
-    _selectedGender  = user.gender.isEmpty  ? null              : user.gender;
-    _selectedCountry = user.country.isEmpty ? "Select Country"  : user.country;
+    _selectedGender  = user.gender.isEmpty  ? null             : user.gender;
+    _selectedCountry = user.country.isEmpty ? "Select Country" : user.country;
   }
 
   @override
@@ -49,7 +49,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  // ── NEW: show bottom sheet to choose gallery or camera ──
   Future<void> _pickImage() async {
     final picker = ImagePicker();
 
@@ -89,7 +88,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 }
               },
             ),
-            // Show remove option only if there's already an image
             if (_pickedImage != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
@@ -119,9 +117,50 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  // ← NEW: extracted save function with Firestore write
+  Future<void> _saveChanges() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // 1️⃣ Save to Firestore
+      await UserService.updateProfile(
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+        dob: _dobController.text,
+        gender: _selectedGender ?? '',
+        country: _selectedCountry,
+      );
+
+      // 2️⃣ Update local Provider so UI reflects immediately
+      if (mounted) {
+        final userData = Provider.of<UserData>(context, listen: false);
+        userData.updateProfile(
+          username: _usernameController.text.trim(),
+          email: _emailController.text.trim(),
+          dob: _dobController.text,
+          gender: _selectedGender,
+          country: _selectedCountry,
+          avatar: _pickedImage != null ? FileImage(_pickedImage!) : null,
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Profile updated successfully')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Failed to save: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ── Decide which image to show in the avatar ──
     final user = Provider.of<UserData>(context, listen: false);
     final ImageProvider avatarImage = _pickedImage != null
         ? FileImage(_pickedImage!)
@@ -146,7 +185,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // ── Profile Photo (FIXED) ──
+            // ── Profile Photo ──
             Stack(
               alignment: Alignment.bottomRight,
               children: [
@@ -156,12 +195,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   backgroundImage: _pickedImage != null ? FileImage(_pickedImage!) : null,
                   child: _pickedImage == null
                       ? (user.avatar != null
-                          ? null // avatar already set as backgroundImage via provider
+                          ? null
                           : const Icon(Icons.person, size: 60, color: AppColors.primaryBlue))
                       : null,
                 ),
                 GestureDetector(
-                  onTap: _pickImage, // ← calls the real picker now
+                  onTap: _pickImage,
                   child: const CircleAvatar(
                     radius: 18,
                     backgroundColor: Colors.white,
@@ -243,26 +282,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 40),
 
-            CustomButton(
-              text: "Save changes",
-              onPressed: () {
-                final userData = Provider.of<UserData>(context, listen: false);
-                userData.updateProfile(
-                  username: _usernameController.text.trim(),
-                  email: _emailController.text.trim(),
-                  dob: _dobController.text,
-                  gender: _selectedGender,
-                  country: _selectedCountry,
-                  // ── Save the picked image to the provider ──
-                  avatar: _pickedImage != null ? FileImage(_pickedImage!) : null,
-                );
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('✅ Profile updated successfully')),
-                );
-                Navigator.pop(context);
-              },
-            ),
+            // ← spinner while saving, button otherwise
+            _isLoading
+                ? const CircularProgressIndicator()
+                : CustomButton(
+                    text: "Save changes",
+                    onPressed: _saveChanges, // ← NEW
+                  ),
           ],
         ),
       ),

@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:provider/provider.dart';
+import 'package:dosely/services/user_service.dart';
+import 'package:dosely/models/user_data.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/custom_textfield.dart';
@@ -15,6 +18,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false; // ← NEW
 
   @override
   void dispose() {
@@ -24,19 +28,35 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    setState(() => _isLoading = true); // ← show loader
+
     try {
+      // 1️⃣ Sign in with Firebase Auth
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      // 2️⃣ Check email verification
       if (!credential.user!.emailVerified) {
         await FirebaseAuth.instance.signOut();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('verify_email'.tr())),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('verify_email'.tr())),
+          );
+        }
         return;
       }
-      Navigator.pushReplacementNamed(context, '/home');
+
+      // 3️⃣ Load all user data from Firestore into Provider
+      if (mounted) {
+        final userData = Provider.of<UserData>(context, listen: false);
+        await UserService.loadUserIntoProvider(userData);
+      }
+
+      // 4️⃣ Navigate to home
+      if (mounted) Navigator.pushReplacementNamed(context, '/home');
+
     } on FirebaseAuthException catch (e) {
       String message;
       switch (e.code) {
@@ -52,11 +72,21 @@ class _LoginScreenState extends State<LoginScreen> {
         default:
           message = 'login_failed'.tr(namedArgs: {'message': e.message ?? ''});
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('error'.tr(namedArgs: {'error': e.toString()}))),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('error'.tr(namedArgs: {'error': e.toString()})),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false); // ← hide loader
     }
   }
 
@@ -84,7 +114,8 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 Text(
                   'welcome_back'.tr(),
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
                 CustomTextField(
@@ -100,19 +131,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/forgotPassword'),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/forgotPassword'),
                     child: Text('forgot_password'.tr()),
                   ),
                 ),
                 const SizedBox(height: 15),
-                CustomButton(
-                  text: 'login'.tr(),
-                  onPressed: _login,
-                ),
+
+                // ← Shows spinner while loading, button otherwise
+                _isLoading
+                    ? const CircularProgressIndicator()
+                    : CustomButton(
+                        text: 'login'.tr(),
+                        onPressed: _login,
+                      ),
+
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/register'),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/register'),
                     child: Text('no_account'.tr()),
                   ),
                 ),

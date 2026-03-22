@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '/theme.dart';
 import '../../models/user_data.dart';
+import 'package:dosely/services/user_service.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/custom_textfield.dart';
 
@@ -78,26 +79,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Create account in Firebase
+      // 1️⃣ Create Firebase Auth account
       final credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      // Send verification email
+      // 2️⃣ Send email verification
       await credential.user!.sendEmailVerification();
 
-      // Save data locally
-      final userData = Provider.of<UserData>(context, listen: false);
-      userData.username = _usernameController.text.trim();
-      userData.email = _emailController.text.trim();
-      userData.dob = _dobController.text;
-      userData.gender = _selectedGender ?? "Prefer not to say";
-      userData.country = _selectedCountry ?? '';
+      // 3️⃣ Save basic profile to Firestore (linked to UID)
+      await UserService.saveBasicProfile(
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+        dob: _dobController.text,
+        gender: _selectedGender ?? 'Prefer not to say',
+        country: _selectedCountry ?? '',
+      );
 
-      if (mounted) Navigator.pushNamed(context, '/personalInfo');
+      // 4️⃣ Also update local provider so next screen has data
+      if (mounted) {
+        final userData = Provider.of<UserData>(context, listen: false);
+        userData.updateProfile(
+          username: _usernameController.text.trim(),
+          email: _emailController.text.trim(),
+          dob: _dobController.text,
+          gender: _selectedGender ?? 'Prefer not to say',
+          country: _selectedCountry ?? '',
+        );
 
+        // 5️⃣ Go to health personalization screen
+        Navigator.pushNamed(context, '/personalInfo');
+      }
     } on FirebaseAuthException catch (e) {
       String message;
       switch (e.code) {
@@ -113,9 +127,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         default:
           message = e.message ?? 'error'.tr(namedArgs: {'error': ''});
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      // Firestore save error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save profile: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -189,7 +212,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                            horizontal: 16, vertical: 14),
                       ),
                       onTap: () => _selectDate(context),
                     ),
@@ -203,13 +226,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                            horizontal: 16, vertical: 14),
                       ),
                       items: [
                         DropdownMenuItem(value: "Male", child: Text('male'.tr())),
                         DropdownMenuItem(value: "Female", child: Text('female'.tr())),
                       ],
-                      onChanged: (value) => setState(() => _selectedGender = value),
+                      onChanged: (value) =>
+                          setState(() => _selectedGender = value),
                     ),
                     const SizedBox(height: 16),
                     GestureDetector(
@@ -219,14 +243,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           showPhoneCode: false,
                           onSelect: (Country country) {
                             setState(() {
-                              _selectedCountry = "${country.flagEmoji} ${country.name}";
+                              _selectedCountry =
+                                  "${country.flagEmoji} ${country.name}";
                             });
                           },
                         );
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 18),
+                            horizontal: 16, vertical: 18),
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey.shade400),
                           borderRadius: BorderRadius.circular(16),
