@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:easy_localization/easy_localization.dart';   // ← Added
+
 import '../../models/user_data.dart';
-import 'package:dosely/services/user_service.dart'; // ← NEW
+import 'package:dosely/services/user_service.dart';
 import '../../Widgets/custom_textfield.dart';
 import '../../Widgets/custom_button.dart';
 import '/theme.dart';
@@ -23,10 +25,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _dobController;
 
   String? _selectedGender;
-  String _selectedCountry = "Select Country";
+  String _selectedCountry = "select_country".tr();   // ← Now localized
 
   File? _pickedImage;
-  bool _isLoading = false; // ← NEW
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -34,11 +36,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = Provider.of<UserData>(context, listen: false);
 
     _usernameController = TextEditingController(text: user.username);
-    _emailController    = TextEditingController(text: user.email);
-    _dobController      = TextEditingController(text: user.dob);
+    _emailController = TextEditingController(text: user.email);
+    _dobController = TextEditingController(text: user.dob);
 
-    _selectedGender  = user.gender.isEmpty  ? null             : user.gender;
-    _selectedCountry = user.country.isEmpty ? "Select Country" : user.country;
+    _selectedGender = user.gender.isEmpty ? null : user.gender;
+    _selectedCountry = user.country.isEmpty ? "select_country".tr() : user.country;
   }
 
   @override
@@ -62,7 +64,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_rounded, color: AppColors.primaryBlue),
-              title: const Text('Choose from Gallery'),
+              title: Text('choose_from_gallery'.tr()),
               onTap: () async {
                 Navigator.pop(context);
                 final picked = await picker.pickImage(
@@ -76,7 +78,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_rounded, color: AppColors.primaryBlue),
-              title: const Text('Take a Photo'),
+              title: Text('take_a_photo'.tr()),
               onTap: () async {
                 Navigator.pop(context);
                 final picked = await picker.pickImage(
@@ -91,7 +93,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             if (_pickedImage != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
+                title: Text('remove_photo'.tr(), style: const TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(context);
                   setState(() => _pickedImage = null);
@@ -117,12 +119,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  // ← NEW: extracted save function with Firestore write
   Future<void> _saveChanges() async {
     setState(() => _isLoading = true);
 
     try {
-      // 1️⃣ Save to Firestore
       await UserService.updateProfile(
         username: _usernameController.text.trim(),
         email: _emailController.text.trim(),
@@ -131,7 +131,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         country: _selectedCountry,
       );
 
-      // 2️⃣ Update local Provider so UI reflects immediately
       if (mounted) {
         final userData = Provider.of<UserData>(context, listen: false);
         userData.updateProfile(
@@ -144,14 +143,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Profile updated successfully')),
+          SnackBar(content: Text('profile_updated'.tr())),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Failed to save: $e')),
+          SnackBar(content: Text('failed_to_save'.tr())),
         );
       }
     } finally {
@@ -162,6 +161,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<UserData>(context, listen: false);
+    
     final ImageProvider avatarImage = _pickedImage != null
         ? FileImage(_pickedImage!)
         : (user.avatar ?? const AssetImage('assets/images/default_avatar.png'));
@@ -175,9 +175,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.text),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700),
+        title: Text(
+          'edit_profile'.tr(),                    // ← Now localized
+          style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
       ),
@@ -185,7 +185,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // ── Profile Photo ──
+            // Profile Photo
             Stack(
               alignment: Alignment.bottomRight,
               children: [
@@ -211,10 +211,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 30),
 
-            CustomTextField(hint: "Username", controller: _usernameController),
-            const SizedBox(height: 16),
             CustomTextField(
-              hint: "Email",
+              hint: 'username'.tr(),
+              controller: _usernameController,
+            ),
+            const SizedBox(height: 16),
+
+            CustomTextField(
+              hint: 'email'.tr(),
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
             ),
@@ -225,7 +229,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               onTap: _selectDate,
               child: AbsorbPointer(
                 child: CustomTextField(
-                  hint: "Date of Birth",
+                  hint: 'date_of_birth'.tr(),
                   controller: _dobController,
                   readOnly: true,
                   suffixIcon: const Icon(Icons.calendar_today, color: AppColors.primaryBlue),
@@ -236,8 +240,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
             // Gender
             DropdownButtonFormField<String>(
-              initialValue: _selectedGender,
-              hint: const Text("Gender"),
+              value: _selectedGender,
+              hint: Text('gender'.tr()),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.grey.shade100,
@@ -246,14 +250,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   borderSide: BorderSide.none,
                 ),
               ),
-              items: ["Male", "Female"]
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
+              items: [
+                DropdownMenuItem(value: "Male", child: Text('male'.tr())),
+                DropdownMenuItem(value: "Female", child: Text('female'.tr())),
+              ],
               onChanged: (v) => setState(() => _selectedGender = v),
             ),
             const SizedBox(height: 16),
 
-            // Country
+            // Country Picker
             GestureDetector(
               onTap: () {
                 showCountryPicker(
@@ -282,12 +287,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 40),
 
-            // ← spinner while saving, button otherwise
             _isLoading
                 ? const CircularProgressIndicator()
                 : CustomButton(
-                    text: "Save changes",
-                    onPressed: _saveChanges, // ← NEW
+                    text: 'save_changes'.tr(),
+                    onPressed: _saveChanges,
                   ),
           ],
         ),

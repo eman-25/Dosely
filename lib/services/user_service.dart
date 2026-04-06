@@ -65,7 +65,7 @@ class UserService {
     required String dob,
     required String gender,
     required String country,
-    String? photoUrl, // pass if you upload to Firebase Storage
+    String? photoUrl,
   }) async {
     final data = {
       'username': username,
@@ -124,5 +124,16 @@ class UserService {
       currentMedications: health['currentMedications'] ?? '',
       specialConditions: health['specialConditions'] ?? '',
     );
+  }
+
+  // ─────────────────────────────────────────────
+  // DELETE USER ACCOUNT — Deletes Firestore document
+  // ─────────────────────────────────────────────
+  static Future<void> deleteUserAccount() async {
+    try {
+      await _userDoc.delete();
+    } catch (e) {
+      rethrow; // Let the screen handle the error
+    }
   }
 }

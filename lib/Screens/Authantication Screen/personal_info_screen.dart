@@ -22,21 +22,15 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   List<String> selectedSpecial = [];
   bool _isLoading = false;
 
-  // ─────────────────────────────────────────────
-  // None-exclusion rule:
-  // • User picks "None"        → clear all others, keep only "None"
-  // • User picks anything else → remove "None" if it was selected
-  // ─────────────────────────────────────────────
+  // None-exclusion rule
   List<String> _enforceNoneRule(List<String> prev, List<String> next) {
     final prevHadNone = prev.contains('None');
     final nextHasNone = next.contains('None');
 
     if (!prevHadNone && nextHasNone) {
-      // Just selected "None" → keep only None
       return ['None'];
     }
     if (prevHadNone && nextHasNone && next.length > 1) {
-      // "None" already selected, user picked something else → drop None
       return next.where((e) => e != 'None').toList();
     }
     return next;
@@ -113,16 +107,14 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back,
-                            color: AppColors.primaryBlue),
+                        icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'health_personalization'.tr(),
-                      style: const TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -133,8 +125,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline,
-                              color: Color(0xFF2E7D32)),
+                          const Icon(Icons.info_outline, color: Color(0xFF2E7D32)),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -156,8 +147,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                       items: HealthData.allergies,
                       selected: selectedAllergies,
                       onChanged: (val) => setState(() {
-                        selectedAllergies =
-                            _enforceNoneRule(selectedAllergies, val);
+                        selectedAllergies = _enforceNoneRule(selectedAllergies, val);
                       }),
                     ),
                     _buildMultiDropdown(
@@ -165,8 +155,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                       items: HealthData.chronicConditions,
                       selected: selectedChronic,
                       onChanged: (val) => setState(() {
-                        selectedChronic =
-                            _enforceNoneRule(selectedChronic, val);
+                        selectedChronic = _enforceNoneRule(selectedChronic, val);
                       }),
                     ),
                     _buildMultiDropdown(
@@ -174,17 +163,15 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                       items: HealthData.medications,
                       selected: selectedMeds,
                       onChanged: (val) => setState(() {
-                        selectedMeds =
-                            _enforceNoneRule(selectedMeds, val);
+                        selectedMeds = _enforceNoneRule(selectedMeds, val);
                       }),
                     ),
                     _buildMultiDropdown(
-                      label: 'special_conditions'.tr(),
+                      label: 'special_conditions'.tr(),   // ← No "(optional)"
                       items: HealthData.specialConditions,
                       selected: selectedSpecial,
                       onChanged: (val) => setState(() {
-                        selectedSpecial =
-                            _enforceNoneRule(selectedSpecial, val);
+                        selectedSpecial = _enforceNoneRule(selectedSpecial, val);
                       }),
                     ),
 
@@ -216,14 +203,11 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w600)),
+          Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           DropdownSearch<String>.multiSelection(
             items: (filter, _) => items
-                .where((item) =>
-                    item.toLowerCase().contains(filter.toLowerCase()))
+                .where((item) => item.toLowerCase().contains(filter.toLowerCase()))
                 .toList(),
             selectedItems: selected,
             onChanged: onChanged,
@@ -234,30 +218,19 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                 decoration: InputDecoration(
                   hintText: 'search'.tr(),
                   prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
-              itemBuilder: (context, item, isSelected, isHighlighted) =>
-                  ListTile(
+              itemBuilder: (context, item, isSelected, isHighlighted) => ListTile(
                 leading: Icon(
-                  isSelected
-                      ? Icons.check_box
-                      : Icons.check_box_outline_blank,
-                  color: isSelected
-                      ? AppColors.primaryBlue
-                      : Colors.grey,
+                  isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+                  color: isSelected ? AppColors.primaryBlue : Colors.grey,
                 ),
                 title: Text(
                   item,
                   style: TextStyle(
-                    fontWeight: item == 'None'
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    color: item == 'None'
-                        ? Colors.grey.shade700
-                        : Colors.black87,
+                    fontWeight: item == 'None' ? FontWeight.bold : FontWeight.normal,
+                    color: item == 'None' ? Colors.grey.shade700 : Colors.black87,
                   ),
                 ),
               ),
@@ -271,8 +244,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   borderRadius: BorderRadius.circular(15),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
           ),

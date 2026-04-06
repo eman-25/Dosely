@@ -18,7 +18,6 @@ class EditPersonalHealthInfoScreen extends StatefulWidget {
 
 class _EditPersonalHealthInfoScreenState
     extends State<EditPersonalHealthInfoScreen> {
-  // Multi-select lists (mirrors personal_info_screen)
   List<String> selectedAllergies = [];
   List<String> selectedChronic = [];
   List<String> selectedMeds = [];
@@ -28,7 +27,6 @@ class _EditPersonalHealthInfoScreenState
   @override
   void initState() {
     super.initState();
-    // Pre-fill from Provider (already loaded from Firestore at login)
     final user = Provider.of<UserData>(context, listen: false);
 
     selectedAllergies = _splitToList(user.allergies);
@@ -37,17 +35,11 @@ class _EditPersonalHealthInfoScreenState
     selectedSpecial = _splitToList(user.specialConditions);
   }
 
-  // Converts the stored comma-separated string back to a list
   List<String> _splitToList(String value) {
     if (value.isEmpty) return [];
     return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
   }
 
-  // ─────────────────────────────────────────────
-  // None-exclusion rule:
-  // • User picks "None"        → clear all others, keep only "None"
-  // • User picks anything else → remove "None" if it was selected
-  // ─────────────────────────────────────────────
   List<String> _enforceNoneRule(List<String> prev, List<String> next) {
     final prevHadNone = prev.contains('None');
     final nextHasNone = next.contains('None');
@@ -70,7 +62,6 @@ class _EditPersonalHealthInfoScreenState
     final special = selectedSpecial.join(', ');
 
     try {
-      // 1️⃣ Save to Firestore
       await UserService.updateHealthInfo(
         allergies: allergies.isEmpty ? 'None' : allergies,
         chronicConditions: chronic.isEmpty ? 'None' : chronic,
@@ -78,7 +69,6 @@ class _EditPersonalHealthInfoScreenState
         specialConditions: special.isEmpty ? 'None' : special,
       );
 
-      // 2️⃣ Update local provider
       if (mounted) {
         final userData = Provider.of<UserData>(context, listen: false);
         userData.updateHealthInfo(
@@ -112,14 +102,12 @@ class _EditPersonalHealthInfoScreenState
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon:
-              const Icon(Icons.arrow_back_ios, color: AppColors.text),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.text),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'personal_health_info'.tr(),
-          style: const TextStyle(
-              color: AppColors.text, fontWeight: FontWeight.w700),
+          style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
       ),
@@ -141,56 +129,47 @@ class _EditPersonalHealthInfoScreenState
                   Expanded(
                     child: Text(
                       'health_info_hint'.tr(),
-                      style: const TextStyle(
-                          fontSize: 13, color: Color(0xFF2E7D32)),
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF2E7D32)),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
+
             Text('health_personalization'.tr(),
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 16)),
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 16),
 
             _buildMultiDropdown(
               label: 'allergies'.tr(),
               items: HealthData.allergies,
               selected: selectedAllergies,
-              onChanged: (val) => setState(() {
-                selectedAllergies =
-                    _enforceNoneRule(selectedAllergies, val);
-              }),
+              onChanged: (val) => setState(() => selectedAllergies = _enforceNoneRule(selectedAllergies, val)),
             ),
             const SizedBox(height: 16),
+
             _buildMultiDropdown(
               label: 'chronic_conditions'.tr(),
               items: HealthData.chronicConditions,
               selected: selectedChronic,
-              onChanged: (val) => setState(() {
-                selectedChronic =
-                    _enforceNoneRule(selectedChronic, val);
-              }),
+              onChanged: (val) => setState(() => selectedChronic = _enforceNoneRule(selectedChronic, val)),
             ),
             const SizedBox(height: 16),
+
             _buildMultiDropdown(
               label: 'current_medications'.tr(),
               items: HealthData.medications,
               selected: selectedMeds,
-              onChanged: (val) => setState(() {
-                selectedMeds = _enforceNoneRule(selectedMeds, val);
-              }),
+              onChanged: (val) => setState(() => selectedMeds = _enforceNoneRule(selectedMeds, val)),
             ),
             const SizedBox(height: 16),
+
             _buildMultiDropdown(
-              label: 'special_conditions'.tr(),
+              label: 'special_conditions'.tr(),   // ← Clean, no "(optional)"
               items: HealthData.specialConditions,
               selected: selectedSpecial,
-              onChanged: (val) => setState(() {
-                selectedSpecial =
-                    _enforceNoneRule(selectedSpecial, val);
-              }),
+              onChanged: (val) => setState(() => selectedSpecial = _enforceNoneRule(selectedSpecial, val)),
             ),
 
             const SizedBox(height: 40),
@@ -214,8 +193,7 @@ class _EditPersonalHealthInfoScreenState
   }) {
     return DropdownSearch<String>.multiSelection(
       items: (filter, _) => items
-          .where((item) =>
-              item.toLowerCase().contains(filter.toLowerCase()))
+          .where((item) => item.toLowerCase().contains(filter.toLowerCase()))
           .toList(),
       selectedItems: selected,
       onChanged: onChanged,
@@ -226,28 +204,19 @@ class _EditPersonalHealthInfoScreenState
           decoration: InputDecoration(
             hintText: 'search'.tr(),
             prefixIcon: const Icon(Icons.search),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           ),
         ),
-        itemBuilder: (context, item, isSelected, isHighlighted) =>
-            ListTile(
+        itemBuilder: (context, item, isSelected, isHighlighted) => ListTile(
           leading: Icon(
-            isSelected
-                ? Icons.check_box
-                : Icons.check_box_outline_blank,
-            color:
-                isSelected ? AppColors.primaryBlue : Colors.grey,
+            isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+            color: isSelected ? AppColors.primaryBlue : Colors.grey,
           ),
           title: Text(
             item,
             style: TextStyle(
-              fontWeight:
-                  item == 'None' ? FontWeight.bold : FontWeight.normal,
-              color: item == 'None'
-                  ? Colors.grey.shade700
-                  : Colors.black87,
+              fontWeight: item == 'None' ? FontWeight.bold : FontWeight.normal,
+              color: item == 'None' ? Colors.grey.shade700 : Colors.black87,
             ),
           ),
         ),
@@ -257,10 +226,8 @@ class _EditPersonalHealthInfoScreenState
           labelText: label,
           filled: true,
           fillColor: Colors.white,
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15)),
-          contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
     );
