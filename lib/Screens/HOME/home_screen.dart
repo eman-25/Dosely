@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import '../../models/user_data.dart';
 import 'settings_panel.dart';
@@ -51,7 +52,6 @@ class _HomeScreenState extends State<HomeScreen>
     _anim = Tween<double>(begin: _dragY, end: target).animate(
       CurvedAnimation(parent: _snap, curve: Curves.easeOutCubic),
     )..addListener(() => setState(() => _dragY = _anim!.value));
-
     _snap.reset();
     _snap.forward();
   }
@@ -92,7 +92,6 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final userData = Provider.of<UserData>(context);
-
     final sheetMax = _sheetMax(context);
     final open = _openFactor(context);
     final sheetTotalHeight = sheetMax + _headerHeight;
@@ -112,11 +111,9 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ),
-
           SafeArea(
             child: Stack(
               children: [
-                // HOME CONTENT
                 Positioned.fill(
                   child: IgnorePointer(
                     ignoring: open > 0.15,
@@ -132,14 +129,14 @@ class _HomeScreenState extends State<HomeScreen>
                               child: Column(
                                 children: [
                                   _FunctionCarousel(
-                                    onScan: () => Navigator.push(
-                                        context, MaterialPageRoute(builder: (_) => const Scan())),
-                                    onUpload: () => Navigator.push(
-                                        context, MaterialPageRoute(builder: (_) => const Upload())),
-                                    onSearch: () => Navigator.push(
-                                        context, MaterialPageRoute(builder: (_) => const SearchScreen())),
-                                    onChat: () => Navigator.push(
-                                        context, MaterialPageRoute(builder: (_) => const PillAssistantHome())),
+                                    onScan: () => Navigator.push(context,
+                                        MaterialPageRoute(builder: (_) => const Scan())),
+                                    onUpload: () => Navigator.push(context,
+                                        MaterialPageRoute(builder: (_) => const Upload())),
+                                    onSearch: () => Navigator.push(context,
+                                        MaterialPageRoute(builder: (_) => const SearchScreen())),
+                                    onChat: () => Navigator.push(context,
+                                        MaterialPageRoute(builder: (_) => const PillAssistantHome())),
                                   ),
                                   const SizedBox(height: 14),
                                   _RemindersCard(
@@ -156,8 +153,6 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                 ),
-
-                // SETTINGS SHEET
                 Positioned(
                   left: 18,
                   right: 18,
@@ -179,10 +174,8 @@ class _HomeScreenState extends State<HomeScreen>
                           GestureDetector(
                             behavior: HitTestBehavior.translucent,
                             onVerticalDragUpdate: (details) {
-                              setState(
-                                () => _dragY = (_dragY + details.delta.dy)
-                                    .clamp(0.0, sheetMax),
-                              );
+                              setState(() => _dragY =
+                                  (_dragY + details.delta.dy).clamp(0.0, sheetMax));
                             },
                             onVerticalDragEnd: (_) => _snapSheet(context),
                             onTap: () {
@@ -191,10 +184,9 @@ class _HomeScreenState extends State<HomeScreen>
                             },
                             child: _GreetingHandle(
                               height: _headerHeight,
-                              // Real username from registration / edit profile
                               name: (userData.name ?? '').trim().isNotEmpty
-                              ? (userData.name ?? '').trim()
-                              : 'User',
+                                  ? (userData.name ?? '').trim()
+                                  : 'User',
                               avatar: userData.avatar,
                               showDown: _openFactor(context) < 0.15,
                               showUp: _openFactor(context) > 0.85,
@@ -254,7 +246,7 @@ class _GreetingHandle extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Greetings, $name !',
+                      'greetings'.tr(namedArgs: {'name': name}),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -262,9 +254,9 @@ class _GreetingHandle extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'How can Dosely help you today?',
-                      style: TextStyle(fontSize: 12.5, color: Colors.black54),
+                    Text(
+                      'how_can_help'.tr(),
+                      style: const TextStyle(fontSize: 12.5, color: Colors.black54),
                     ),
                   ],
                 ),
@@ -312,32 +304,29 @@ class _FunctionCarousel extends StatelessWidget {
       child: PageView(
         physics: const BouncingScrollPhysics(),
         children: [
-          _FunctionCard(
-            icon: Icons.camera_alt_rounded,
-            title: 'Scan Your Medicine Using\nCamera',
-            subtitle: 'Take a clear photo of the medicine and let Dosely identify it and provide detailed information.',
-            buttonText: 'Scan',
+          _ScanCard(
+            title: 'scan_title'.tr(),
+            subtitle: 'scan_subtitle'.tr(),
+            buttonText: 'scan_btn'.tr(),
             onTap: onScan,
           ),
-          _FunctionCard(
-            icon: Icons.cloud_upload_rounded,
-            title: 'Upload a Photo of the\nMedicine',
-            subtitle: 'Upload an existing image of the medicine to receive accurate details, usage information, and warnings.',
-            buttonText: 'Upload',
+          _UploadCard(
+            title: 'upload_title'.tr(),
+            subtitle: 'upload_subtitle'.tr(),
+            buttonText: 'upload_btn'.tr(),
             onTap: onUpload,
           ),
-          _FunctionCard(
-            icon: Icons.manage_search_rounded,
-            title: 'Search for a Medicine\nManually',
-            subtitle: 'Search by medicine name or type to view trusted information, instructions, and safety details.',
-            buttonText: 'Search',
+          // ✅ Search card now uses image asset — same style as _ScanCard
+          _SearchCard(
+            title: 'search_title'.tr(),
+            subtitle: 'search_subtitle'.tr(),
+            buttonText: 'search_btn'.tr(),
             onTap: onSearch,
           ),
-          _FunctionCard(
-            icon: Icons.smart_toy_rounded,
-            title: 'Pillo Assistant',
-            subtitle: 'Get instant answers about medicines, usage, and safety information to help you take them correctly and confidently.',
-            buttonText: 'Chat',
+          _ChatCard(
+            title: 'chat_title'.tr(),
+            subtitle: 'chat_subtitle'.tr(),
+            buttonText: 'chat_btn'.tr(),
             onTap: onChat,
           ),
         ],
@@ -346,15 +335,14 @@ class _FunctionCarousel extends StatelessWidget {
   }
 }
 
-class _FunctionCard extends StatelessWidget {
-  final IconData icon;
+// ====================== Scan Card ======================
+class _ScanCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final String buttonText;
   final VoidCallback onTap;
 
-  const _FunctionCard({
-    required this.icon,
+  const _ScanCard({
     required this.title,
     required this.subtitle,
     required this.buttonText,
@@ -364,45 +352,74 @@ class _FunctionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: SizedBox(
-        height: 290,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 520),
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 22, offset: const Offset(0, 10)),
-            ],
-          ),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(32),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                height: 60,
-                width: 65,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFACEDD9).withOpacity(0.45),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(icon, size: 40, color: const Color(0xFF3E84A8)),
+              Image.asset(
+                'assets/images/scan_icon.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.contain,
               ),
-              const SizedBox(height: 14),
-              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.black87)),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87,
+                  height: 1.3,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11.5, height: 1.35, color: Color.fromARGB(136, 59, 59, 92))),
-              const SizedBox(height: 14),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: Color(0xFF666688),
+                ),
+              ),
+              const SizedBox(height: 20),
               SizedBox(
-                height: 34,
+                width: 160,
+                height: 44,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.65),
+                    backgroundColor: const Color(0xFFB8EEE8),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
                   ),
                   onPressed: onTap,
-                  child: Text(buttonText, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Color(0xFF1A7A70),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -413,7 +430,293 @@ class _FunctionCard extends StatelessWidget {
   }
 }
 
-// ====================== Reminders Card – EMPTY by default ======================
+// ====================== Search Card ======================
+class _SearchCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String buttonText;
+  final VoidCallback onTap;
+
+  const _SearchCard({
+    required this.title,
+    required this.subtitle,
+    required this.buttonText,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(32),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/search_icon.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: Color(0xFF666688),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 160,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB8EEE8),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  onPressed: onTap,
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Color(0xFF1A7A70),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ====================== Upload Card ======================
+class _UploadCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String buttonText;
+  final VoidCallback onTap;
+
+  const _UploadCard({
+    required this.title,
+    required this.subtitle,
+    required this.buttonText,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(32),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/upload_icon.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: Color(0xFF666688),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 160,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB8EEE8),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  onPressed: onTap,
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Color(0xFF1A7A70),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ====================== Chat Card ======================
+class _ChatCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String buttonText;
+  final VoidCallback onTap;
+
+  const _ChatCard({
+    required this.title,
+    required this.subtitle,
+    required this.buttonText,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(32),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/pillo_icon.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: Color(0xFF666688),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 160,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB8EEE8),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  onPressed: onTap,
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Color(0xFF1A7A70),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+// ====================== Reminders Card ======================
 class _RemindersCard extends StatelessWidget {
   final VoidCallback onDragUp;
   final VoidCallback onArrowTap;
@@ -422,7 +725,7 @@ class _RemindersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const bool hasMedicines = false; // Will be dynamic later
+    const bool hasMedicines = false;
 
     return GestureDetector(
       onVerticalDragEnd: (details) {
@@ -435,22 +738,24 @@ class _RemindersCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(28),
           color: Colors.white.withOpacity(0.85),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 25, offset: const Offset(0, 10)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 25,
+              offset: const Offset(0, 10),
+            ),
           ],
         ),
         child: Column(
           children: [
-            const Text('Medicine Reminders', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            Text('medicine_reminders'.tr(),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(height: 14),
-
-            hasMedicines
-                ? const SizedBox.shrink() // Will show real list later
-                : _buildEmptyState(context),
-
+            hasMedicines ? const SizedBox.shrink() : _buildEmptyState(context),
             const SizedBox(height: 12),
             InkWell(
               onTap: onArrowTap,
-              child: const Icon(Icons.keyboard_arrow_up_rounded, size: 26, color: Colors.black54),
+              child: const Icon(Icons.keyboard_arrow_up_rounded,
+                  size: 26, color: Colors.black54),
             ),
           ],
         ),
@@ -463,14 +768,18 @@ class _RemindersCard extends StatelessWidget {
       children: [
         const Icon(Icons.medical_services_outlined, size: 48, color: Colors.black38),
         const SizedBox(height: 12),
-        const Text('No medications yet', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black54)),
+        Text('no_medications'.tr(),
+            style: const TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black54)),
         const SizedBox(height: 4),
-        const Text('Add your first medicine from the schedule', style: TextStyle(fontSize: 12, color: Colors.black45), textAlign: TextAlign.center),
+        Text('add_medicine_hint'.tr(),
+            style: const TextStyle(fontSize: 12, color: Colors.black45),
+            textAlign: TextAlign.center),
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: () => onArrowTap(),
           icon: const Icon(Icons.add),
-          label: const Text('Add Medicine'),
+          label: Text('add_medicine'.tr()),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF4ACED0),
             foregroundColor: Colors.white,

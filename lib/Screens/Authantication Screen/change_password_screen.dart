@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/custom_textfield.dart';
@@ -28,7 +29,6 @@ class ChangePasswordScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // FIX: Added IconButton with Navigator.pop
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
@@ -37,37 +37,23 @@ class ChangePasswordScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                const Text(
-                  "Change Password",
-                  style: TextStyle(
+                Text(
+                  'change_password'.tr(),
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryBlue,
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                const CustomTextField(hint: "New Password", isPassword: true),
-
-                const CustomTextField(
-                  hint: "Confirm New Password",
-                  isPassword: true,
-                ),
-
+                CustomTextField(hint: 'new_password'.tr(), isPassword: true),
+                CustomTextField(hint: 'confirm_new_password'.tr(), isPassword: true),
                 const SizedBox(height: 25),
-
-                // FIX: Ensure this route exists in your main.dart
                 CustomButton(
-                  text: "Submit",
+                  text: 'submit'.tr(),
                   color: AppColors.darkButton,
                   onPressed: () {
-                    // This replaces the current screen with the success screen
-                    Navigator.pushReplacementNamed(
-                      context,
-                      '/passwordChanged',
-                    );
+                    Navigator.pushReplacementNamed(context, '/passwordChanged');
                   },
                 ),
               ],

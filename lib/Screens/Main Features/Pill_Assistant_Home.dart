@@ -1,7 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import 'package:image_picker/image_picker.dart';
 import 'pillo_chat_service.dart';
+=======
+import 'package:easy_localization/easy_localization.dart';
+>>>>>>> 5d265e0a9897220c2fc51a58dc05214d1c19736c
 
 class PillAssistantHome extends StatefulWidget {
   const PillAssistantHome({super.key});
@@ -23,7 +27,18 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
   bool _sending = false;
   File? _pickedImage;
 
+<<<<<<< HEAD
   static const bg = Color(0xFFEAF7F7);
+=======
+    String reply = 'pillo_intro'.tr();
+    if (text.toLowerCase().contains("safe")) {
+      reply = 'pillo_safe'.tr();
+    } else if (text.toLowerCase().contains("dose")) {
+      reply = 'pillo_dose'.tr();
+    } else if (text.toLowerCase().contains("side")) {
+      reply = 'pillo_side'.tr();
+    }
+>>>>>>> 5d265e0a9897220c2fc51a58dc05214d1c19736c
 
   @override
   void dispose() {
@@ -132,6 +147,7 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+<<<<<<< HEAD
       backgroundColor: bg,
       appBar: AppBar(
         backgroundColor: bg,
@@ -150,6 +166,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
           ),
         ],
       ),
+=======
+      appBar: AppBar(title: Text('pillo_assistant'.tr())),
+>>>>>>> 5d265e0a9897220c2fc51a58dc05214d1c19736c
       body: Column(
         children: [
           const SizedBox(height: 10),
@@ -212,6 +231,7 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
                 final m = _messages[i];
 
                 return Align(
+<<<<<<< HEAD
                   alignment:
                       m.isUser ? Alignment.centerLeft : Alignment.centerRight,
                   child: Padding(
@@ -219,11 +239,26 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
                     child: m.isImage
                         ? _ImageBubble(file: m.imageFile!, isUser: m.isUser)
                         : _TextBubble(text: m.text!, isUser: m.isUser),
+=======
+                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isUser ? const Color(0xFF4ACED0) : Colors.grey[200],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      m['text']!,
+                      style: TextStyle(color: isUser ? Colors.white : Colors.black87),
+                    ),
+>>>>>>> 5d265e0a9897220c2fc51a58dc05214d1c19736c
                   ),
                 );
               },
             ),
           ),
+<<<<<<< HEAD
 
           if (_pickedImage != null)
             Padding(
@@ -321,6 +356,27 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
                   ),
                 ],
               ),
+=======
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _msgCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'ask_medicine'.tr(),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _send,
+                  icon: const Icon(Icons.send, color: Color(0xFF4ACED0), size: 30),
+                ),
+              ],
+>>>>>>> 5d265e0a9897220c2fc51a58dc05214d1c19736c
             ),
           ),
         ],

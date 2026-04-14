@@ -10,27 +10,35 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  easy_localization: ^3.0.0
+
   # Core & State
   provider: ^6.1.2
+  
   # UI & Utils
   cupertino_icons: ^1.0.8
   dropdown_search: ^6.0.1
   country_picker: ^2.0.27
-  intl: ^0.18.1
+  intl: ^0.20.2
   fluttertoast: ^8.2.8
+  
   # Medicine Identification Engine
-  camera: ^0.12.0
+  camera: ^0.10.6
   image_picker: ^1.1.2
-  google_mlkit_text_recognition: ^0.15.1
+  google_mlkit_text_recognition: ^0.13.0
   http: ^1.2.2
   shared_preferences: ^2.3.0
+  
   # Firebase (Auth + Firestore for profiles & history)
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4
+<<<<<<< HEAD
   permission_handler: ^12.0.1
   firebase_ai: ^2.3.0
 
+=======
+>>>>>>> 5d265e0a9897220c2fc51a58dc05214d1c19736c
 
 dev_dependencies:
   flutter_test:
@@ -39,6 +47,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/images/dosely_logo.png
-   
+    - assets/translations/
+    - assets/images/scan_icon.png
+    - assets/images/search_icon.png
+    - assets/images/upload_icon.png
+    - assets/images/pillo_icon.png
+
+
+
+
+ 

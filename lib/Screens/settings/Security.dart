@@ -1,5 +1,5 @@
-// lib/screens/settings/Security.dart
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 import '../../Widgets/custom_button.dart';
 
@@ -20,7 +20,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8),
       appBar: AppBar(
-        title: const Text('Security'),
+        title: Text('security'.tr()),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppColors.text,
@@ -28,30 +28,25 @@ class _SecurityScreenState extends State<SecurityScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Security status card
           Card(
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             color: const Color(0xFFE8F5E9),
-            child: const Padding(
-              padding: EdgeInsets.all(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Icon(Icons.shield, color: AppColors.primaryGreen, size: 40),
-                  SizedBox(width: 16),
+                  const Icon(Icons.shield, color: AppColors.primaryGreen, size: 40),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Your account is protected',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Last password change: 14 days ago',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
+                        Text('account_protected'.tr(),
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                        const SizedBox(height: 4),
+                        Text('last_password_change'.tr(),
+                            style: const TextStyle(color: Colors.grey, fontSize: 13)),
                       ],
                     ),
                   ),
@@ -59,80 +54,70 @@ class _SecurityScreenState extends State<SecurityScreen> {
               ),
             ),
           ),
-
           const SizedBox(height: 24),
-          const Text(
-            'Login & Access',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-          ),
+          Text('login_access'.tr(),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-
           SwitchListTile(
-            title: const Text('Biometric authentication'),
-            subtitle: const Text('Use fingerprint or face recognition'),
+            title: Text('biometric_auth'.tr()),
+            subtitle: Text('biometric_subtitle'.tr()),
             secondary: const Icon(Icons.fingerprint, color: AppColors.primaryBlue),
             value: _biometricsEnabled,
             onChanged: (v) => setState(() => _biometricsEnabled = v),
           ),
-
           SwitchListTile(
-            title: const Text('App lock'),
-            subtitle: const Text('Require PIN or pattern'),
+            title: Text('app_lock'.tr()),
+            subtitle: Text('app_lock_subtitle'.tr()),
             secondary: const Icon(Icons.lock_outline, color: AppColors.primaryBlue),
             value: _appLockEnabled,
             onChanged: (v) => setState(() => _appLockEnabled = v),
           ),
-
           SwitchListTile(
-            title: const Text('Two-factor authentication'),
-            subtitle: const Text('Extra security with SMS / authenticator'),
+            title: Text('two_factor'.tr()),
+            subtitle: Text('two_factor_subtitle'.tr()),
             secondary: const Icon(Icons.phonelink_lock, color: AppColors.primaryBlue),
             value: _twoFactorAuth,
             onChanged: (v) => setState(() => _twoFactorAuth = v),
           ),
-
           const Divider(height: 32),
-
           ListTile(
             leading: const Icon(Icons.password, color: AppColors.primaryBlue),
-            title: const Text('Change password', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: const Text('Update your account password'),
+            title: Text('change_password_title'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text('change_password_subtitle'.tr()),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.pushNamed(context, '/change-password'),
           ),
-
           ListTile(
             leading: const Icon(Icons.history, color: AppColors.primaryBlue),
-            title: const Text('Login activity', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: const Text('See recent logins'),
+            title: Text('login_activity'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text('login_activity_subtitle'.tr()),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLoginHistory(context),
           ),
-
           const SizedBox(height: 40),
-
-          // Red danger button - using your existing CustomButton
           CustomButton(
-            text: 'Sign out from all devices',
-            color: Colors.redAccent,           // ← This is the correct parameter
+            text: 'sign_out_all'.tr(),
+            color: Colors.redAccent,
             onPressed: () {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Sign out everywhere?'),
-                  content: const Text('This will log you out from all devices.'),
+                  title: Text('sign_out_everywhere'.tr()),
+                  content: Text('sign_out_all_desc'.tr()),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text('cancel'.tr()),
                     ),
                     TextButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        //TODO: Add real sign-out logic later (Firebase, etc.)
                         Navigator.pushNamedAndRemoveUntil(context, '/', (r) => false);
                       },
-                      child: const Text('Sign out all', style: TextStyle(color: Colors.red)),
+                      child: Text('sign_out_all_btn'.tr(),
+                          style: const TextStyle(color: Colors.red)),
                     ),
                   ],
                 ),
@@ -147,17 +132,27 @@ class _SecurityScreenState extends State<SecurityScreen> {
   void _showLoginHistory(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => const Padding(
-        padding: EdgeInsets.all(20),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Recent login activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            SizedBox(height: 16),
-            ListTile(leading: Icon(Icons.smartphone), title: Text('iPhone 14 • Bahrain'), subtitle: Text('Today at 01:49 AM • This device')),
-            ListTile(leading: Icon(Icons.laptop), title: Text('Chrome on Windows'), subtitle: Text('February 19, 2026')),
+            Text('recent_login_activity'.tr(),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.smartphone),
+              title: Text('device_iphone'.tr()),
+              subtitle: Text('device_iphone_time'.tr()),
+            ),
+            ListTile(
+              leading: const Icon(Icons.laptop),
+              title: Text('device_chrome'.tr()),
+              subtitle: Text('device_chrome_time'.tr()),
+            ),
           ],
         ),
       ),

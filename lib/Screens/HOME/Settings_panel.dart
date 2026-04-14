@@ -1,23 +1,30 @@
-// lib/screens/HOME/Settings_panel.dart
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
-class SettingsPanel extends StatelessWidget {
+class SettingsPanel extends StatefulWidget {
   const SettingsPanel({super.key});
 
   @override
+  State<SettingsPanel> createState() => _SettingsPanelState();
+}
+
+class _SettingsPanelState extends State<SettingsPanel> {
+  @override
   Widget build(BuildContext context) {
+    // This forces rebuild when locale changes
+    final _ = context.locale;
+
     return Column(
       children: [
-        // Header
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
           child: Row(
             children: [
-              Icon(Icons.settings_rounded, size: 24, color: Colors.black87),
-              SizedBox(width: 12),
+              const Icon(Icons.settings_rounded, size: 24, color: Colors.black87),
+              const SizedBox(width: 12),
               Text(
-                'Settings',
-                style: TextStyle(
+                'settings'.tr(),
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: Colors.black87,
@@ -26,33 +33,31 @@ class SettingsPanel extends StatelessWidget {
             ],
           ),
         ),
-
-        // Scrollable Content
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             physics: const BouncingScrollPhysics(),
             children: [
-              _sectionTitle('Account'),
-              _tile(context, Icons.edit, 'Edit profile', '/editProfile'),
-              _tile(context, Icons.health_and_safety, 'Personal Health Information', '/editPersonalHealthInfo'),
-              _tile(context, Icons.security, 'Security', '/security'),
-              _tile(context, Icons.privacy_tip, 'Privacy', '/privacy'),
+              _sectionTitle('account'.tr()),
+              _tile(context, Icons.edit, 'edit_profile'.tr(), '/editProfile'),
+              _tile(context, Icons.health_and_safety, 'personal_health_info'.tr(), '/editPersonalHealthInfo'),
+              _tile(context, Icons.security, 'security'.tr(), '/security'),
+              _tile(context, Icons.privacy_tip, 'privacy'.tr(), '/privacy'),
 
               const SizedBox(height: 16),
-              _sectionTitle('App Preferences'),
-              _tile(context, Icons.language, 'Language', '/language'),
-              _tile(context, Icons.notifications, 'Notifications', '/notifications'),
+              _sectionTitle('app_preferences'.tr()),
+              _tile(context, Icons.language, 'language'.tr(), '/language'),
+              _tile(context, Icons.notifications, 'notifications'.tr(), '/notifications'),
 
               const SizedBox(height: 16),
-              _sectionTitle('Support & About'),
-              _tile(context, Icons.help_outline, 'Help & Support', '/helpSupport'),
-              _tile(context, Icons.info_outline, 'About Us', '/aboutUs'),
+              _sectionTitle('support_about'.tr()),
+              _tile(context, Icons.help_outline, 'help_support'.tr(), '/helpSupport'),
+              _tile(context, Icons.info_outline, 'about_us'.tr(), '/aboutUs'),
 
               const SizedBox(height: 16),
-              _sectionTitle('Actions'),
-              _tile(context, Icons.report_gmailerrorred, 'Report a problem', '/reportProblem'),
-              _tile(context, Icons.logout, 'Log out', '/logout'),
+              _sectionTitle('actions'.tr()),
+              _tile(context, Icons.report_gmailerrorred, 'report_problem'.tr(), '/reportProblem'),
+              _tile(context, Icons.logout, 'logout'.tr(), '/logout'),
             ],
           ),
         ),
@@ -86,9 +91,7 @@ class SettingsPanel extends StatelessWidget {
         leading: Icon(icon, color: Colors.black87),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         trailing: const Icon(Icons.chevron_right_rounded, color: Colors.black45),
-        onTap: () {
-          Navigator.pushNamed(context, route);
-        },
+        onTap: () => Navigator.pushNamed(context, route),
       ),
     );
   }

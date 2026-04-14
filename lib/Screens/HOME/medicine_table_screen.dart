@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class MedicineTableScreen extends StatelessWidget {
   const MedicineTableScreen({super.key});
@@ -40,7 +41,6 @@ class MedicineTableScreen extends StatelessWidget {
             ),
           ),
 
-          // Back button
           Positioned(
             left: 10,
             top: MediaQuery.of(context).padding.top + 6,
@@ -50,14 +50,12 @@ class MedicineTableScreen extends StatelessWidget {
             ),
           ),
 
-          // Bottom edit button
           Positioned(
             left: 22,
             bottom: 22,
             child: _RoundFab(icon: Icons.edit, onTap: () {}),
           ),
 
-          // Bottom Pillo button
           Positioned(
             right: 22,
             bottom: 22,
@@ -69,7 +67,6 @@ class MedicineTableScreen extends StatelessWidget {
   }
 }
 
-// Calendar (matches your screenshot exactly)
 class _CalendarCard extends StatelessWidget {
   const _CalendarCard();
 
@@ -88,17 +85,20 @@ class _CalendarCard extends StatelessWidget {
           children: [
             const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.black54),
             const SizedBox(height: 8),
-            _weekdays(),
+            _weekdays(context),
             const SizedBox(height: 10),
-            _datesGrid(selectedDay: 8),   // 8th is highlighted as in your screenshot
+            _datesGrid(selectedDay: 8),
           ],
         ),
       ),
     );
   }
 
-  Widget _weekdays() {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  Widget _weekdays(BuildContext context) {
+    final days = [
+      'sun'.tr(), 'mon'.tr(), 'tue'.tr(), 'wed'.tr(),
+      'thu'.tr(), 'fri'.tr(), 'sat'.tr(),
+    ];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: days.map((d) => Text(d, style: const TextStyle(fontSize: 11, color: Colors.black45, fontWeight: FontWeight.w700))).toList(),
@@ -142,7 +142,6 @@ class _CalendarCard extends StatelessWidget {
   }
 }
 
-// Medicine List (matches screenshot style)
 class _MedicineListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -153,7 +152,7 @@ class _MedicineListCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Column(
           children: [
-            _row(leading: _redBox(), name: 'Panadol Extra , 500 g', time: '9:30 am  (LATE)', nameColor: const Color(0xFFB3261E), timeColor: const Color(0xFFB3261E)),
+            _row(leading: _redBox(), name: 'Panadol Extra , 500 g', time: '9:30 am  (${' late'.tr()})', nameColor: const Color(0xFFB3261E), timeColor: const Color(0xFFB3261E)),
             const SizedBox(height: 8),
             _row(leading: const Icon(Icons.alarm, size: 20), name: 'Augmentin , 1 g', time: '10:00 am'),
             const SizedBox(height: 8),
