@@ -1,0 +1,1 @@
+const String huggingFaceApiKey = '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';
