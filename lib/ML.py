@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, accuracy_score
 
 # Load data
-df = pd.read_csv("medicine_suitability_dataset.csv")
+df = pd.read_csv("medicine_dataset.csv")
 
 # Features and label
 X = df.drop("label", axis=1)
