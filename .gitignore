@@ -11,7 +11,8 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-
+lib/MachineLearning/*.csv
+lib/MachineLearning/*.ipynb
 # IntelliJ related
 *.iml
 *.ipr
