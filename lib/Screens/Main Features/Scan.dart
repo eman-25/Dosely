@@ -98,7 +98,7 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
 
      final uid = FirebaseAuth.instance.currentUser!.uid;
 
-final medicineResult =
+    final medicineResult =
     await FirebaseMedicineChecker.checkMedicine(
       uid: uid,
       ocrText: ocrText,
