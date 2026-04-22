@@ -1,9 +1,10 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
-import 'package:dosely/Screens/Main%20Features/scan_result_sxreen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'ocr_text_screen.dart';
+import '../../services/firebase_medicine_checker.dart';
+import 'medicine_result_screen.dart';
 
 class Scan extends StatefulWidget {
   const Scan({super.key});
@@ -27,13 +28,14 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
   Future<void> _initCamera() async {
     try {
       final cameras = await availableCameras();
-      final back = cameras.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.back,
+
+      final backCamera = cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
         orElse: () => cameras.first,
       );
 
       final controller = CameraController(
-        back,
+        backCamera,
         ResolutionPreset.high,
         enableAudio: false,
       );
@@ -41,57 +43,98 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
       await controller.initialize();
 
       if (!mounted) return;
+
       setState(() {
         _controller = controller;
         _initializing = false;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _initializing = false);
+
+      setState(() {
+        _initializing = false;
+      });
+
       _showError('Camera failed: $e');
     }
   }
 
   Future<void> _captureAndRead() async {
     final controller = _controller;
+
     if (controller == null || !controller.value.isInitialized) return;
     if (_isTakingPhoto) return;
 
-    setState(() => _isTakingPhoto = true);
+    setState(() {
+      _isTakingPhoto = true;
+    });
 
     try {
       final XFile file = await controller.takePicture();
       final imageFile = File(file.path);
 
-      // ML Kit Text Recognition
       final inputImage = InputImage.fromFile(imageFile);
       final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
       final RecognizedText recognizedText =
-        await textRecognizer.processImage(inputImage);
+          await textRecognizer.processImage(inputImage);
 
       await textRecognizer.close();
+
       if (!mounted) return;
+
+      final String ocrText = recognizedText.text.trim();
+
+      if (ocrText.isEmpty) {
+        _showError('No text detected from the image.');
+        return;
+      }
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showError('No logged in user found.');
+        return;
+      }
+
+     final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    final medicineResult =
+    await FirebaseMedicineChecker.checkMedicine(
+      uid: uid,
+      ocrText: ocrText,
+    );
+
+      if (!mounted) return;
+
+      if (medicineResult == null) {
+        _showError('No medicine match found in Firebase.');
+        return;
+      }
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => OcrTextScreen(
+          builder: (_) => MedicineResultScreen(
             imagePath: imageFile.path,
-            text: recognizedText.text,
+            ocrText: ocrText,
+            medicineData: medicineResult,
           ),
         ),
       );
     } catch (e) {
       _showError('Scan failed: $e');
     } finally {
-      if (mounted) setState(() => _isTakingPhoto = false);
+      if (mounted) {
+        setState(() {
+          _isTakingPhoto = false;
+        });
+      }
     }
   }
 
-  void _showError(String msg) {
+  void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
+      SnackBar(content: Text(message)),
     );
   }
 
@@ -118,13 +161,17 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     if (_initializing) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
       );
     }
 
     if (_controller == null) {
       return const Scaffold(
-        body: Center(child: Text('No camera available')),
+        body: Center(
+          child: Text('No camera available'),
+        ),
       );
     }
 
@@ -137,9 +184,9 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
       ),
       body: Stack(
         children: [
-          Positioned.fill(child: CameraPreview(_controller!)),
-
-          // simple overlay hint
+          Positioned.fill(
+            child: CameraPreview(_controller!),
+          ),
           Positioned(
             left: 16,
             right: 16,
@@ -166,7 +213,10 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
             ? const SizedBox(
                 height: 18,
                 width: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : const Icon(Icons.camera_alt_rounded),
         label: Text(_isTakingPhoto ? 'Reading...' : 'Capture'),
