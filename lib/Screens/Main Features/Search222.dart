@@ -45,7 +45,6 @@ class _SearchState extends State<Search> {
         MaterialPageRoute(
           builder: (_) => MedicineResultScreen(
             medicineData: data,
-            userData: Provider.of<UserData>(context, listen: false),
           ),
         ),
       );

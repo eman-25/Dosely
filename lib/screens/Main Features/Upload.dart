@@ -52,7 +52,6 @@ class _UploadState extends State<Upload> {
           MaterialPageRoute(
             builder: (_) => MedicineResultScreen(
               medicineData: data,
-              userData: Provider.of<UserData>(context, listen: false),
             ),
           ),
         );
