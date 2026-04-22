@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import '../../services/medicine_api_service.dart';
+import '../../services/firebase_medicine_checker.dart';
 import 'medicine_result_screen.dart';
 
 class Scan extends StatefulWidget {
@@ -89,13 +90,21 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
         return;
       }
 
-      final medicineResult =
-          await MedicineApiService.predictMedicine(ocrText);
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showError('No logged in user found.');
+        return;
+      }
+
+      final medicineResult = await FirebaseMedicineChecker.checkMedicine(
+        uid: user.uid,
+        ocrText: ocrText,
+      );
 
       if (!mounted) return;
 
       if (medicineResult == null) {
-        _showError('No medicine match found.');
+        _showError('No medicine match found in Firebase.');
         return;
       }
 

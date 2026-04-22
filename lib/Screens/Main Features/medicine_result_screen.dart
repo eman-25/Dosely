@@ -23,10 +23,24 @@ class MedicineResultScreen extends StatelessWidget {
     final String dosage = (medicineData['dosage'] ?? 'Unknown').toString();
     final String description =
         (medicineData['description'] ?? 'No description available').toString();
+    final String status =
+        (medicineData['status'] ?? 'unknown').toString();
+
+    final List<String> reasons =
+        List<String>.from(medicineData['reasons'] ?? []);
 
     final double score = medicineData['score'] is num
         ? (medicineData['score'] as num).toDouble()
         : 0.0;
+
+    Color statusColor;
+    if (status == 'safe') {
+      statusColor = Colors.green;
+    } else if (status == 'caution') {
+      statusColor = Colors.orange;
+    } else {
+      statusColor = Colors.red;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -51,22 +65,30 @@ class MedicineResultScreen extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF3E84A8).withOpacity(0.12),
+                color: statusColor.withOpacity(0.12),
               ),
-              child: const Icon(
-                Icons.medication_rounded,
+              child: Icon(
+                status == 'safe'
+                    ? Icons.verified_rounded
+                    : status == 'caution'
+                        ? Icons.warning_amber_rounded
+                        : Icons.dangerous_rounded,
                 size: 90,
-                color: Color(0xFF3E84A8),
+                color: statusColor,
               ),
             ),
             const SizedBox(height: 20),
 
-            const Text(
-              'Medicine Identified',
+            Text(
+              status == 'safe'
+                  ? 'This medicine looks safe'
+                  : status == 'caution'
+                      ? 'Use caution'
+                      : 'This medicine is not safe',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF3E84A8),
+                color: statusColor,
               ),
               textAlign: TextAlign.center,
             ),
@@ -76,6 +98,9 @@ class MedicineResultScreen extends StatelessWidget {
             _buildInfoCard('Generic Name', genericName),
             _buildInfoCard('Dosage', dosage),
             _buildInfoCard('Description', description),
+            _buildInfoCard('Safety Status', status.toUpperCase()),
+            _buildInfoCard('Reasons',
+                reasons.isEmpty ? 'No reasons found' : reasons.join('\n• ')),
             _buildInfoCard('Match Score', score.toStringAsFixed(3)),
             _buildInfoCard('OCR Text', ocrText.isEmpty ? 'No text found' : ocrText),
 
