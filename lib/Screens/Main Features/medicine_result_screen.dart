@@ -4,14 +4,14 @@ import 'Pill_Assistant_Home.dart';
 
 class MedicineResultScreen extends StatelessWidget {
   final Map<String, dynamic> medicineData;
-  final String imagePath;
-  final String ocrText;
+  final String? imagePath;
+  final String? ocrText;
 
   const MedicineResultScreen({
     super.key,
     required this.medicineData,
-    required this.imagePath,
-    required this.ocrText,
+    this.imagePath,
+    this.ocrText,
   });
 
   @override
@@ -20,9 +20,11 @@ class MedicineResultScreen extends StatelessWidget {
         (medicineData['name'] ?? 'Unknown Medicine').toString();
     final String genericName =
         (medicineData['generic_name'] ?? 'Unknown').toString();
-    final String dosage = (medicineData['dosage'] ?? 'Unknown').toString();
+    final String dosage =
+        (medicineData['dosage'] ?? 'Unknown').toString();
     final String description =
         (medicineData['description'] ?? 'No description available').toString();
+
     final String status =
         (medicineData['status'] ?? 'unknown').toString();
 
@@ -34,12 +36,25 @@ class MedicineResultScreen extends StatelessWidget {
         : 0.0;
 
     Color statusColor;
+    IconData statusIcon;
+    String statusTitle;
+
     if (status == 'safe') {
       statusColor = Colors.green;
+      statusIcon = Icons.verified_rounded;
+      statusTitle = 'This medicine looks safe';
     } else if (status == 'caution') {
       statusColor = Colors.orange;
-    } else {
+      statusIcon = Icons.warning_amber_rounded;
+      statusTitle = 'Use caution';
+    } else if (status == 'not safe') {
       statusColor = Colors.red;
+      statusIcon = Icons.dangerous_rounded;
+      statusTitle = 'This medicine is not safe';
+    } else {
+      statusColor = const Color(0xFF3E84A8);
+      statusIcon = Icons.medication_rounded;
+      statusTitle = 'Medicine Identified';
     }
 
     return Scaffold(
@@ -50,16 +65,18 @@ class MedicineResultScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.file(
-                File(imagePath),
-                height: 210,
-                width: double.infinity,
-                fit: BoxFit.cover,
+            if (imagePath != null && imagePath!.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.file(
+                  File(imagePath!),
+                  height: 210,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
+            ],
 
             Container(
               padding: const EdgeInsets.all(24),
@@ -68,11 +85,7 @@ class MedicineResultScreen extends StatelessWidget {
                 color: statusColor.withOpacity(0.12),
               ),
               child: Icon(
-                status == 'safe'
-                    ? Icons.verified_rounded
-                    : status == 'caution'
-                        ? Icons.warning_amber_rounded
-                        : Icons.dangerous_rounded,
+                statusIcon,
                 size: 90,
                 color: statusColor,
               ),
@@ -80,11 +93,7 @@ class MedicineResultScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             Text(
-              status == 'safe'
-                  ? 'This medicine looks safe'
-                  : status == 'caution'
-                      ? 'Use caution'
-                      : 'This medicine is not safe',
+              statusTitle,
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -98,11 +107,17 @@ class MedicineResultScreen extends StatelessWidget {
             _buildInfoCard('Generic Name', genericName),
             _buildInfoCard('Dosage', dosage),
             _buildInfoCard('Description', description),
-            _buildInfoCard('Safety Status', status.toUpperCase()),
-            _buildInfoCard('Reasons',
-                reasons.isEmpty ? 'No reasons found' : reasons.join('\n• ')),
+
+            if (status != 'unknown')
+              _buildInfoCard('Safety Status', status.toUpperCase()),
+
+            if (reasons.isNotEmpty)
+              _buildInfoCard('Reasons', reasons.join('\n• ')),
+
             _buildInfoCard('Match Score', score.toStringAsFixed(3)),
-            _buildInfoCard('OCR Text', ocrText.isEmpty ? 'No text found' : ocrText),
+
+            if (ocrText != null && ocrText!.isNotEmpty)
+              _buildInfoCard('OCR Text', ocrText!),
 
             const SizedBox(height: 30),
 
