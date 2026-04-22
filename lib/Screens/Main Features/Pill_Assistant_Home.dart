@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../api_key.dart';
 import 'pillo_chat_service.dart';
+
 class PillAssistantHome extends StatefulWidget {
   const PillAssistantHome({super.key});
 
@@ -12,20 +11,30 @@ class PillAssistantHome extends StatefulWidget {
 }
 
 class _PillAssistantHomeState extends State<PillAssistantHome> {
-  final _controller = TextEditingController();
-  final _scroll = ScrollController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scroll = ScrollController();
 
-  final List<_ChatMessage> _messages = [
-    _ChatMessage.user('how can i scan medicine?'),
-    _ChatMessage.bot(
-      'Open the camera and point it directly and clearly at the medicine container, and wait a little while until the result appears.',
-    ),
-  ];
+  // ✅ Start with no conversations — fresh empty state
+  final List<_ChatConversation> _conversations = [];
+
+  late String _currentConvId = '';
+
+  _ChatConversation? get _currentConversation {
+    if (_currentConvId.isEmpty) return null;
+    try {
+      return _conversations.firstWhere((c) => c.id == _currentConvId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<_ChatMessage> get _messages => _currentConversation?.messages ?? [];
 
   bool _sending = false;
   File? _pickedImage;
 
-  static const bg = Color(0xFFEAF7F7); // close to your screenshot
+  static const bg = Color(0xFFEAF7F7);
 
   @override
   void dispose() {
@@ -41,11 +50,44 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     setState(() => _pickedImage = File(x.path));
   }
 
+  void _startNewChat() {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    setState(() {
+      _conversations.insert(0, _ChatConversation(id, 'New Chat', []));
+      _currentConvId = id;
+    });
+    Navigator.of(context).pop();
+  }
+
+  void _switchChat(String id) {
+    setState(() => _currentConvId = id);
+    Navigator.of(context).pop();
+    _jumpToBottom();
+  }
+
   Future<void> _send() async {
     final text = _controller.text.trim();
     final image = _pickedImage;
 
     if (text.isEmpty && image == null) return;
+
+    // ✅ Auto-create a conversation on first message
+    if (_currentConversation == null) {
+      final id = DateTime.now().millisecondsSinceEpoch.toString();
+      final title = text.length > 25 ? '${text.substring(0, 25)}...' : text;
+      setState(() {
+        _conversations.insert(0, _ChatConversation(id, title.isNotEmpty ? title : 'Image', []));
+        _currentConvId = id;
+      });
+    }
+
+    final conv = _currentConversation!;
+
+    if (conv.title == 'New Chat' && text.isNotEmpty) {
+      setState(() {
+        conv.title = text.length > 25 ? '${text.substring(0, 25)}...' : text;
+      });
+    }
 
     setState(() {
       _sending = true;
@@ -59,10 +101,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
 
     try {
       final reply = await PilloChatService.send(text);
-
       setState(() => _messages.add(_ChatMessage.bot(reply)));
     } catch (e) {
-      setState(() => _messages.add(_ChatMessage.bot('Sorry, something went wrong: $e')));
+      setState(() => _messages.add(_ChatMessage.bot('Error: $e')));
     } finally {
       setState(() => _sending = false);
       _jumpToBottom();
@@ -82,7 +123,10 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isEmpty = _messages.isEmpty;
+
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: bg,
       appBar: AppBar(
         backgroundColor: bg,
@@ -94,140 +138,203 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
         actions: [
           IconButton(
             icon: const Icon(Icons.menu_rounded, color: Colors.black87),
-            onPressed: () {},
-          )
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+          ),
         ],
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 10),
 
-          // Top bot area
-          Column(
+      endDrawer: Drawer(
+        child: SafeArea(
+          child: Column(
             children: [
-              // Replace this with your asset if you have it:
-              // Image.asset('assets/pillo.png', height: 100)
-              Container(
-                height: 90,
-                width: 90,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(26),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 16, offset: const Offset(0, 8)),
-                  ],
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ElevatedButton.icon(
+                  onPressed: _startNewChat,
+                  icon: const Icon(Icons.add),
+                  label: const Text('New Conversation'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4ACED0),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
                 ),
-                child: const Icon(Icons.smart_toy_rounded, size: 48, color: Color(0xFF3E84A8)),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Ask Pillo anything about\nyour medicine',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+              const Divider(),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _conversations.length,
+                  itemBuilder: (context, index) {
+                    final conv = _conversations[index];
+                    return ListTile(
+                      title: Text(conv.title),
+                      selected: conv.id == _currentConvId,
+                      selectedTileColor: const Color(0xFF4ACED0).withOpacity(0.12),
+                      onTap: () => _switchChat(conv.id),
+                    );
+                  },
                 ),
               ),
             ],
           ),
+        ),
+      ),
 
-          const SizedBox(height: 12),
+      body: Column(
+        children: [
+          const SizedBox(height: 10),
 
-          // Chat list
+          Image.asset('assets/images/pillo_icon.png', height: 100),
+
+          const SizedBox(height: 10),
+
+          // ✅ Show welcome message when chat is empty, normal subtitle otherwise
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: isEmpty
+                ? Padding(
+                    key: const ValueKey('welcome'),
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      "If you need anything, don't hesitate to ask Pillo for help.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.black.withOpacity(0.55),
+                        height: 1.5,
+                      ),
+                    ),
+                  )
+                : const SizedBox(key: ValueKey('empty'), height: 0),
+          ),
+
           Expanded(
             child: ListView.builder(
               controller: _scroll,
-              padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               itemCount: _messages.length,
               itemBuilder: (context, i) {
                 final m = _messages[i];
                 return Align(
-                  alignment: m.isUser ? Alignment.centerLeft : Alignment.centerRight,
+                  alignment: m.isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     child: m.isImage
-                        ? _ImageBubble(file: m.imageFile!, isUser: m.isUser)
-                        : _TextBubble(text: m.text!, isUser: m.isUser),
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(m.imageFile!, width: 150),
+                          )
+                        : Container(
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.75,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: m.isUser
+                                  ? const Color(0xFF4ACED0)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(18),
+                                topRight: const Radius.circular(18),
+                                bottomLeft: Radius.circular(m.isUser ? 18 : 4),
+                                bottomRight: Radius.circular(m.isUser ? 4 : 18),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.06),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              m.text!,
+                              style: TextStyle(
+                                color: m.isUser ? Colors.white : Colors.black87,
+                                fontSize: 14.5,
+                              ),
+                            ),
+                          ),
                   ),
                 );
               },
             ),
           ),
 
-          // If user picked image, show a small preview above input
-          if (_pickedImage != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(_pickedImage!, height: 46, width: 46, fit: BoxFit.cover),
-                  ),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text('Image attached', style: TextStyle(color: Colors.black54)),
-                  ),
-                  IconButton(
-                    onPressed: () => setState(() => _pickedImage = null),
-                    icon: const Icon(Icons.close_rounded),
-                  )
-                ],
-              ),
-            ),
-
           // Input bar
-          SafeArea(
-            top: false,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.92),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 18, offset: const Offset(0, -8)),
-                ],
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: _sending ? null : _pickImage,
-                    icon: const Icon(Icons.image_outlined),
-                    color: Colors.black54,
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            decoration: BoxDecoration(
+              color: bg,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.image_outlined, color: Colors.black54),
+                  onPressed: _pickImage,
+                ),
+                if (_pickedImage != null)
+                  Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(_pickedImage!, width: 40, height: 40, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        top: -4,
+                        right: -4,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _pickedImage = null),
+                          child: const CircleAvatar(
+                            radius: 9,
+                            backgroundColor: Colors.red,
+                            child: Icon(Icons.close, size: 12, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sending ? null : _send(),
-                      decoration: const InputDecoration(
-                        hintText: 'What would you like to know?',
-                        border: InputBorder.none,
+                const SizedBox(width: 4),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'Ask something...',
+                      hintStyle: const TextStyle(color: Colors.black38),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
                       ),
                     ),
+                    onSubmitted: (_) => _send(),
                   ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: _sending ? null : _send,
-                    borderRadius: BorderRadius.circular(999),
-                    child: Container(
-                      height: 42,
-                      width: 42,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4ACED0),
-                        borderRadius: BorderRadius.circular(999),
+                ),
+                const SizedBox(width: 6),
+                _sending
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.send_rounded, color: Color(0xFF3E84A8)),
+                        onPressed: _send,
                       ),
-                      child: _sending
-                          ? const Padding(
-                              padding: EdgeInsets.all(10),
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.send_rounded, color: Colors.white),
-                    ),
-                  )
-                ],
-              ),
+              ],
             ),
           ),
         ],
@@ -236,56 +343,7 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
   }
 }
 
-class _TextBubble extends StatelessWidget {
-  final String text;
-  final bool isUser;
-
-  const _TextBubble({required this.text, required this.isUser});
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = isUser ? Colors.white : const Color(0xFF9BC8C3);
-    final fg = Colors.black87;
-
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 260),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 14, offset: const Offset(0, 8)),
-        ],
-      ),
-      child: Text(text, style: TextStyle(color: fg, height: 1.25)),
-    );
-  }
-}
-
-class _ImageBubble extends StatelessWidget {
-  final File file;
-  final bool isUser;
-
-  const _ImageBubble({required this.file, required this.isUser});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 260),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 14, offset: const Offset(0, 8)),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Image.file(file, fit: BoxFit.cover),
-      ),
-    );
-  }
-}
+// ─── Models ───────────────────────────────────────────────────────────────────
 
 class _ChatMessage {
   final bool isUser;
@@ -299,10 +357,12 @@ class _ChatMessage {
   factory _ChatMessage.user(String text) => _ChatMessage._(true, text, null);
   factory _ChatMessage.bot(String text) => _ChatMessage._(false, text, null);
   factory _ChatMessage.userImage(File f) => _ChatMessage._(true, null, f);
+}
 
-  Map<String, dynamic> toMap() => {
-        "role": isUser ? "user" : "assistant",
-        "text": text,
-        "hasImage": imageFile != null,
-      };
+class _ChatConversation {
+  final String id;
+  String title;
+  final List<_ChatMessage> messages;
+
+  _ChatConversation(this.id, this.title, this.messages);
 }

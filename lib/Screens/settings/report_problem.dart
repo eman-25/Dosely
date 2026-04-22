@@ -1,5 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
+import 'package:provider/provider.dart';
+import '../../models/user_data.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/custom_textfield.dart';
 import '/theme.dart';
@@ -14,11 +19,66 @@ class ReportProblemScreen extends StatefulWidget {
 class _ReportProblemScreenState extends State<ReportProblemScreen> {
   final _descriptionController = TextEditingController();
   String? _selectedIssueType;
+  File? _attachedFile;
 
   @override
   void dispose() {
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _attachedFile = File(picked.path));
+    }
+  }
+
+  Future<void> _sendReport() async {
+    if (_descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('describe_issue_prompt'.tr())),
+      );
+      return;
+    }
+
+    final user = Provider.of<UserData>(context, listen: false);
+    final issueType = _selectedIssueType ?? 'Other';
+    final userEmail = user.email.isNotEmpty ? user.email : 'Unknown User';
+
+    final body = '''
+Reported by: $userEmail
+Issue Type: $issueType
+
+Description:
+${_descriptionController.text.trim()}
+''';
+
+    final Email email = Email(
+      body: body,
+      subject: 'Dosely Support Request: $issueType',
+      recipients: ['doselysupport@gmail.com'],
+      attachmentPaths: _attachedFile != null ? [_attachedFile!.path] : null,
+      isHTML: false,
+    );
+
+    try {
+      await FlutterEmailSender.send(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('report_submitted'.tr()),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: Could not open email client. $e')),
+      );
+    }
   }
 
   @override
@@ -84,33 +144,24 @@ class _ReportProblemScreenState extends State<ReportProblemScreen> {
                 const Icon(Icons.attach_file, color: AppColors.primaryBlue),
                 const SizedBox(width: 8),
                 TextButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('attach_coming_soon'.tr())),
-                    );
-                  },
-                  child: Text('attach_screenshot'.tr()),
+                  onPressed: _pickImage,
+                  child: Text(
+                    _attachedFile != null
+                        ? 'Image Attached'
+                        : 'attach_screenshot'.tr(),
+                  ),
                 ),
+                if (_attachedFile != null)
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                    onPressed: () => setState(() => _attachedFile = null),
+                  ),
               ],
             ),
             const SizedBox(height: 32),
             CustomButton(
               text: 'submit_report'.tr(),
-              onPressed: () {
-                if (_descriptionController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('describe_issue_prompt'.tr())),
-                  );
-                  return;
-                }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('report_submitted'.tr()),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                Navigator.pop(context);
-              },
+              onPressed: _sendReport,
             ),
           ],
         ),

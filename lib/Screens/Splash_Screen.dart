@@ -112,51 +112,70 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FAF8),
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // "Hello! Welcome To" fades in after logo settles
-                FadeTransition(
-                  opacity: _textFadeAnimation,
-                  child: Transform.translate(
-                    offset: Offset(0, _textSlideAnimation.value),
-                    child: const Text(
-                      'Hello! Welcome To',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A3A5C),
-                        letterSpacing: 0.3,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: [0.65, 1.0],
+            colors: [
+              Colors.white,
+              Color(0xFFBCE6D8), // Soft mint gradient at the bottom
+            ],
+          ),
+        ),
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // "Hello! Welcome To" fades in after logo settles
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                    child: FadeTransition(
+                      opacity: _textFadeAnimation,
+                      child: Transform.translate(
+                        offset: Offset(0, _textSlideAnimation.value),
+                        child: const Text(
+                          'Hello! Welcome To',
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF146494),
+                            letterSpacing: 0.0,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 36),
+                  const SizedBox(height: 50),
 
-                // Logo sweeps left → right → center
-                FadeTransition(
-                  opacity: _logoFadeAnimation,
-                  child: Transform.translate(
-                    offset: Offset(_logoXAnimation.value, 0),
-                    child: Transform.scale(
-                      scale: _logoScaleAnimation.value,
-                      child: Image.asset(
-                        'assets/images/dosely_logo.png', // ✅ your asset
-                        width: 200,
-                        fit: BoxFit.contain,
+                  // Logo sweeps left → right → center
+                  Center(
+                    child: FadeTransition(
+                      opacity: _logoFadeAnimation,
+                      child: Transform.translate(
+                        offset: Offset(_logoXAnimation.value, 0),
+                        child: Transform.scale(
+                          scale: _logoScaleAnimation.value,
+                          child: Image.asset(
+                            'assets/images/dosely_logo.png', // ✅ your asset
+                            width: 230,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

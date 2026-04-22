@@ -10,41 +10,49 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  easy_localization: ^3.0.0
-  url_launcher: ^6.3.0     # ← Add this line
   easy_localization: ^3.0.7
-
+  url_launcher: ^6.3.0
 
   # Core & State
   provider: ^6.1.2
-  
+
   # UI & Utils
   cupertino_icons: ^1.0.8
   dropdown_search: ^6.0.1
   country_picker: ^2.0.27
   intl: ^0.20.2
   fluttertoast: ^8.2.8
-  
+
   # Medicine Identification Engine
   camera: ^0.10.6
   image_picker: ^1.1.2
   google_mlkit_text_recognition: ^0.13.0
   http: ^1.2.2
   shared_preferences: ^2.3.0
-  
+
   # Firebase (Auth + Firestore for profiles & history)
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4
   permission_handler: ^12.0.1
   firebase_ai: ^2.3.0
-
+  flutter_email_sender: ^8.0.0
+  image: ^4.8.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
 
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  remove_alpha_ios: true
+  background_color: "#FFFFFF"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/app_icon.png"
 
 flutter:
   uses-material-design: true

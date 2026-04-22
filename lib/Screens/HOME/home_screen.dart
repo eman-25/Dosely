@@ -261,15 +261,7 @@ class _GreetingHandle extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              CircleAvatar(
-                radius: 22,
-                backgroundImage: avatar,
-                backgroundColor: const Color(0xFF4ACED0).withOpacity(0.25),
-                child: avatar == null
-                    ? const Icon(Icons.person, color: Colors.black54)
-                    : null,
-              ),
+
             ],
           ),
           const SizedBox(height: 8),
@@ -725,7 +717,13 @@ class _RemindersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const bool hasMedicines = false;
+    final userData = Provider.of<UserData>(context);
+    final medsStr = userData.currentMedications;
+    final medsList = medsStr.isNotEmpty 
+        ? medsStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty && e != 'None').toList()
+        : <String>[];
+
+    final bool hasMedicines = medsList.isNotEmpty;
 
     return GestureDetector(
       onVerticalDragEnd: (details) {
@@ -750,7 +748,7 @@ class _RemindersCard extends StatelessWidget {
             Text('medicine_reminders'.tr(),
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(height: 14),
-            hasMedicines ? const SizedBox.shrink() : _buildEmptyState(context),
+            hasMedicines ? _buildFilledState(medsList) : _buildEmptyState(context),
             const SizedBox(height: 12),
             InkWell(
               onTap: onArrowTap,
@@ -760,6 +758,45 @@ class _RemindersCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFilledState(List<String> medicines) {
+    return Column(
+      children: medicines.map((med) => Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4ACED0).withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.alarm, size: 20, color: Color(0xFF1A7A70)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                med,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            const Text(
+              '8:00 am',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A7A70),
+              ),
+            ),
+          ],
+        ),
+      )).toList(),
     );
   }
 

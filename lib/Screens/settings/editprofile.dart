@@ -185,31 +185,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Profile Photo
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                CircleAvatar(
-                  radius: 55,
-                  backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
-                  backgroundImage: _pickedImage != null ? FileImage(_pickedImage!) : null,
-                  child: _pickedImage == null
-                      ? (user.avatar != null
-                          ? null
-                          : const Icon(Icons.person, size: 60, color: AppColors.primaryBlue))
-                      : null,
-                ),
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: const CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.camera_alt, size: 18, color: AppColors.primaryBlue),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
+
 
             CustomTextField(
               hint: 'username'.tr(),
