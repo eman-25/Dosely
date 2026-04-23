@@ -83,10 +83,10 @@ class _SearchScreenState extends State<SearchScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => MedicineResultScreen(
-          medicineData: medicine,
-          userData: userData,
+        medicineData: medicine,
         ),
-      ),
+        ),
+    
     );
   }
 

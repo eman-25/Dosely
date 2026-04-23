@@ -1,182 +1,201 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
-import 'package:easy_localization/easy_localization.dart';
-import '../../services/medicine_service.dart';
-import '../../models/user_data.dart';
-import 'medicine_result_screen.dart';
+import 'Pill_Assistant_Home.dart';
 
-class Upload extends StatefulWidget {
-  const Upload({super.key});
-  @override
-  State<Upload> createState() => _UploadState();
-}
+class MedicineResultScreen extends StatelessWidget {
+  final Map<String, dynamic> medicineData;
+  final String? imagePath;
+  final String? ocrText;
 
-class _UploadState extends State<Upload> {
-  final ImagePicker _picker = ImagePicker();
-
-  File? _pickedImage;   // ← holds the preview image
-  bool _isLoading = false;
-
-  // Step 1: just pick the image and show preview
-  Future<void> _pickImage() async {
-    final XFile? file = await _picker.pickImage(source: ImageSource.gallery);
-    if (file == null) return;
-    setState(() {
-      _pickedImage = File(file.path);
-    });
-  }
-
-  // Step 2: user pressed "Upload Image" — now process and go to results
-  Future<void> _processImage() async {
-    if (_pickedImage == null) return;
-    setState(() => _isLoading = true);
-
-    try {
-      final text = await MedicineService.processImage(_pickedImage!.path);
-      final name = MedicineService.extractMedicineName(text);
-
-      if (name.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('could_not_read'.tr())),
-        );
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      final data = await MedicineService.fetchMedicineInfo(name);
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MedicineResultScreen(
-              medicineData: data,
-              userData: Provider.of<UserData>(context, listen: false),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('could_not_read'.tr())),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+  const MedicineResultScreen({
+    super.key,
+    required this.medicineData,
+    this.imagePath,
+    this.ocrText,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final String medicineName =
+        (medicineData['name'] ?? 'Unknown Medicine').toString();
+    final String genericName =
+        (medicineData['generic_name'] ?? 'Unknown').toString();
+    final String dosage =
+        (medicineData['dosage'] ?? 'Unknown').toString();
+    final String description =
+        (medicineData['description'] ?? 'No description available').toString();
+
+    final String status =
+        (medicineData['status'] ?? 'unknown').toString();
+
+    final List<String> reasons =
+        List<String>.from(medicineData['reasons'] ?? []);
+
+    final double score = medicineData['score'] is num
+        ? (medicineData['score'] as num).toDouble()
+        : 0.0;
+
+    Color statusColor;
+    IconData statusIcon;
+    String statusTitle;
+
+    if (status == 'safe') {
+      statusColor = Colors.green;
+      statusIcon = Icons.verified_rounded;
+      statusTitle = 'This medicine looks safe';
+    } else if (status == 'caution') {
+      statusColor = Colors.orange;
+      statusIcon = Icons.warning_amber_rounded;
+      statusTitle = 'Use caution';
+    } else if (status == 'not safe') {
+      statusColor = Colors.red;
+      statusIcon = Icons.dangerous_rounded;
+      statusTitle = 'This medicine is not safe';
+    } else {
+      statusColor = const Color(0xFF3E84A8);
+      statusIcon = Icons.medication_rounded;
+      statusTitle = 'Medicine Identified';
+    }
+
     return Scaffold(
-      appBar: AppBar(title: Text('upload_photo'.tr())),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // ── Show preview if image picked, else show placeholder ──
-              GestureDetector(
-                onTap: _pickImage,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
+      appBar: AppBar(
+        title: Text(medicineName),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            if (imagePath != null && imagePath!.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.file(
+                  File(imagePath!),
+                  height: 210,
                   width: double.infinity,
-                  height: 260,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: const Color(0xFF4ACED0),
-                      width: 2,
-                    ),
-                  ),
-                  child: _pickedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(22),
-                          child: Image.file(
-                            _pickedImage!,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.cloud_upload,
-                                size: 80, color: Color(0xFF4ACED0)),
-                            const SizedBox(height: 16),
-                            Text(
-                              'select_medicine_photo'.tr(),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
+                  fit: BoxFit.cover,
                 ),
               ),
-
-              const SizedBox(height: 28),
-
-              // ── If no image: "Choose Image" button ──
-              // ── If image picked: "Upload Image" button ──
-              if (_pickedImage == null)
-                ElevatedButton.icon(
-                  onPressed: _pickImage,
-                  icon: const Icon(Icons.photo_library),
-                  label: Text('choose_image'.tr()),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 16),
-                  ),
-                )
-              else
-                Column(
-                  children: [
-                    // Upload Image button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _processImage,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4ACED0),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 22,
-                                width: 22,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : Text(
-                                'upload_image'.tr(),
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Change image link
-                    TextButton(
-                      onPressed: _pickImage,
-                      child: Text(
-                        'choose_image'.tr(),
-                        style: const TextStyle(color: Color(0xFF4ACED0)),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 20),
             ],
-          ),
+
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: statusColor.withOpacity(0.12),
+              ),
+              child: Icon(
+                statusIcon,
+                size: 90,
+                color: statusColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            Text(
+              statusTitle,
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: statusColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+
+            _buildInfoCard('Medicine Name', medicineName),
+            _buildInfoCard('Generic Name', genericName),
+            _buildInfoCard('Dosage', dosage),
+            _buildInfoCard('Description', description),
+
+            if (status != 'unknown')
+              _buildInfoCard('Safety Status', status.toUpperCase()),
+
+            if (reasons.isNotEmpty)
+              _buildInfoCard('Reasons', reasons.join('\n• ')),
+
+            _buildInfoCard('Match Score', score.toStringAsFixed(3)),
+
+            if (ocrText != null && ocrText!.isNotEmpty)
+              _buildInfoCard('OCR Text', ocrText!),
+
+            const SizedBox(height: 30),
+
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('✅ Added to your schedule'),
+                        ),
+                      );
+                    },
+                    child: const Text('Add to Schedule'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PillAssistantHome(),
+                        ),
+                      );
+                    },
+                    child: const Text('Ask Pillo'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(String title, String value) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: Colors.black54,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }
