@@ -74,7 +74,9 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
       final imageFile = File(file.path);
 
       final inputImage = InputImage.fromFile(imageFile);
-      final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+      final textRecognizer = TextRecognizer(
+        script: TextRecognitionScript.latin,
+      );
 
       final RecognizedText recognizedText =
           await textRecognizer.processImage(inputImage);
@@ -96,7 +98,7 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
         return;
       }
 
-      final uid = FirebaseAuth.instance.currentUser!.uid;
+      final uid = user.uid;
 
       final medicineResult = await FirebaseMedicineChecker.checkMedicine(
         uid: uid,
@@ -138,14 +140,24 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
     final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) return;
+    if (controller == null) return;
 
-    if (state == AppLifecycleState.inactive) {
-      controller.dispose();
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      await controller.dispose();
+
+      if (mounted) {
+        setState(() {
+          _controller = null;
+          _initializing = true;
+        });
+      }
     } else if (state == AppLifecycleState.resumed) {
-      _initCamera();
+      if (_controller == null) {
+        _initCamera();
+      }
     }
   }
 
@@ -166,10 +178,10 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
       );
     }
 
-    if (_controller == null) {
+    if (_controller == null || !_controller!.value.isInitialized) {
       return const Scaffold(
         body: Center(
-          child: Text('No camera available'),
+          child: CircularProgressIndicator(),
         ),
       );
     }
