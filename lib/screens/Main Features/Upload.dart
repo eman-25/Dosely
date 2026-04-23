@@ -10,10 +10,7 @@ class Upload extends StatelessWidget {
         title: const Text('Upload Medicine'),
       ),
       body: const Center(
-        child: Text(
-          'Upload screen here',
-          style: TextStyle(fontSize: 18),
-        ),
+        child: Text('Upload screen here'),
       ),
     );
   }
