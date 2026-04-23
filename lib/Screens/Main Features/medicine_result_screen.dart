@@ -16,8 +16,7 @@ class MedicineResultScreen extends StatelessWidget {
 
   static const Color _c1 = Color(0xFF48466E);
   static const Color _c2 = Color(0xFF3E84A8);
-  static const Color _c3 = Color(0xFF4ACED0);
-  static const Color _c5 = Color(0xFFE0FBF4);
+  static const Color _bg = Color(0xFFF7FBFD);
 
   @override
   Widget build(BuildContext context) {
@@ -29,19 +28,20 @@ class MedicineResultScreen extends StatelessWidget {
     final String description =
         (medicineData['description'] ?? 'No description available').toString();
     final String status = (medicineData['status'] ?? 'unknown').toString();
-    final List<String> reasons = List<String>.from(medicineData['reasons'] ?? []);
-
+    final List<String> reasons =
+        List<String>.from(medicineData['reasons'] ?? const <String>[]);
     final double score = medicineData['score'] is num
         ? (medicineData['score'] as num).toDouble()
         : 0.0;
 
     final _StatusUi statusUi = _getStatusUi(status);
+    final bool canAddToSchedule = status.toLowerCase() != 'not safe';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FBFD),
+      backgroundColor: _bg,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFFF7FBFD),
+        backgroundColor: _bg,
         foregroundColor: _c1,
         centerTitle: true,
         title: const Text(
@@ -56,41 +56,12 @@ class MedicineResultScreen extends StatelessWidget {
           children: [
             if (imagePath != null && imagePath!.isNotEmpty) ...[
               ClipRRect(
-                borderRadius: BorderRadius.circular(26),
-                child: Stack(
-                  children: [
-                    Image.file(
-                      File(imagePath!),
-                      height: 220,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                    Positioned(
-                      left: 14,
-                      top: 14,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.45),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.image_rounded, color: Colors.white, size: 18),
-                            SizedBox(width: 6),
-                            Text(
-                              'Scanned Image',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                borderRadius: BorderRadius.circular(24),
+                child: Image.file(
+                  File(imagePath!),
+                  height: 220,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
                 ),
               ),
               const SizedBox(height: 18),
@@ -151,7 +122,10 @@ class MedicineResultScreen extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       _infoChip(Icons.medication_rounded, dosage),
-                      _infoChip(Icons.analytics_rounded, 'Score ${score.toStringAsFixed(2)}'),
+                      _infoChip(
+                        Icons.analytics_rounded,
+                        'Score ${score.toStringAsFixed(2)}',
+                      ),
                     ],
                   ),
                 ],
@@ -159,10 +133,26 @@ class MedicineResultScreen extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _sectionTitle('Medicine Details'),
-            _buildInfoCard('Medicine Name', medicineName, icon: Icons.local_pharmacy_rounded),
-            _buildInfoCard('Generic Name', genericName, icon: Icons.science_rounded),
-            _buildInfoCard('Dosage', dosage, icon: Icons.straighten_rounded),
-            _buildInfoCard('Description', description, icon: Icons.description_rounded),
+            _buildInfoCard(
+              'Medicine Name',
+              medicineName,
+              icon: Icons.local_pharmacy_rounded,
+            ),
+            _buildInfoCard(
+              'Generic Name',
+              genericName,
+              icon: Icons.science_rounded,
+            ),
+            _buildInfoCard(
+              'Dosage',
+              dosage,
+              icon: Icons.straighten_rounded,
+            ),
+            _buildInfoCard(
+              'Description',
+              description,
+              icon: Icons.description_rounded,
+            ),
             if (status != 'unknown')
               _buildInfoCard(
                 'Safety Status',
@@ -186,7 +176,8 @@ class MedicineResultScreen extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.check_circle_rounded, color: statusUi.color, size: 20),
+                      Icon(Icons.check_circle_rounded,
+                          color: statusUi.color, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -204,25 +195,33 @@ class MedicineResultScreen extends StatelessWidget {
                 ),
               ),
             ],
-            if (ocrText != null && ocrText!.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              _sectionTitle('Detected Text'),
+            if (!canAddToSchedule) ...[
+              const SizedBox(height: 8),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _c3.withOpacity(0.25)),
+                  color: Colors.red.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.red.withOpacity(0.22)),
                 ),
-                child: Text(
-                  ocrText!,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: _c1,
-                    height: 1.5,
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.block_rounded, color: Colors.red),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'This medicine cannot be added to your schedule because it is marked as not safe.',
+                        style: TextStyle(
+                          color: _c1,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -232,25 +231,35 @@ class MedicineResultScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _c2,
+                      backgroundColor: canAddToSchedule ? _c2 : Colors.grey.shade400,
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey.shade400,
+                      disabledForegroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
                       ),
                       elevation: 0,
                     ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Added to your schedule'),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.add_task_rounded),
-                    label: const Text(
-                      'Add to Schedule',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                    onPressed: canAddToSchedule
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Added to your schedule'),
+                              ),
+                            );
+                          }
+                        : null,
+                    icon: Icon(
+                      canAddToSchedule
+                          ? Icons.add_task_rounded
+                          : Icons.block_rounded,
+                    ),
+                    label: Text(
+                      canAddToSchedule
+                          ? 'Add to Schedule'
+                          : 'Cannot Add to Schedule',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
@@ -259,7 +268,7 @@ class MedicineResultScreen extends StatelessWidget {
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _c1,
-                      side: BorderSide(color: _c2.withOpacity(0.35), width: 1.4),
+                      side: BorderSide(color: _c2.withOpacity(0.35)),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
@@ -288,36 +297,62 @@ class MedicineResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionTitle(String title) {
+  static Widget _sectionTitle(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10, left: 2),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Text(
-        title,
+        text,
         style: const TextStyle(
           fontSize: 18,
-          color: _c1,
           fontWeight: FontWeight.w900,
+          color: _c1,
         ),
       ),
     );
   }
 
-  Widget _buildInfoCard(
+  static Widget _infoChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: _c2),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: const TextStyle(
+              color: _c1,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _buildInfoCard(
     String title,
     String value, {
     required IconData icon,
-    Color accentColor = _c2,
+    Color? accentColor,
   }) {
+    final Color displayColor = accentColor ?? _c2;
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),
@@ -330,10 +365,10 @@ class MedicineResultScreen extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.10),
+              color: displayColor.withOpacity(0.10),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: accentColor),
+            child: Icon(icon, color: displayColor),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -353,9 +388,9 @@ class MedicineResultScreen extends StatelessWidget {
                   value,
                   style: const TextStyle(
                     fontSize: 16,
-                    color: _c1,
                     fontWeight: FontWeight.w800,
-                    height: 1.35,
+                    color: _c1,
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -366,74 +401,50 @@ class MedicineResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _infoChip(IconData icon, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: _c2),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: const TextStyle(
-              color: _c1,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  _StatusUi _getStatusUi(String status) {
-    if (status == 'safe') {
-      return _StatusUi(
-        color: Colors.green,
-        softColor: const Color(0xFFEAF8EE),
-        icon: Icons.verified_rounded,
-        title: 'Looks Safe',
-      );
+  static _StatusUi _getStatusUi(String status) {
+    switch (status.toLowerCase()) {
+      case 'safe':
+        return const _StatusUi(
+          title: 'This medicine looks safe',
+          color: Colors.green,
+          softColor: Color(0xFFEAF8EF),
+          icon: Icons.verified_rounded,
+        );
+      case 'caution':
+        return const _StatusUi(
+          title: 'Use caution',
+          color: Colors.orange,
+          softColor: Color(0xFFFFF4E5),
+          icon: Icons.warning_amber_rounded,
+        );
+      case 'not safe':
+        return const _StatusUi(
+          title: 'This medicine is not safe',
+          color: Colors.red,
+          softColor: Color(0xFFFFEBEE),
+          icon: Icons.dangerous_rounded,
+        );
+      default:
+        return const _StatusUi(
+          title: 'Medicine Identified',
+          color: _c2,
+          softColor: Color(0xFFEAF4FA),
+          icon: Icons.medication_rounded,
+        );
     }
-    if (status == 'caution') {
-      return _StatusUi(
-        color: Colors.orange,
-        softColor: const Color(0xFFFFF5E8),
-        icon: Icons.warning_amber_rounded,
-        title: 'Use Caution',
-      );
-    }
-    if (status == 'not safe') {
-      return _StatusUi(
-        color: Colors.red,
-        softColor: const Color(0xFFFDECEC),
-        icon: Icons.dangerous_rounded,
-        title: 'Not Safe',
-      );
-    }
-    return const _StatusUi(
-      color: _c2,
-      softColor: _c5,
-      icon: Icons.medication_rounded,
-      title: 'Medicine Identified',
-    );
   }
 }
 
 class _StatusUi {
+  final String title;
   final Color color;
   final Color softColor;
   final IconData icon;
-  final String title;
 
   const _StatusUi({
+    required this.title,
     required this.color,
     required this.softColor,
     required this.icon,
-    required this.title,
   });
 }
