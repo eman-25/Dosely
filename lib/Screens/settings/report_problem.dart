@@ -4,6 +4,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../models/user_data.dart';
 import '../../Widgets/custom_button.dart';
 import '../../Widgets/custom_textfield.dart';
@@ -18,12 +20,17 @@ class ReportProblemScreen extends StatefulWidget {
 
 class _ReportProblemScreenState extends State<ReportProblemScreen> {
   final _descriptionController = TextEditingController();
+  final _suggestionController = TextEditingController();
+
   String? _selectedIssueType;
   File? _attachedFile;
+
+  double _rating = 0;
 
   @override
   void dispose() {
     _descriptionController.dispose();
+    _suggestionController.dispose();
     super.dispose();
   }
 
@@ -47,12 +54,34 @@ class _ReportProblemScreenState extends State<ReportProblemScreen> {
     final issueType = _selectedIssueType ?? 'Other';
     final userEmail = user.email.isNotEmpty ? user.email : 'Unknown User';
 
+    final description = _descriptionController.text.trim();
+    final suggestion = _suggestionController.text.trim();
+
+    /// 🔥 SAVE TO FIREBASE (for dashboard)
+    try {
+      await FirebaseFirestore.instance.collection('feedback').add({
+        "user": userEmail,
+        "issue_type": issueType,
+        "rating": _rating,
+        "description": description,
+        "suggestion": suggestion,
+        "timestamp": DateTime.now(),
+      });
+    } catch (e) {
+      debugPrint("Firestore error: $e");
+    }
+
+    /// 📧 EMAIL BODY
     final body = '''
 Reported by: $userEmail
 Issue Type: $issueType
+Rating: $_rating / 5
 
 Description:
-${_descriptionController.text.trim()}
+$description
+
+Suggestions:
+$suggestion
 ''';
 
     final Email email = Email(
@@ -65,16 +94,20 @@ ${_descriptionController.text.trim()}
 
     try {
       await FlutterEmailSender.send(email);
+
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('report_submitted'.tr()),
           backgroundColor: Colors.green,
         ),
       );
+
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: Could not open email client. $e')),
       );
@@ -105,6 +138,8 @@ ${_descriptionController.text.trim()}
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
+            /// TITLE
             Text(
               'report_problem_title'.tr(),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -114,7 +149,10 @@ ${_descriptionController.text.trim()}
               'report_problem_subtitle'.tr(),
               style: const TextStyle(color: Colors.grey),
             ),
+
             const SizedBox(height: 24),
+
+            /// ISSUE TYPE
             DropdownButtonFormField<String>(
               value: _selectedIssueType,
               hint: Text('select_issue_type'.tr()),
@@ -132,12 +170,56 @@ ${_descriptionController.text.trim()}
                   .toList(),
               onChanged: (value) => setState(() => _selectedIssueType = value),
             ),
+
+            /// ⭐ RATING
+            const SizedBox(height: 20),
+            const Text(
+              "Rate your experience",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+
+            Row(
+              children: List.generate(5, (index) {
+                return IconButton(
+                  icon: Icon(
+                    index < _rating ? Icons.star : Icons.star_border,
+                    color: Colors.amber,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _rating = index + 1;
+                    });
+                  },
+                );
+              }),
+            ),
+
+            Text("Your Rating: $_rating / 5"),
+
+            /// DESCRIPTION
             const SizedBox(height: 20),
             CustomTextField(
               hint: 'describe_problem'.tr(),
               controller: _descriptionController,
               maxLines: 5,
             ),
+
+            /// SUGGESTIONS
+            const SizedBox(height: 20),
+            const Text(
+              "Suggestions for improvement",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+
+            CustomTextField(
+              hint: "Tell us how we can improve...",
+              controller: _suggestionController,
+              maxLines: 3,
+            ),
+
+            /// ATTACH IMAGE
             const SizedBox(height: 12),
             Row(
               children: [
@@ -158,7 +240,10 @@ ${_descriptionController.text.trim()}
                   ),
               ],
             ),
+
             const SizedBox(height: 32),
+
+            /// SUBMIT
             CustomButton(
               text: 'submit_report'.tr(),
               onPressed: _sendReport,
