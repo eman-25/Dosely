@@ -46,3 +46,32 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 android/.kotlin/sessions/kotlin-compiler-8250831378682972397.salive
+# Node.js
+node_modules/
+npm-debug.log
+
+# Firebase keys (VERY IMPORTANT)
+serviceAccountKey.json
+
+# Flutter / Dart
+.dart_tool/
+.build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Android
+android/.gradle/
+android/app/build/
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+
+# VS Code
+.vscode/
+
+# Mac / Windows junk
+.DS_Store
+Thumbs.db

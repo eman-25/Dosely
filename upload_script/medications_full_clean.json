@@ -1,0 +1,1170 @@
+[
+  {
+    "id": "advil_200mg",
+    "name": "Advil",
+    "generic_name": "Ibuprofen",
+    "aliases": [
+      "Ibuprofen",
+      "Advil"
+    ],
+    "dosage": "200 mg",
+    "indications": [
+      "Pain reliever and anti-inflammatory used for headaches, fever, and muscle pain"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "advil_400mg",
+    "name": "Advil",
+    "generic_name": "Ibuprofen",
+    "aliases": [
+      "Ibuprofen",
+      "Advil"
+    ],
+    "dosage": "400 mg",
+    "indications": [
+      "Pain reliever and anti-inflammatory used for headaches, fever, and muscle pain"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "advil_600mg",
+    "name": "Advil",
+    "generic_name": "Ibuprofen",
+    "aliases": [
+      "Ibuprofen",
+      "Advil"
+    ],
+    "dosage": "600 mg",
+    "indications": [
+      "Pain reliever and anti-inflammatory used for headaches, fever, and muscle pain"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "advil_800mg",
+    "name": "Advil",
+    "generic_name": "Ibuprofen",
+    "aliases": [
+      "Ibuprofen",
+      "Advil"
+    ],
+    "dosage": "800 mg",
+    "indications": [
+      "Pain reliever and anti-inflammatory used for headaches, fever, and muscle pain"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "panadol_500mg",
+    "name": "Panadol",
+    "generic_name": "Paracetamol",
+    "aliases": [
+      "Panadol",
+      "Paracetamol"
+    ],
+    "dosage": "500 mg",
+    "indications": [
+      "Pain reliever and fever reducer used for headaches and mild pain"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Alcohol"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "panadol_extra_500mg",
+    "name": "PanadolExtra",
+    "generic_name": "Paracetamol + Caffeine",
+    "aliases": [
+      "PanadolExtra",
+      "Paracetamol + Caffeine"
+    ],
+    "dosage": "500 mg",
+    "indications": [
+      "Pain reliever with caffeine for stronger headache relief"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Alcohol",
+      "Other caffeine drugs"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "panadol_cf_500mg",
+    "name": "PanadolCold&Flu",
+    "generic_name": "Paracetamol + Decongestant",
+    "aliases": [
+      "PanadolCold&Flu",
+      "Paracetamol + Decongestant"
+    ],
+    "dosage": "500 mg",
+    "indications": [
+      "Pain relief and helps with cold and flu symptoms"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Other cold medicines"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "panadol_night_500mg",
+    "name": "PanadolNight",
+    "generic_name": "Paracetamol + Antihistamine",
+    "aliases": [
+      "PanadolNight",
+      "Paracetamol + Antihistamine"
+    ],
+    "dosage": "500 mg",
+    "indications": [
+      "Pain relief with sleep aid for night use"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Alcohol",
+      "Sedatives"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "panadol_advance_500mg",
+    "name": "PanadolAdvance",
+    "generic_name": "Paracetamol",
+    "aliases": [
+      "Paracetamol",
+      "PanadolAdvance"
+    ],
+    "dosage": "500 mg",
+    "indications": [
+      "Faster absorption pain reliever for headaches and body pain"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Alcohol"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "brufen_200mg",
+    "name": "Brufen200mg",
+    "generic_name": "Ibuprofen",
+    "aliases": [
+      "Ibuprofen",
+      "Brufen200mg"
+    ],
+    "dosage": "200 mg",
+    "indications": [
+      "Pain reliever and anti-inflammatory used for mild pain and fever"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "brufen_400mg",
+    "name": "Brufen400mg",
+    "generic_name": "Ibuprofen",
+    "aliases": [
+      "Brufen400mg",
+      "Ibuprofen"
+    ],
+    "dosage": "400 mg",
+    "indications": [
+      "Pain reliever and anti-inflammatory used for moderate pain and inflammation"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "brufen_600mg",
+    "name": "Brufen600mg",
+    "generic_name": "Ibuprofen",
+    "aliases": [
+      "Brufen600mg",
+      "Ibuprofen"
+    ],
+    "dosage": "600 mg",
+    "indications": [
+      "Stronger anti-inflammatory used for arthritis and severe pain"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "brufen_800mg",
+    "name": "Brufen800mg",
+    "generic_name": "Ibuprofen",
+    "aliases": [
+      "Ibuprofen",
+      "Brufen800mg"
+    ],
+    "dosage": "800 mg",
+    "indications": [
+      "High dose anti-inflammatory for severe pain and inflammation"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "diclofenac_25mg",
+    "name": "Diclofenac25mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Diclofenac",
+      "Diclofenac25mg"
+    ],
+    "dosage": "25 mg",
+    "indications": [
+      "Anti-inflammatory pain reliever used for mild to moderate pain and inflammation"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "diclofenac_50mg",
+    "name": "Diclofenac50mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Diclofenac50mg",
+      "Diclofenac"
+    ],
+    "dosage": "50 mg",
+    "indications": [
+      "Anti-inflammatory drug used for pain and swelling such as arthritis"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "diclofenac_75mg",
+    "name": "Diclofenac75mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Diclofenac75mg",
+      "Diclofenac"
+    ],
+    "dosage": "75 mg",
+    "indications": [
+      "Stronger anti-inflammatory used for moderate to severe pain and joint conditions"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "diclofenac_100mg",
+    "name": "Diclofenac100mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Diclofenac100mg",
+      "Diclofenac"
+    ],
+    "dosage": "100 mg",
+    "indications": [
+      "High dose anti-inflammatory for severe pain and chronic inflammatory conditions"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "fludrex_std",
+    "name": "Fludrex",
+    "generic_name": "Paracetamol + Pseudoephedrine + Dextromethorphan + Antihistamine",
+    "aliases": [
+      "Paracetamol + Pseudoephedrine + Dextromethorphan + Antihistamine",
+      "Fludrex"
+    ],
+    "dosage": "Standard dose",
+    "indications": [
+      "Used to relieve cold and flu symptoms such as fever, cough, congestion, and runny nose"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Other cold medicines",
+      "Sedatives",
+      "Alcohol"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "tardyferon_80mg",
+    "name": "Tardyferon80mg",
+    "generic_name": "Iron (Ferrous Sulfate)",
+    "aliases": [
+      "Iron (Ferrous Sulfate)",
+      "Tardyferon80mg"
+    ],
+    "dosage": "80 mg",
+    "indications": [
+      "Iron supplement used to treat and prevent iron deficiency anemia"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Antacids",
+      "Calcium supplements"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "tardyferon_160mg",
+    "name": "Tardyferon160mg",
+    "generic_name": "Iron (Ferrous Sulfate)",
+    "aliases": [
+      "Tardyferon160mg",
+      "Iron (Ferrous Sulfate)"
+    ],
+    "dosage": "160 mg",
+    "indications": [
+      "Higher dose iron supplement for severe iron deficiency anemia"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Antacids",
+      "Calcium supplements"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "augmentin_625mg",
+    "name": "Augmentin625mg",
+    "generic_name": "Amoxicillin + Clavulanic Acid",
+    "aliases": [
+      "Augmentin625mg",
+      "Amoxicillin + Clavulanic Acid"
+    ],
+    "dosage": "625 mg",
+    "indications": [
+      "Antibiotic used to treat bacterial infections such as respiratory and urinary infections"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Allopurinol",
+      "Methotrexate"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "augmentin_1g",
+    "name": "Augmentin1g",
+    "generic_name": "Amoxicillin + Clavulanic Acid",
+    "aliases": [
+      "Amoxicillin + Clavulanic Acid",
+      "Augmentin1g"
+    ],
+    "dosage": "1 g",
+    "indications": [
+      "Strong antibiotic used for moderate to severe bacterial infections"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Allopurinol",
+      "Methotrexate"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "voltaren_25mg",
+    "name": "Voltaren25mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Diclofenac",
+      "Voltaren25mg"
+    ],
+    "dosage": "25 mg",
+    "indications": [
+      "Anti-inflammatory pain reliever used for mild to moderate pain and inflammation"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "voltaren_50mg",
+    "name": "Voltaren50mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Diclofenac",
+      "Voltaren50mg"
+    ],
+    "dosage": "50 mg",
+    "indications": [
+      "Anti-inflammatory drug used for pain and swelling such as arthritis"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "voltaren_75mg",
+    "name": "Voltaren75mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Voltaren75mg",
+      "Diclofenac"
+    ],
+    "dosage": "75 mg",
+    "indications": [
+      "Stronger anti-inflammatory used for moderate to severe pain and joint conditions"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "voltaren_100mg",
+    "name": "Voltaren100mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Voltaren100mg",
+      "Diclofenac"
+    ],
+    "dosage": "100 mg",
+    "indications": [
+      "High dose anti-inflammatory for severe pain and chronic inflammatory conditions"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "cataflam_25mg",
+    "name": "Cataflam25mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Diclofenac",
+      "Cataflam25mg"
+    ],
+    "dosage": "25 mg",
+    "indications": [
+      "Anti-inflammatory pain reliever used for mild to moderate pain and inflammation"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "cataflam_50mg",
+    "name": "Cataflam50mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Cataflam50mg",
+      "Diclofenac"
+    ],
+    "dosage": "50 mg",
+    "indications": [
+      "Anti-inflammatory drug used for pain and swelling such as arthritis"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "cataflam_75mg",
+    "name": "Cataflam75mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Cataflam75mg",
+      "Diclofenac"
+    ],
+    "dosage": "75 mg",
+    "indications": [
+      "Stronger anti-inflammatory used for moderate to severe pain and joint conditions"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "cataflam_100mg",
+    "name": "Cataflam100mg",
+    "generic_name": "Diclofenac",
+    "aliases": [
+      "Cataflam100mg",
+      "Diclofenac"
+    ],
+    "dosage": "100 mg",
+    "indications": [
+      "High dose anti-inflammatory for severe pain and chronic inflammatory conditions"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin",
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "zyrtec_10mg",
+    "name": "Zyrtec10mg",
+    "generic_name": "Cetirizine",
+    "aliases": [
+      "Zyrtec10mg",
+      "Cetirizine"
+    ],
+    "dosage": "10 mg",
+    "indications": [
+      "Antihistamine used for allergies and hay fever"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Alcohol"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "claritin_10mg",
+    "name": "Claritin10mg",
+    "generic_name": "Loratadine",
+    "aliases": [
+      "Loratadine",
+      "Claritin10mg"
+    ],
+    "dosage": "10 mg",
+    "indications": [
+      "Antihistamine used to relieve allergy symptoms"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Alcohol"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "ventolin_100mcg",
+    "name": "VentolinInhaler",
+    "generic_name": "Salbutamol",
+    "aliases": [
+      "VentolinInhaler",
+      "Salbutamol"
+    ],
+    "dosage": "100 mcg",
+    "indications": [
+      "Bronchodilator used for asthma and breathing problems"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Beta blockers"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "glucophage_500mg",
+    "name": "Glucophage500mg",
+    "generic_name": "Metformin",
+    "aliases": [
+      "Metformin",
+      "Glucophage500mg"
+    ],
+    "dosage": "500 mg",
+    "indications": [
+      "Used to control blood sugar in type 2 diabetes"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Alcohol"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "lipitor_20mg",
+    "name": "Lipitor20mg",
+    "generic_name": "Atorvastatin",
+    "aliases": [
+      "Lipitor20mg",
+      "Atorvastatin"
+    ],
+    "dosage": "20 mg",
+    "indications": [
+      "Used to lower cholesterol levels"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Grapefruit juice"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "nexium_40mg",
+    "name": "Nexium40mg",
+    "generic_name": "Esomeprazole",
+    "aliases": [
+      "Nexium40mg",
+      "Esomeprazole"
+    ],
+    "dosage": "40 mg",
+    "indications": [
+      "Reduces stomach acid and treats reflux"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "losec_20mg",
+    "name": "Losec20mg",
+    "generic_name": "Omeprazole",
+    "aliases": [
+      "Losec20mg",
+      "Omeprazole"
+    ],
+    "dosage": "20 mg",
+    "indications": [
+      "Used for acid reflux and stomach ulcers"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "flagyl_500mg",
+    "name": "Flagyl500mg",
+    "generic_name": "Metronidazole",
+    "aliases": [
+      "Metronidazole",
+      "Flagyl500mg"
+    ],
+    "dosage": "500 mg",
+    "indications": [
+      "Antibiotic used for bacterial and parasitic infections"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Alcohol"
+    ],
+    "pregnancy_warning": "Avoid",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "brilinta_90mg",
+    "name": "Brilinta90mg",
+    "generic_name": "Ticagrelor",
+    "aliases": [
+      "Brilinta90mg",
+      "Ticagrelor"
+    ],
+    "dosage": "90 mg",
+    "indications": [
+      "Blood thinner used to prevent heart attacks"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "plavix_75mg",
+    "name": "Plavix75mg",
+    "generic_name": "Clopidogrel",
+    "aliases": [
+      "Clopidogrel",
+      "Plavix75mg"
+    ],
+    "dosage": "75 mg",
+    "indications": [
+      "Blood thinner used to prevent strokes and heart attacks"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Aspirin"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "aerius_5mg",
+    "name": "Aerius5mg",
+    "generic_name": "Desloratadine",
+    "aliases": [
+      "Aerius5mg",
+      "Desloratadine"
+    ],
+    "dosage": "5 mg",
+    "indications": [
+      "Antihistamine used for allergies and hives"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Alcohol"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "telfast_120mg",
+    "name": "Telfast120mg",
+    "generic_name": "Fexofenadine",
+    "aliases": [
+      "Fexofenadine",
+      "Telfast120mg"
+    ],
+    "dosage": "120 mg",
+    "indications": [
+      "Antihistamine used to relieve allergy symptoms"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Antacids"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "imodium_2mg",
+    "name": "Imodium2mg",
+    "generic_name": "Loperamide",
+    "aliases": [
+      "Loperamide",
+      "Imodium2mg"
+    ],
+    "dosage": "2 mg",
+    "indications": [
+      "Used to treat diarrhea"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "buscopan_10mg",
+    "name": "Buscopan10mg",
+    "generic_name": "Hyoscine Butylbromide",
+    "aliases": [
+      "Hyoscine Butylbromide",
+      "Buscopan10mg"
+    ],
+    "dosage": "10 mg",
+    "indications": [
+      "Used to relieve stomach cramps"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "spasfon_80mg",
+    "name": "Spasfon80mg",
+    "generic_name": "Phloroglucinol",
+    "aliases": [
+      "Phloroglucinol",
+      "Spasfon80mg"
+    ],
+    "dosage": "80 mg",
+    "indications": [
+      "Used to relieve abdominal pain and spasms"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "duspatalin_135mg",
+    "name": "Duspatalin135mg",
+    "generic_name": "Mebeverine",
+    "aliases": [
+      "Mebeverine",
+      "Duspatalin135mg"
+    ],
+    "dosage": "135 mg",
+    "indications": [
+      "Used to treat irritable bowel syndrome"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "gaviscon_std",
+    "name": "Gaviscon",
+    "generic_name": "Liquid/Alginate",
+    "aliases": [
+      "Liquid/Alginate",
+      "Gaviscon"
+    ],
+    "dosage": "Standard dose",
+    "indications": [
+      "Used to relieve heartburn and acid reflux"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "rennie_std",
+    "name": "Rennie",
+    "generic_name": "Calcium Carbonate",
+    "aliases": [
+      "Calcium Carbonate",
+      "Rennie"
+    ],
+    "dosage": "Standard dose",
+    "indications": [
+      "Used to neutralize stomach acid"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "insulin_lantus",
+    "name": "InsulinLantus",
+    "generic_name": "Insulin Glargine",
+    "aliases": [
+      "Insulin Glargine",
+      "InsulinLantus"
+    ],
+    "dosage": "Injection",
+    "indications": [
+      "Long-acting insulin used to control blood sugar"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "panadol_syrup",
+    "name": "PanadolSyrup",
+    "generic_name": "Paracetamol",
+    "aliases": [
+      "Paracetamol",
+      "PanadolSyrup"
+    ],
+    "dosage": "120 mg/5ml",
+    "indications": [
+      "Pain reliever for children"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Alcohol"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "neurobion_std",
+    "name": "Neurobion",
+    "generic_name": "Vitamin B Complex",
+    "aliases": [
+      "Vitamin B Complex",
+      "Neurobion"
+    ],
+    "dosage": "Standard dose",
+    "indications": [
+      "Vitamin supplement for nerve health"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "centrum_std",
+    "name": "CentrumMultivitamin",
+    "generic_name": "Multivitamins",
+    "aliases": [
+      "CentrumMultivitamin",
+      "Multivitamins"
+    ],
+    "dosage": "Standard dose",
+    "indications": [
+      "Dietary supplement with vitamins and minerals"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "voltaren_gel",
+    "name": "VoltarenGel",
+    "generic_name": "Diclofenac Topical",
+    "aliases": [
+      "VoltarenGel",
+      "Diclofenac Topical"
+    ],
+    "dosage": "1%",
+    "indications": [
+      "Topical gel used for muscle and joint pain"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "Warfarin"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "fucidin_cream",
+    "name": "FucidinCream",
+    "generic_name": "Fusidic Acid",
+    "aliases": [
+      "FucidinCream",
+      "Fusidic Acid"
+    ],
+    "dosage": "2%",
+    "indications": [
+      "Topical antibiotic used for skin infections"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "bepanthen_cream",
+    "name": "BepanthenCream",
+    "generic_name": "Dexpanthenol",
+    "aliases": [
+      "BepanthenCream",
+      "Dexpanthenol"
+    ],
+    "dosage": "5%",
+    "indications": [
+      "Used for skin healing and moisturizing"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "canesten_cream",
+    "name": "CanestenCream",
+    "generic_name": "Clotrimazole",
+    "aliases": [
+      "CanestenCream",
+      "Clotrimazole"
+    ],
+    "dosage": "1%",
+    "indications": [
+      "Antifungal used for skin infections"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  },
+  {
+    "id": "zithromax_500mg",
+    "name": "Zithromax500mg",
+    "generic_name": "Azithromycin",
+    "aliases": [
+      "Zithromax500mg",
+      "Azithromycin"
+    ],
+    "dosage": "500 mg",
+    "indications": [
+      "Antibiotic used for respiratory infections"
+    ],
+    "contraindications": [],
+    "avoid_combinations": [
+      "None"
+    ],
+    "pregnancy_warning": "Caution",
+    "common_side_effects": [],
+    "serious_side_effects": []
+  }
+]
