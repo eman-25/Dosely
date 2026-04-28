@@ -114,7 +114,7 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
                                 return _MedicineListCard(
                                   selectedDay: selectedDay,
                                   docs: visibleDocs,
-                                  onAddPressed: _showAddMedicineDialog,
+                                  onAddPressed: _showMedicinePickerSheet,
                                   onToggleTaken: _toggleTaken,
                                   onEdit: _showEditMedicineDialog,
                                   onDelete: _deleteMedicine,
@@ -141,7 +141,7 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
               bottom: 22,
               child: _RoundFab(
                 icon: Icons.add_rounded,
-                onTap: _showAddMedicineDialog,
+                onTap: _showMedicinePickerSheet,
               ),
             ),
             Positioned(
@@ -179,13 +179,29 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
         ],
       );
 
-  Future<void> _showAddMedicineDialog() async {
+  Future<void> _showMedicinePickerSheet() async {
     if (_user == null || _adding) return;
 
-    final nameCtrl = TextEditingController();
-    final dosageCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
-    final imageCtrl = TextEditingController();
+    final selected = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => _MedicinePickerSheet(uid: _user!.uid),
+    );
+
+    if (!mounted || selected == null) return;
+    await _showAddMedicineDialog(prefill: selected);
+  }
+
+  Future<void> _showAddMedicineDialog({Map<String, dynamic>? prefill}) async {
+    if (_user == null || _adding) return;
+
+    final nameCtrl = TextEditingController(text: (prefill?['name'] ?? '').toString());
+    final dosageCtrl = TextEditingController(text: (prefill?['dosage'] ?? '').toString());
+    final descCtrl = TextEditingController(text: (prefill?['description'] ?? '').toString());
+    final imageCtrl = TextEditingController(text: (prefill?['imageUrl'] ?? '').toString());
     TimeOfDay selectedTime = const TimeOfDay(hour: 8, minute: 0);
     final selectedWeekdays = <int>{selectedDay.weekday};
 
@@ -324,12 +340,12 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
     try {
       await _tableRef.add({
         'medicineName': name,
-        'genericName': '',
+        'genericName': (prefill?['generic_name'] ?? '').toString(),
         'dosage': dosage,
         'description': description,
         'imageUrl': imageUrl,
-        'status': 'safe',
-        'source': 'manual',
+        'status': (prefill?['_safetyStatus'] ?? 'safe').toString(),
+        'source': prefill != null ? 'database' : 'manual',
         'timeHour': selectedTime.hour,
         'timeMinute': selectedTime.minute,
         'selectedDays': selectedWeekdays.toList()..sort(),
@@ -1083,4 +1099,326 @@ class _RoundFab extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Medicine picker bottom sheet ─────────────────────────────────────────────
+
+class _MedicinePickerItem {
+  final Map<String, dynamic> data;
+  final String safetyStatus;
+  const _MedicinePickerItem({required this.data, required this.safetyStatus});
+}
+
+class _MedicinePickerSheet extends StatefulWidget {
+  final String uid;
+  const _MedicinePickerSheet({required this.uid});
+
+  @override
+  State<_MedicinePickerSheet> createState() => _MedicinePickerSheetState();
+}
+
+class _MedicinePickerSheetState extends State<_MedicinePickerSheet> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+  late final Future<List<_MedicinePickerItem>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<List<_MedicinePickerItem>> _load() async {
+    final results = await Future.wait([
+      FirebaseFirestore.instance.collection('medicines').get(),
+      FirebaseFirestore.instance.collection('users').doc(widget.uid).get(),
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.uid)
+          .collection('medicine_table')
+          .get(),
+    ]);
+
+    final medsSnap = results[0] as QuerySnapshot<Map<String, dynamic>>;
+    final userDoc = results[1] as DocumentSnapshot<Map<String, dynamic>>;
+    final tableSnap = results[2] as QuerySnapshot<Map<String, dynamic>>;
+
+    final healthInfo =
+        Map<String, dynamic>.from((userDoc.data() ?? {})['healthInfo'] ?? {});
+    final allergies = _split(healthInfo['allergies']);
+    final chronicConditions = _split(healthInfo['chronicConditions']);
+    final currentMedications = _split(healthInfo['currentMedications']);
+    final specialConditions = _split(healthInfo['specialConditions']);
+
+    final scheduled = <String>[];
+    for (final doc in tableSnap.docs) {
+      final d = doc.data();
+      if (d['medicineName'] != null) scheduled.add(_n(d['medicineName'].toString()));
+      if (d['genericName'] != null) scheduled.add(_n(d['genericName'].toString()));
+    }
+
+    final items = medsSnap.docs.map((doc) {
+      final med = doc.data();
+      final status = _computeSafety(
+        med: med,
+        allergies: allergies,
+        chronicConditions: chronicConditions,
+        currentMedications: currentMedications,
+        specialConditions: specialConditions,
+        scheduled: scheduled,
+      );
+      return _MedicinePickerItem(data: med, safetyStatus: status);
+    }).toList();
+
+    items.sort((a, b) {
+      const order = {'safe': 0, 'caution': 1, 'not safe': 2};
+      return (order[a.safetyStatus] ?? 3).compareTo(order[b.safetyStatus] ?? 3);
+    });
+
+    return items;
+  }
+
+  String _computeSafety({
+    required Map<String, dynamic> med,
+    required List<String> allergies,
+    required List<String> chronicConditions,
+    required List<String> currentMedications,
+    required List<String> specialConditions,
+    required List<String> scheduled,
+  }) {
+    final allergyIngredient = _n((med['allergy_ingredient'] ?? '').toString());
+    final pregnancyWarning =
+        (med['pregnancy_warning'] ?? '').toString().trim().toLowerCase();
+    final avoidCombinations = _split(med['avoid_combinations']);
+    final medName = _n((med['name'] ?? '').toString());
+    final medGeneric = _n((med['generic_name'] ?? '').toString());
+    final medDesc = _n((med['description'] ?? '').toString());
+
+    if (allergyIngredient.isNotEmpty &&
+        allergyIngredient != 'none' &&
+        _hasEquiv(allergies, allergyIngredient)) {
+      return 'not safe';
+    }
+    if (_hasEquiv(allergies, 'nsaids') && allergyIngredient == 'nsaids') {
+      return 'not safe';
+    }
+    for (final m in [...currentMedications, ...scheduled]) {
+      if (_matchesAny(avoidCombinations, m)) return 'not safe';
+    }
+
+    String status = 'safe';
+
+    if (_hasEquiv(specialConditions, 'pregnant') ||
+        _hasEquiv(specialConditions, 'pregnancy')) {
+      if (pregnancyWarning == 'avoid') return 'not safe';
+      if (pregnancyWarning == 'caution') status = 'caution';
+    }
+
+    if (_hasEquiv(currentMedications, medName) ||
+        _hasEquiv(currentMedications, medGeneric) ||
+        _hasEquiv(scheduled, medName) ||
+        _hasEquiv(scheduled, medGeneric)) {
+      status = 'caution';
+    }
+
+    for (final c in chronicConditions) {
+      if (c.isNotEmpty && medDesc.contains(c)) status = 'caution';
+    }
+
+    return status;
+  }
+
+  static String _n(String s) => s
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^\w\s]'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  static List<String> _split(dynamic v) {
+    if (v == null) return [];
+    if (v is List) {
+      return v.map((e) => _n(e.toString())).where((e) => e.isNotEmpty && e != 'none').toList();
+    }
+    final t = v.toString().trim();
+    if (t.isEmpty || t.toLowerCase() == 'none') return [];
+    return t.split(RegExp(r'[,/;|]')).map(_n).where((e) => e.isNotEmpty && e != 'none').toList();
+  }
+
+  static bool _hasEquiv(List<String> items, String value) {
+    final v = _n(value);
+    return items.any((i) => i == v || i.contains(v) || v.contains(i));
+  }
+
+  static bool _matchesAny(List<String> haystack, String value) {
+    final v = _n(value);
+    return haystack.any((i) => i == v || i.contains(v) || v.contains(i));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (ctx, scrollCtrl) => Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 4),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 6, 16, 0),
+              child: Text(
+                'Select a Medicine',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged: (v) => setState(() => _query = v.toLowerCase()),
+                decoration: InputDecoration(
+                  hintText: 'Search medicines…',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ),
+            Expanded(
+              child: FutureBuilder<List<_MedicinePickerItem>>(
+                future: _future,
+                builder: (ctx, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snap.hasError) {
+                    return Center(child: Text('Error: ${snap.error}'));
+                  }
+
+                  final all = snap.data!;
+                  final filtered = _query.isEmpty
+                      ? all
+                      : all.where((item) {
+                          final name =
+                              (item.data['name'] ?? '').toString().toLowerCase();
+                          final generic =
+                              (item.data['generic_name'] ?? '').toString().toLowerCase();
+                          return name.contains(_query) || generic.contains(_query);
+                        }).toList();
+
+                  if (filtered.isEmpty) {
+                    return const Center(
+                      child: Text('No medicines found.',
+                          style: TextStyle(color: Colors.black38)),
+                    );
+                  }
+
+                  return ListView.builder(
+                    controller: scrollCtrl,
+                    itemCount: filtered.length,
+                    itemBuilder: (ctx, i) {
+                      final item = filtered[i];
+                      return _MedicinePickerTile(
+                        item: item,
+                        onTap: () => Navigator.pop(
+                          context,
+                          {...item.data, '_safetyStatus': item.safetyStatus},
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MedicinePickerTile extends StatelessWidget {
+  final _MedicinePickerItem item;
+  final VoidCallback onTap;
+  const _MedicinePickerTile({required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = (item.data['name'] ?? 'Unknown').toString();
+    final generic = (item.data['generic_name'] ?? '').toString();
+    final dosage = (item.data['dosage'] ?? '').toString();
+    final imageUrl = (item.data['imageUrl'] ?? '').toString().trim();
+
+    final Color badgeColor;
+    final IconData badgeIcon;
+    switch (item.safetyStatus) {
+      case 'not safe':
+        badgeColor = const Color(0xFFB3261E);
+        badgeIcon = Icons.dangerous_rounded;
+        break;
+      case 'caution':
+        badgeColor = const Color(0xFFE67E22);
+        badgeIcon = Icons.warning_amber_rounded;
+        break;
+      default:
+        badgeColor = const Color(0xFF2ECC71);
+        badgeIcon = Icons.check_circle_rounded;
+    }
+
+    final subtitle = [
+      if (generic.isNotEmpty) generic,
+      if (dosage.isNotEmpty) dosage,
+    ].join(' · ');
+
+    return ListTile(
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: imageUrl.isNotEmpty
+            ? Image.network(
+                imageUrl,
+                width: 44,
+                height: 44,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _fallback(),
+              )
+            : _fallback(),
+      ),
+      title: Text(name,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+      subtitle: subtitle.isNotEmpty
+          ? Text(subtitle,
+              style: const TextStyle(fontSize: 12, color: Colors.black54))
+          : null,
+      trailing: Icon(badgeIcon, color: badgeColor, size: 22),
+      onTap: onTap,
+    );
+  }
+
+  Widget _fallback() => Container(
+        width: 44,
+        height: 44,
+        color: const Color(0xFFEAF7F7),
+        child: const Icon(Icons.medication_rounded, color: Colors.black54),
+      );
 }
