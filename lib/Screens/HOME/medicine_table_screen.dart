@@ -196,171 +196,44 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
   }
 
   Future<void> _showAddMedicineDialog({Map<String, dynamic>? prefill}) async {
-    if (_user == null || _adding) return;
+    if (_user == null || _adding || prefill == null) return;
 
-    final nameCtrl = TextEditingController(text: (prefill?['name'] ?? '').toString());
-    final dosageCtrl = TextEditingController(text: (prefill?['dosage'] ?? '').toString());
-    final descCtrl = TextEditingController(text: (prefill?['description'] ?? '').toString());
-    final imageCtrl = TextEditingController(text: (prefill?['imageUrl'] ?? '').toString());
-    TimeOfDay selectedTime = const TimeOfDay(hour: 8, minute: 0);
-    final selectedWeekdays = <int>{selectedDay.weekday};
-
-    final ok = await showDialog<bool>(
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          title: const Text('Add Medicine'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Medicine Name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: dosageCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Dosage',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descCtrl,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: imageCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Image URL (optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Scheduled time'),
-                  subtitle: Text(selectedTime.format(ctx)),
-                  trailing: const Icon(Icons.access_time),
-                  onTap: () async {
-                    final picked = await showTimePicker(
-                      context: ctx,
-                      initialTime: selectedTime,
-                    );
-                    if (picked != null) {
-                      setLocal(() => selectedTime = picked);
-                    }
-                  },
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Repeat on days',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: List.generate(7, (index) {
-                    final weekday = index + 1;
-                    final selected = selectedWeekdays.contains(weekday);
-                    return FilterChip(
-                      selected: selected,
-                      label: Text(_weekdayShort(weekday)),
-                      onSelected: (value) {
-                        setLocal(() {
-                          if (value) {
-                            selectedWeekdays.add(weekday);
-                          } else {
-                            selectedWeekdays.remove(weekday);
-                          }
-                        });
-                      },
-                    );
-                  }),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'No save button is needed. After pressing Add, it is saved automatically.',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Add'),
-            ),
-          ],
-        ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AddScheduleSheet(
+        medicine: prefill,
+        initialDay: selectedDay,
       ),
     );
 
-    if (ok != true) return;
-
-    final name = nameCtrl.text.trim();
-    final dosage = dosageCtrl.text.trim();
-    final description = descCtrl.text.trim();
-    final imageUrl = imageCtrl.text.trim();
-
-    if (name.isEmpty) {
-      _showMessage('Medicine name is required.');
-      return;
-    }
-
-    if (selectedWeekdays.isEmpty) {
-      _showMessage('Choose at least one day.');
-      return;
-    }
+    if (!mounted || result == null) return;
 
     setState(() => _adding = true);
 
     try {
       await _tableRef.add({
-        'medicineName': name,
-        'genericName': (prefill?['generic_name'] ?? '').toString(),
-        'dosage': dosage,
-        'description': description,
-        'imageUrl': imageUrl,
-        'status': (prefill?['_safetyStatus'] ?? 'safe').toString(),
-        'source': prefill != null ? 'database' : 'manual',
-        'timeHour': selectedTime.hour,
-        'timeMinute': selectedTime.minute,
-        'selectedDays': selectedWeekdays.toList()..sort(),
+        'medicineName': (prefill['name'] ?? '').toString(),
+        'genericName': (prefill['generic_name'] ?? '').toString(),
+        'dosage': (prefill['dosage'] ?? '').toString(),
+        'description': (prefill['description'] ?? '').toString(),
+        'imageUrl': (prefill['imageUrl'] ?? '').toString(),
+        'status': (prefill['_safetyStatus'] ?? 'safe').toString(),
+        'source': 'database',
+        'timeHour': result['hour'] as int,
+        'timeMinute': result['minute'] as int,
+        'selectedDays': result['days'] as List<int>,
         'takenDates': <String>[],
         'startDate': _dateKey(selectedDay),
         'addedAt': FieldValue.serverTimestamp(),
       });
 
-      _showMessage('Medicine added and saved.');
+      _showMessage('Medicine added to your schedule.');
     } catch (e) {
       _showMessage('Failed to add medicine: $e');
     } finally {
-      if (mounted) {
-        setState(() => _adding = false);
-      }
+      if (mounted) setState(() => _adding = false);
     }
   }
 
@@ -1339,12 +1212,26 @@ class _MedicinePickerSheetState extends State<_MedicinePickerSheet> {
                     itemCount: filtered.length,
                     itemBuilder: (ctx, i) {
                       final item = filtered[i];
+                      final blocked = item.safetyStatus != 'safe';
                       return _MedicinePickerTile(
                         item: item,
-                        onTap: () => Navigator.pop(
-                          context,
-                          {...item.data, '_safetyStatus': item.safetyStatus},
-                        ),
+                        blocked: blocked,
+                        onTap: blocked
+                            ? () {
+                                final msg = item.safetyStatus == 'not safe'
+                                    ? 'Cannot add — this medicine is not safe for your health profile.'
+                                    : 'Cannot add — this medicine requires caution with your health profile.';
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(msg),
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            : () => Navigator.pop(
+                                  context,
+                                  {...item.data, '_safetyStatus': item.safetyStatus},
+                                ),
                       );
                     },
                   );
@@ -1361,7 +1248,12 @@ class _MedicinePickerSheetState extends State<_MedicinePickerSheet> {
 class _MedicinePickerTile extends StatelessWidget {
   final _MedicinePickerItem item;
   final VoidCallback onTap;
-  const _MedicinePickerTile({required this.item, required this.onTap});
+  final bool blocked;
+  const _MedicinePickerTile({
+    required this.item,
+    required this.onTap,
+    required this.blocked,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1391,27 +1283,39 @@ class _MedicinePickerTile extends StatelessWidget {
       if (dosage.isNotEmpty) dosage,
     ].join(' · ');
 
-    return ListTile(
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: imageUrl.isNotEmpty
-            ? Image.network(
-                imageUrl,
-                width: 44,
-                height: 44,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _fallback(),
-              )
-            : _fallback(),
+    return Opacity(
+      opacity: blocked ? 0.45 : 1.0,
+      child: ListTile(
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: imageUrl.isNotEmpty
+              ? Image.network(
+                  imageUrl,
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _fallback(),
+                )
+              : _fallback(),
+        ),
+        title: Text(name,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+        subtitle: subtitle.isNotEmpty
+            ? Text(subtitle,
+                style: const TextStyle(fontSize: 12, color: Colors.black54))
+            : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(badgeIcon, color: badgeColor, size: 20),
+            if (blocked) ...[
+              const SizedBox(width: 6),
+              const Icon(Icons.block_rounded, color: Colors.black38, size: 18),
+            ],
+          ],
+        ),
+        onTap: onTap,
       ),
-      title: Text(name,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-      subtitle: subtitle.isNotEmpty
-          ? Text(subtitle,
-              style: const TextStyle(fontSize: 12, color: Colors.black54))
-          : null,
-      trailing: Icon(badgeIcon, color: badgeColor, size: 22),
-      onTap: onTap,
     );
   }
 
@@ -1420,5 +1324,374 @@ class _MedicinePickerTile extends StatelessWidget {
         height: 44,
         color: const Color(0xFFEAF7F7),
         child: const Icon(Icons.medication_rounded, color: Colors.black54),
+      );
+}
+
+// ── Schedule time/days sheet ─────────────────────────────────────────────────
+
+class _AddScheduleSheet extends StatefulWidget {
+  final Map<String, dynamic> medicine;
+  final DateTime initialDay;
+
+  const _AddScheduleSheet({required this.medicine, required this.initialDay});
+
+  @override
+  State<_AddScheduleSheet> createState() => _AddScheduleSheetState();
+}
+
+class _AddScheduleSheetState extends State<_AddScheduleSheet> {
+  static const _c1 = Color(0xFF48466E);
+  static const _c2 = Color(0xFF3E84A8);
+  static const _c3 = Color(0xFF4ACED0);
+
+  TimeOfDay _time = const TimeOfDay(hour: 8, minute: 0);
+  late Set<int> _days;
+
+  static const _dayLabels = {
+    1: 'M', 2: 'T', 3: 'W', 4: 'T', 5: 'F', 6: 'S', 7: 'S',
+  };
+  static const _dayFull = {
+    1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _days = {widget.initialDay.weekday};
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final med = widget.medicine;
+    final name = (med['name'] ?? '').toString();
+    final generic = (med['generic_name'] ?? '').toString();
+    final dosage = (med['dosage'] ?? '').toString();
+    final imageUrl = (med['imageUrl'] ?? '').toString().trim();
+    final status = (med['_safetyStatus'] ?? 'safe').toString();
+
+    final Color statusColor;
+    final String statusLabel;
+    final IconData statusIcon;
+    switch (status) {
+      case 'not safe':
+        statusColor = const Color(0xFFB3261E);
+        statusLabel = 'Not Safe';
+        statusIcon = Icons.dangerous_rounded;
+        break;
+      case 'caution':
+        statusColor = const Color(0xFFE67E22);
+        statusLabel = 'Caution';
+        statusIcon = Icons.warning_amber_rounded;
+        break;
+      default:
+        statusColor = const Color(0xFF2ECC71);
+        statusLabel = 'Safe';
+        statusIcon = Icons.verified_rounded;
+    }
+
+    final hour = _time.hourOfPeriod == 0 ? 12 : _time.hourOfPeriod;
+    final minute = _time.minute.toString().padLeft(2, '0');
+    final period = _time.period == DayPeriod.am ? 'AM' : 'PM';
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 14,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.black12,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 22),
+
+          // Medicine info card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [_c1, _c2],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _medPlaceholder(),
+                        )
+                      : _medPlaceholder(),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (generic.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          generic,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
+                      if (dosage.isNotEmpty) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          dosage,
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: statusColor.withValues(alpha: 0.55), width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(statusIcon, color: statusColor, size: 13),
+                      const SizedBox(width: 4),
+                      Text(
+                        statusLabel,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 28),
+
+          // Time picker row
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'SCHEDULED TIME',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.black38,
+                letterSpacing: 1.1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () async {
+              final picked =
+                  await showTimePicker(context: context, initialTime: _time);
+              if (picked != null) setState(() => _time = picked);
+            },
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4FDFD),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                    color: _c3.withValues(alpha: 0.45), width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.access_time_rounded, color: _c3, size: 22),
+                  const SizedBox(width: 14),
+                  Text(
+                    '$hour:$minute',
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    period,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black38,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.chevron_right_rounded,
+                      color: Colors.black26, size: 22),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 26),
+
+          // Days row
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'REPEAT ON DAYS',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.black38,
+                letterSpacing: 1.1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (i) {
+              final weekday = i + 1;
+              final selected = _days.contains(weekday);
+              return GestureDetector(
+                onTap: () => setState(() {
+                  if (selected) {
+                    _days.remove(weekday);
+                  } else {
+                    _days.add(weekday);
+                  }
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: selected ? _c3 : const Color(0xFFF2F2F2),
+                    shape: BoxShape.circle,
+                    boxShadow: selected
+                        ? [
+                            BoxShadow(
+                              color: _c3.withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _dayLabels[weekday]!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: selected ? Colors.white : Colors.black38,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 4),
+          // Day name labels
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (i) {
+              final weekday = i + 1;
+              return SizedBox(
+                width: 40,
+                child: Center(
+                  child: Text(
+                    _dayFull[weekday]!,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.black38,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+
+          const SizedBox(height: 30),
+
+          // Confirm button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _days.isEmpty
+                  ? null
+                  : () => Navigator.pop(context, {
+                        'hour': _time.hour,
+                        'minute': _time.minute,
+                        'days': _days.toList()..sort(),
+                      }),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _c1,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.black12,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Add to Schedule',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _medPlaceholder() => Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: Colors.white12,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.medication_rounded,
+            color: Colors.white54, size: 28),
       );
 }
