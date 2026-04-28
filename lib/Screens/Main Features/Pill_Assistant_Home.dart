@@ -239,7 +239,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
 
     final isEmpty = _messages.isEmpty;
 
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       endDrawer: _buildDrawer(),
@@ -305,6 +307,7 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
           ),
         ],
       ),
+    ),
     );
   }
 
