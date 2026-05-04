@@ -479,4 +479,5 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
       ),
     );
   }
+  
 }

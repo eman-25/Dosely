@@ -64,3 +64,4 @@ flutter:
     - assets/images/search_icon.png
     - assets/images/upload_icon.png
     - assets/images/pillo_icon.png
+    - assets/medications/  # Add this line to include all medication images

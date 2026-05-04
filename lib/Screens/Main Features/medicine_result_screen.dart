@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'Pill_Assistant_Home.dart';
-
-class MedicineResultScreen extends StatelessWidget {
+import 'package:cloud_firestore/cloud_firestore.dart';
+class MedicineResultScreen extends StatefulWidget {
   final Map<String, dynamic> medicineData;
   final String? imagePath;
   final String? ocrText;
@@ -14,6 +14,34 @@ class MedicineResultScreen extends StatelessWidget {
     this.ocrText,
   });
 
+  @override
+  State<MedicineResultScreen> createState() => _MedicineResultScreenState();
+}
+class _MedicineResultScreenState extends State<MedicineResultScreen> {
+  @override
+void initState() {
+  super.initState();
+  _trackMedication();
+}
+
+Future<void> _trackMedication() async {
+  try {
+    final String medicineName =
+        (widget.medicineData['name'] ?? 'Unknown').toString();
+
+    if (medicineName.isEmpty || medicineName == 'Unknown') return;
+
+    await FirebaseFirestore.instance.collection('medication_events').add({
+      "medication_name": medicineName,
+      "event_type": widget.imagePath != null ? "scan/upload" : "search",
+      "timestamp": FieldValue.serverTimestamp(),
+    });
+
+  } catch (e) {
+    print("Tracking error: $e");
+  }
+}
+  
   static const Color _c1 = Color(0xFF48466E);
   static const Color _c2 = Color(0xFF3E84A8);
   static const Color _bg = Color(0xFFF7FBFD);
@@ -21,17 +49,17 @@ class MedicineResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String medicineName =
-        (medicineData['name'] ?? 'Unknown Medicine').toString();
+        (widget.medicineData['name'] ?? 'Unknown Medicine').toString();
     final String genericName =
-        (medicineData['generic_name'] ?? 'Unknown').toString();
-    final String dosage = (medicineData['dosage'] ?? 'Unknown').toString();
+        (widget.medicineData['generic_name'] ?? 'Unknown').toString();
+    final String dosage = (widget.medicineData['dosage'] ?? 'Unknown').toString();
     final String description =
-        (medicineData['description'] ?? 'No description available').toString();
-    final String status = (medicineData['status'] ?? 'unknown').toString();
+        (widget.medicineData['description'] ?? 'No description available').toString();
+    final String status = (widget.medicineData['status'] ?? 'unknown').toString();
     final List<String> reasons =
-        List<String>.from(medicineData['reasons'] ?? const <String>[]);
-    final double score = medicineData['score'] is num
-        ? (medicineData['score'] as num).toDouble()
+        List<String>.from(widget.medicineData['reasons'] ?? const <String>[]);
+    final double score = widget.medicineData['score'] is num
+        ? (widget.medicineData['score'] as num).toDouble()
         : 0.0;
 
     final _StatusUi statusUi = _getStatusUi(status);
@@ -54,11 +82,11 @@ class MedicineResultScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (imagePath != null && imagePath!.isNotEmpty) ...[
+            if (widget.imagePath != null && widget.imagePath!.isNotEmpty) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: Image.file(
-                  File(imagePath!),
+                  File(widget.imagePath!),
                   height: 220,
                   width: double.infinity,
                   fit: BoxFit.cover,

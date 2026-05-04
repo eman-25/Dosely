@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dosely Enterprise Dashboard</title>
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+  --c1: #48466E;
+  --c2: #3E84A8;
+  --c3: #4ACED0;
+  --c4: #ACEDD9;
+  --c5: #E0FBF4;
+}
+
+body { background: var(--c5); }
+
+.fade { animation: fadeIn 0.4s ease-in-out; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+.sidebar-item:hover {
+  background: var(--c2);
+  color: white;
+}
+</style>
+</head>
+
+<body class="flex h-screen">
+
+<!-- SIDEBAR -->
+<div class="w-64 text-white flex flex-col" style="background: var(--c1)">
+  <div class="p-6 text-2xl font-bold border-b border-white/20">
+    Dosely
+  </div>
+
+  <div class="flex-1 p-3 space-y-2">
+    <div onclick="showPage('dashboard')" class="sidebar-item p-3 rounded cursor-pointer">Dashboard</div>
+    <div onclick="showPage('feedback')" class="sidebar-item p-3 rounded cursor-pointer">Feedback</div>
+    <div onclick="showPage('analytics')" class="sidebar-item p-3 rounded cursor-pointer">Analytics</div>
+  </div>
+
+  <button onclick="logout()" class="m-4 p-2 rounded" style="background: var(--c2)">
+    Logout
+  </button>
+</div>
+
+<!-- MAIN -->
+<div class="flex-1 p-6 overflow-y-auto">
+
+<!-- DASHBOARD -->
+<div id="dashboardPage" class="fade">
+
+<h1 class="text-3xl font-bold mb-6" style="color: var(--c1)">Dashboard</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+  <div class="bg-white p-4 rounded-xl shadow">
+    <h2>Total Feedback</h2>
+    <p id="totalFeedback" class="text-2xl font-bold">0</p>
+  </div>
+
+  <div class="bg-white p-4 rounded-xl shadow">
+    <h2>Average Rating</h2>
+    <p id="avgRating" class="text-2xl font-bold">0</p>
+  </div>
+
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+  <div class="bg-white p-4 rounded-xl shadow">
+    <h3 class="mb-2 font-semibold">Feedback Over Time</h3>
+    <canvas id="lineChart"></canvas>
+  </div>
+
+  <div class="bg-white p-4 rounded-xl shadow">
+    <h3 class="mb-2 font-semibold">Issue Categories</h3>
+    <canvas id="pieChart"></canvas>
+  </div>
+
+  <!-- 🔥 NEW TRENDING CHART -->
+  <div class="bg-white p-4 rounded-xl shadow md:col-span-2">
+    <h3 class="mb-2 font-semibold">Top Trending Medicines</h3>
+    <canvas id="trendingChart"></canvas>
+  </div>
+
+</div>
+
+</div>
+
+<!-- FEEDBACK -->
+<div id="feedbackPage" class="hidden fade">
+
+<h1 class="text-3xl font-bold mb-6" style="color: var(--c1)">Feedback</h1>
+
+<input type="text" placeholder="Search..."
+  class="mb-4 p-2 border w-full rounded"
+  onkeyup="searchTable(this.value)">
+
+<table class="w-full bg-white rounded-xl shadow">
+<thead>
+<tr class="border-b">
+<th>User</th>
+<th>Issue</th>
+<th>Rating</th>
+<th>Status</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
+
+</div>
+
+<!-- ANALYTICS -->
+<div id="analyticsPage" class="hidden fade">
+<h1 class="text-3xl font-bold mb-6" style="color: var(--c1)">Analytics</h1>
+<p>Advanced analytics coming soon...</p>
+</div>
+
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "dosley-76bd1.firebaseapp.com",
+  projectId: "dosley-76bd1",
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* AUTH */
+firebase.auth().onAuthStateChanged(user => {
+  if (!user || user.email !== "doselysupport@gmail.com") {
+    window.location.href = "login.html";
+  } else {
+    loadData();
+    loadTrendingChart(); // 🔥 important
+  }
+});
+
+function logout() {
+  firebase.auth().signOut();
+}
+
+/* PAGE SWITCH */
+function showPage(page) {
+  ["dashboard","feedback","analytics"].forEach(p => {
+    document.getElementById(p+"Page").classList.add("hidden");
+  });
+  document.getElementById(page+"Page").classList.remove("hidden");
+}
+
+/* CHARTS */
+let lineChart, pieChart, trendingChart;
+
+function loadData() {
+  db.collection("feedback").onSnapshot(snapshot => {
+
+    let ratings = [];
+    let issueCounts = {};
+    let dates = {};
+    let total = 0;
+
+    const table = document.getElementById("tableBody");
+    table.innerHTML = "";
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const id = doc.id;
+      total++;
+
+      if (data.rating) ratings.push(data.rating);
+
+      const type = data.issue_type || "Other";
+      issueCounts[type] = (issueCounts[type] || 0) + 1;
+
+      if (data.timestamp) {
+        const d = new Date(data.timestamp.seconds * 1000);
+        const date = d.toLocaleDateString();
+        dates[date] = (dates[date] || 0) + 1;
+      }
+
+      const row = `
+      <tr class="border-b">
+        <td>${data.user || "-"}</td>
+        <td>${type}</td>
+        <td>${data.rating || "-"}</td>
+        <td>
+          <select onchange="updateStatus('${id}', this.value)">
+            <option>Pending</option>
+            <option>In Review</option>
+            <option>Completed</option>
+          </select>
+        </td>
+        <td>
+          <button onclick="deleteFeedback('${id}')" class="text-red-500">Delete</button>
+        </td>
+      </tr>`;
+      table.innerHTML += row;
+    });
+
+    document.getElementById("totalFeedback").innerText = total;
+
+    const avg = ratings.length
+      ? (ratings.reduce((a,b)=>a+b)/ratings.length).toFixed(2)
+      : 0;
+
+    document.getElementById("avgRating").innerText = avg;
+
+    if (lineChart) lineChart.destroy();
+    if (pieChart) pieChart.destroy();
+
+    lineChart = new Chart(document.getElementById("lineChart"), {
+      type: "line",
+      data: {
+        labels: Object.keys(dates),
+        datasets: [{
+          data: Object.values(dates),
+          borderColor: "#3E84A8"
+        }]
+      }
+    });
+
+    pieChart = new Chart(document.getElementById("pieChart"), {
+      type: "pie",
+      data: {
+        labels: Object.keys(issueCounts),
+        datasets: [{
+          data: Object.values(issueCounts),
+          backgroundColor: ["#48466E","#3E84A8","#4ACED0","#ACEDD9"]
+        }]
+      }
+    });
+
+  });
+}
+
+/* 🔥 TRENDING CHART */
+async function loadTrendingChart() {
+  const snapshot = await db.collection("medication_events").get();
+
+  let counts = {};
+
+  snapshot.forEach(doc => {
+    const name = doc.data().medication_name;
+    if (!name) return;
+
+    counts[name] = (counts[name] || 0) + 1;
+  });
+
+  const sorted = Object.entries(counts)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,5);
+
+  const labels = sorted.map(x=>x[0]);
+  const values = sorted.map(x=>x[1]);
+
+  if (trendingChart) trendingChart.destroy();
+
+  trendingChart = new Chart(
+    document.getElementById("trendingChart"),
+    {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          borderRadius: 10,
+          backgroundColor: "#4ACED0"
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } }
+      }
+    }
+  );
+}
+
+/* ACTIONS */
+function updateStatus(id, status) {
+  db.collection("feedback").doc(id).update({ status });
+}
+
+function deleteFeedback(id) {
+  if (confirm("Delete?")) {
+    db.collection("feedback").doc(id).delete();
+  }
+}
+
+/* SEARCH */
+function searchTable(value) {
+  let rows = document.querySelectorAll("#tableBody tr");
+  rows.forEach(row => {
+    row.style.display =
+      row.innerText.toLowerCase().includes(value.toLowerCase())
+        ? "" : "none";
+  });
+}
+</script>
+
+</body>
+</html>
