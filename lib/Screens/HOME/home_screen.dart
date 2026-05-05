@@ -7,7 +7,6 @@ import '../../models/user_data.dart';
 import 'settings_panel.dart';
 import 'medicine_table_screen.dart';
 
-// Main Features
 import '../Main Features/Scan.dart';
 import '../Main Features/Upload.dart';
 import '../Main Features/Search.dart';
@@ -101,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen>
       backgroundColor: Colors.white,
       body: Stack(
         children: [
+          // ── Background gradient ──────────────────────────────────────────
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -111,48 +111,72 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ),
+
           SafeArea(
             child: Stack(
               children: [
+                // ── Main scrollable content ──────────────────────────────
                 Positioned.fill(
                   child: IgnorePointer(
                     ignoring: open > 0.15,
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 160),
                       opacity: (1 - open * 0.92).clamp(0.0, 1.0),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(18, 0, 18, 32),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: _headerHeight + 10),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  _FunctionCarousel(
-                                    onScan: () => Navigator.push(context,
-                                        MaterialPageRoute(builder: (_) => const Scan())),
-                                    onUpload: () => Navigator.push(context,
-                                        MaterialPageRoute(builder: (_) => const Upload())),
-                                    onSearch: () => Navigator.push(context,
-                                        MaterialPageRoute(builder: (_) => const SearchScreen())),
-                                    onChat: () => Navigator.push(context,
-                                        MaterialPageRoute(builder: (_) => const PillAssistantHome())),
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _RemindersCard(
-                                    onDragUp: () => _openMedicineTable(context),
-                                    onArrowTap: () => _openMedicineTable(context),
-                                  ),
-                                ],
+                            SizedBox(height: _headerHeight + 20),
+
+                            // Date pill
+                            _DatePill(),
+
+                            const SizedBox(height: 18),
+
+                            // Section label
+                            const Padding(
+                              padding: EdgeInsets.only(left: 2, bottom: 14),
+                              child: Text(
+                                'Quick Actions',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white70,
+                                  letterSpacing: 1.1,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 8),
+
+                            // 2×2 action grid
+                            _QuickActionsGrid(
+                              onScan: () => Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const Scan())),
+                              onUpload: () => Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const Upload())),
+                              onSearch: () => Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const SearchScreen())),
+                              onChat: () => Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const PillAssistantHome())),
+                            ),
+
+                            const SizedBox(height: 22),
+
+                            // Schedule card
+                            _ScheduleCard(
+                              onViewAll: () => _openMedicineTable(context),
+                            ),
+
+                            const SizedBox(height: 24),
                           ],
                         ),
                       ),
                     ),
                   ),
                 ),
+
+                // ── Sliding settings panel (UNCHANGED behaviour) ─────────
                 Positioned(
                   left: 18,
                   right: 18,
@@ -161,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(26),
                     child: Material(
-                      color: Colors.white.withOpacity(0.96),
+                      color: Colors.white.withValues(alpha: 0.96),
                       child: Column(
                         children: [
                           IgnorePointer(
@@ -175,7 +199,8 @@ class _HomeScreenState extends State<HomeScreen>
                             behavior: HitTestBehavior.translucent,
                             onVerticalDragUpdate: (details) {
                               setState(() => _dragY =
-                                  (_dragY + details.delta.dy).clamp(0.0, sheetMax));
+                                  (_dragY + details.delta.dy)
+                                      .clamp(0.0, sheetMax));
                             },
                             onVerticalDragEnd: (_) => _snapSheet(context),
                             onTap: () {
@@ -206,7 +231,42 @@ class _HomeScreenState extends State<HomeScreen>
   }
 }
 
-// ====================== Greeting Handle ======================
+// ── Date pill ────────────────────────────────────────────────────────────────
+
+class _DatePill extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final label = DateFormat('EEEE, MMMM d').format(now);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.calendar_today_rounded,
+              color: Colors.white70, size: 13),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Greeting handle (settings drag panel header) ─────────────────────────────
+
 class _GreetingHandle extends StatelessWidget {
   final double height;
   final String name;
@@ -222,56 +282,124 @@ class _GreetingHandle extends StatelessWidget {
     required this.showUp,
   });
 
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       height: height,
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.92),
+      decoration: const BoxDecoration(
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 18,
-            offset: const Offset(0, -6),
+            color: Color(0x12000000),
+            blurRadius: 16,
+            offset: Offset(0, -4),
           ),
         ],
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'greetings'.tr(namedArgs: {'name': name}),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'how_can_help'.tr(),
-                      style: const TextStyle(fontSize: 12.5, color: Colors.black54),
-                    ),
-                  ],
-                ),
-              ),
-
-            ],
+          // Drag handle bar
+          Container(
+            margin: const EdgeInsets.only(top: 10),
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.black12,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          const SizedBox(height: 8),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 160),
-            child: showDown
-                ? const Icon(Icons.keyboard_arrow_down_rounded, key: ValueKey('down'))
-                : showUp
-                    ? const Icon(Icons.keyboard_arrow_up_rounded, key: ValueKey('up'))
-                    : const SizedBox(height: 24, key: ValueKey('space')),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 6, 14, 10),
+              child: Row(
+                children: [
+                  // Avatar
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF48466E), Color(0xFF4ACED0)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF4ACED0).withValues(alpha: 0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: avatar != null
+                        ? ClipOval(
+                            child: Image(image: avatar!, fit: BoxFit.cover))
+                        : const Icon(Icons.person_rounded,
+                            color: Colors.white, size: 26),
+                  ),
+                  const SizedBox(width: 13),
+                  // Name + greeting
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _greeting(),
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: Color(0xFF4ACED0),
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF48466E),
+                            height: 1.1,
+                          ),
+                        ),
+                        Text(
+                          'how_can_help'.tr(),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.black38,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Settings arrow
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: showDown
+                        ? const Icon(Icons.keyboard_arrow_down_rounded,
+                            key: ValueKey('down'),
+                            color: Color(0xFF48466E),
+                            size: 26)
+                        : showUp
+                            ? const Icon(Icons.keyboard_arrow_up_rounded,
+                                key: ValueKey('up'),
+                                color: Color(0xFF48466E),
+                                size: 26)
+                            : const SizedBox(
+                                width: 26, key: ValueKey('none')),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -279,11 +407,12 @@ class _GreetingHandle extends StatelessWidget {
   }
 }
 
-// ====================== Function Carousel ======================
-class _FunctionCarousel extends StatelessWidget {
+// ── Quick actions 2×2 grid ───────────────────────────────────────────────────
+
+class _QuickActionsGrid extends StatelessWidget {
   final VoidCallback onScan, onUpload, onSearch, onChat;
 
-  const _FunctionCarousel({
+  const _QuickActionsGrid({
     required this.onScan,
     required this.onUpload,
     required this.onSearch,
@@ -292,34 +421,305 @@ class _FunctionCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: PageView(
-        physics: const BouncingScrollPhysics(),
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _ActionTile(
+                icon: Icons.document_scanner_rounded,
+                label: 'scan_btn'.tr(),
+                gradientColors: const [Color(0xFF48466E), Color(0xFF3E84A8)],
+                shadowColor: Color(0xFF48466E),
+                onTap: onScan,
+              ),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: _ActionTile(
+                icon: Icons.upload_file_rounded,
+                label: 'upload_btn'.tr(),
+                gradientColors: const [Color(0xFF3E84A8), Color(0xFF4ACED0)],
+                shadowColor: Color(0xFF3E84A8),
+                onTap: onUpload,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 13),
+        Row(
+          children: [
+            Expanded(
+              child: _ActionTile(
+                icon: Icons.manage_search_rounded,
+                label: 'search_btn'.tr(),
+                gradientColors: const [Color(0xFF4ACED0), Color(0xFF3E84A8)],
+                shadowColor: Color(0xFF4ACED0),
+                onTap: onSearch,
+              ),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: _ActionTile(
+                icon: Icons.smart_toy_rounded,
+                label: 'chat_btn'.tr(),
+                gradientColors: const [Color(0xFF5C5490), Color(0xFF48466E)],
+                shadowColor: Color(0xFF5C5490),
+                onTap: onChat,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final List<Color> gradientColors;
+  final Color shadowColor;
+  final VoidCallback onTap;
+
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.gradientColors,
+    required this.shadowColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 148,
+        clipBehavior: Clip.hardEdge,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradientColors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor.withValues(alpha: 0.38),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Decorative circles (clipped cleanly by the container)
+            Positioned(
+              right: -18,
+              top: -18,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              left: -10,
+              bottom: -18,
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.07),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Icon inside a frosted circle
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.20),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: Colors.white, size: 26),
+                  ),
+                  const Spacer(),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Text(
+                        'Open',
+                        style: TextStyle(
+                          color: Colors.white60,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(Icons.arrow_forward_rounded,
+                          color: Colors.white54, size: 11),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Today's schedule card ────────────────────────────────────────────────────
+
+class _ScheduleCard extends StatelessWidget {
+  final VoidCallback onViewAll;
+
+  const _ScheduleCard({required this.onViewAll});
+
+  @override
+  Widget build(BuildContext context) {
+    final userData = Provider.of<UserData>(context);
+    final medsStr = userData.currentMedications;
+    final medsList = medsStr.isNotEmpty
+        ? medsStr
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty && e != 'None')
+            .toList()
+        : <String>[];
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.93),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
         children: [
-          _ScanCard(
-            title: 'scan_title'.tr(),
-            subtitle: 'scan_subtitle'.tr(),
-            buttonText: 'scan_btn'.tr(),
-            onTap: onScan,
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 14, 0),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF48466E), Color(0xFF4ACED0)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.today_rounded,
+                      color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'medicine_reminders'.tr(),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF48466E),
+                        ),
+                      ),
+                      Text(
+                        DateFormat('EEEE, d MMM').format(DateTime.now()),
+                        style: const TextStyle(
+                            fontSize: 11.5, color: Colors.black38),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: onViewAll,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 13, vertical: 7),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF48466E), Color(0xFF3E84A8)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'View all',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(width: 3),
+                        Icon(Icons.arrow_forward_rounded,
+                            color: Colors.white, size: 12),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          _UploadCard(
-            title: 'upload_title'.tr(),
-            subtitle: 'upload_subtitle'.tr(),
-            buttonText: 'upload_btn'.tr(),
-            onTap: onUpload,
+
+          const SizedBox(height: 16),
+
+          // Divider
+          Container(
+            height: 1,
+            margin: const EdgeInsets.symmetric(horizontal: 18),
+            color: Colors.black.withValues(alpha: 0.05),
           ),
-          // ✅ Search card now uses image asset — same style as _ScanCard
-          _SearchCard(
-            title: 'search_title'.tr(),
-            subtitle: 'search_subtitle'.tr(),
-            buttonText: 'search_btn'.tr(),
-            onTap: onSearch,
-          ),
-          _ChatCard(
-            title: 'chat_title'.tr(),
-            subtitle: 'chat_subtitle'.tr(),
-            buttonText: 'chat_btn'.tr(),
-            onTap: onChat,
+
+          const SizedBox(height: 14),
+
+          // Medicine list or empty state
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 18),
+            child: medsList.isEmpty
+                ? _EmptySchedule(onTap: onViewAll)
+                : Column(
+                    children: medsList
+                        .take(3)
+                        .map((med) => _MedRow(name: med))
+                        .toList(),
+                  ),
           ),
         ],
       ),
@@ -327,502 +727,137 @@ class _FunctionCarousel extends StatelessWidget {
   }
 }
 
-// ====================== Scan Card ======================
-class _ScanCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String buttonText;
-  final VoidCallback onTap;
-
-  const _ScanCard({
-    required this.title,
-    required this.subtitle,
-    required this.buttonText,
-    required this.onTap,
-  });
+class _MedRow extends StatelessWidget {
+  final String name;
+  const _MedRow({required this.name});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4FDFD),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: const Color(0xFF4ACED0).withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF4ACED0), Color(0xFF3E84A8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(10),
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/images/scan_icon.png',
-                width: 120,
-                height: 120,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black87,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
-                  color: Color(0xFF666688),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 160,
-                height: 44,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFB8EEE8),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  onPressed: onTap,
-                  child: Text(
-                    buttonText,
-                    style: const TextStyle(
-                      color: Color(0xFF1A7A70),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            child: const Icon(Icons.medication_rounded,
+                color: Colors.white, size: 20),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ====================== Search Card ======================
-class _SearchCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String buttonText;
-  final VoidCallback onTap;
-
-  const _SearchCard({
-    required this.title,
-    required this.subtitle,
-    required this.buttonText,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/images/search_icon.png',
-                width: 120,
-                height: 120,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black87,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
-                  color: Color(0xFF666688),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 160,
-                height: 44,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFB8EEE8),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  onPressed: onTap,
-                  child: Text(
-                    buttonText,
-                    style: const TextStyle(
-                      color: Color(0xFF1A7A70),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ====================== Upload Card ======================
-class _UploadCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String buttonText;
-  final VoidCallback onTap;
-
-  const _UploadCard({
-    required this.title,
-    required this.subtitle,
-    required this.buttonText,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/images/upload_icon.png',
-                width: 120,
-                height: 120,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black87,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
-                  color: Color(0xFF666688),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 160,
-                height: 44,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFB8EEE8),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  onPressed: onTap,
-                  child: Text(
-                    buttonText,
-                    style: const TextStyle(
-                      color: Color(0xFF1A7A70),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ====================== Chat Card ======================
-class _ChatCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String buttonText;
-  final VoidCallback onTap;
-
-  const _ChatCard({
-    required this.title,
-    required this.subtitle,
-    required this.buttonText,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/images/pillo_icon.png',
-                width: 120,
-                height: 120,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black87,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
-                  color: Color(0xFF666688),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 160,
-                height: 44,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFB8EEE8),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  onPressed: onTap,
-                  child: Text(
-                    buttonText,
-                    style: const TextStyle(
-                      color: Color(0xFF1A7A70),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
-// ====================== Reminders Card ======================
-class _RemindersCard extends StatelessWidget {
-  final VoidCallback onDragUp;
-  final VoidCallback onArrowTap;
-
-  const _RemindersCard({required this.onDragUp, required this.onArrowTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final userData = Provider.of<UserData>(context);
-    final medsStr = userData.currentMedications;
-    final medsList = medsStr.isNotEmpty 
-        ? medsStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty && e != 'None').toList()
-        : <String>[];
-
-    final bool hasMedicines = medsList.isNotEmpty;
-
-    return GestureDetector(
-      onVerticalDragEnd: (details) {
-        if (details.velocity.pixelsPerSecond.dy < -220) onDragUp();
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          color: Colors.white.withOpacity(0.85),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 25,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Text('medicine_reminders'.tr(),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 14),
-            hasMedicines ? _buildFilledState(medsList) : _buildEmptyState(context),
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: onArrowTap,
-              child: const Icon(Icons.keyboard_arrow_up_rounded,
-                  size: 26, color: Colors.black54),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilledState(List<String> medicines) {
-    return Column(
-      children: medicines.map((med) => Padding(
-        padding: const EdgeInsets.only(bottom: 12.0),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF4ACED0).withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.alarm, size: 20, color: Color(0xFF1A7A70)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                med,
-                style: const TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-            const Text(
-              '8:00 am',
-              style: TextStyle(
-                fontSize: 13,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1A7A70),
+                color: Color(0xFF48466E),
               ),
             ),
-          ],
-        ),
-      )).toList(),
+          ),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFF48466E).withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              '8:00 AM',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF48466E),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Column(
-      children: [
-        const Icon(Icons.medical_services_outlined, size: 48, color: Colors.black38),
-        const SizedBox(height: 12),
-        Text('no_medications'.tr(),
-            style: const TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black54)),
-        const SizedBox(height: 4),
-        Text('add_medicine_hint'.tr(),
-            style: const TextStyle(fontSize: 12, color: Colors.black45),
-            textAlign: TextAlign.center),
-        const SizedBox(height: 16),
-        ElevatedButton.icon(
-          onPressed: () => onArrowTap(),
-          icon: const Icon(Icons.add),
-          label: Text('add_medicine'.tr()),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF4ACED0),
-            foregroundColor: Colors.white,
+class _EmptySchedule extends StatelessWidget {
+  final VoidCallback onTap;
+  const _EmptySchedule({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEAF7F7),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.event_available_rounded,
+                color: Color(0xFF4ACED0), size: 32),
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          Text(
+            'no_medications'.tr(),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'add_medicine_hint'.tr(),
+            style: const TextStyle(fontSize: 12, color: Colors.black38),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF48466E), Color(0xFF4ACED0)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add_rounded,
+                      color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    'add_medicine'.tr(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
