@@ -159,69 +159,162 @@ class HealthData {
     'Chronic Pain Syndrome',
     'Chronic Fatigue Syndrome',
   ];
-
-  // ─────────────────────────────────────────────
-  // MEDICATIONS — comprehensive list
+// ─────────────────────────────────────────────
+  // MEDICATIONS — comprehensive list (120 medicines)
   // ─────────────────────────────────────────────
   static const List<String> medications = [
     'None',
-    'Advil 200 mg',
-    'Advil 400 mg',
-    'Advil 600 mg',
-    'Advil 800 mg',
-    'Panadol 500 mg',
-    'Panadol Extra 500 mg',
-    'Panadol Cold&Flu 500 mg',
-    'Panadol Night 500 mg',
-    'Panadol Advance 500 mg',
-    'Brufen 200mg',
-    'Brufen 400mg',
-    'Brufen 600mg',
-    'Brufen 800mg',
-    'Diclofenac 25mg',
-    'Diclofenac 50mg',
-    'Diclofenac 75mg',
-    'Diclofenac 100mg',
-    'Fludrex Standard dose',
-    'Tardyferon 80mg',
-    'Tardyferon 160mg',
-    'Augmentin 625mg',
-    'Augmentin 1g',
-    'Voltaren 25mg',
-    'Voltaren 50mg',
-    'Voltaren 75mg',
-    'Voltaren 100mg',
-    'Cataflam 25mg',
-    'Cataflam 50mg',
-    'Cataflam 75mg',
-    'Cataflam 100mg',
-    'Zyrtec 10mg',
-    'Claritin 10mg',
-    'Ventolin Inhaler 100 mcg',
-    'Glucophage 500mg',
-    'Lipitor 20mg',
-    'Nexium 40mg',
-    'Losec 20mg',
-    'Flagyl 500mg',
-    'Brilinta 90mg',
-    'Plavix 75mg',
-    'Aerius 5mg',
-    'Telfast 120mg',
-    'Imodium 2mg',
-    'Buscopan 10mg',
-    'Spasfon 80mg',
-    'Duspatalin 135mg',
-    'Gaviscon Standard dose',
-    'Rennie Standard dose',
-    'Insulin Lantus Injection',
-    'Panadol Syrup 120 mg/5ml',
-    'Neurobion Standard dose',
-    'Centrum Multivitamin Standard dose',
-    'Voltaren Gel 1%',
-    'Fucidin Cream 2%',
-    'Bepanthen Cream 5%',
-    'Canesten Cream 1%',
-    'Zithromax 500mg',
+
+    // ── Pain & Anti-inflammatory ──────────────────
+    'Advil 200mg',              // Ibuprofen
+    'Advil 400mg',              // Ibuprofen
+    'Advil 600mg',              // Ibuprofen
+    'Advil 800mg',              // Ibuprofen
+    'Brufen 200mg',             // Ibuprofen
+    'Brufen 400mg',             // Ibuprofen
+    'Brufen 600mg',             // Ibuprofen
+    'Brufen 800mg',             // Ibuprofen
+    'Diclofenac 25mg',          // Diclofenac
+    'Diclofenac 50mg',          // Diclofenac
+    'Diclofenac 75mg',          // Diclofenac
+    'Diclofenac 100mg',         // Diclofenac
+    'Voltaren 25mg',            // Diclofenac
+    'Voltaren 50mg',            // Diclofenac
+    'Voltaren 75mg',            // Diclofenac
+    'Voltaren 100mg',           // Diclofenac
+    'Voltaren Gel 1%',          // Diclofenac Topical
+    'Cataflam 25mg',            // Diclofenac Potassium
+    'Cataflam 50mg',            // Diclofenac Potassium
+    'Cataflam 75mg',            // Diclofenac Potassium
+    'Cataflam 100mg',           // Diclofenac Potassium
+
+    // ── Paracetamol ───────────────────────────────
+    'Panadol 500mg',            // Paracetamol
+    'Panadol Extra 500mg',      // Paracetamol + Caffeine
+    'Panadol Cold&Flu 500mg',   // Paracetamol + Decongestant
+    'Panadol Night 500mg',      // Paracetamol + Antihistamine
+    'Panadol Advance 500mg',    // Paracetamol
+    'Panadol Syrup 120mg/5ml',  // Paracetamol
+
+    // ── Cold & Flu ────────────────────────────────
+    'Fludrex Standard dose',    // Paracetamol + Pseudoephedrine + Dextromethorphan + Antihistamine
+
+    // ── Antibiotics ───────────────────────────────
+    'Amoxicillin 250mg',        // Amoxicillin
+    'Amoxicillin 500mg',        // Amoxicillin
+    'Augmentin 625mg',          // Amoxicillin + Clavulanic Acid
+    'Augmentin 1g',             // Amoxicillin + Clavulanic Acid
+    'Flagyl 500mg',             // Metronidazole
+    'Zithromax 500mg',          // Azithromycin
+    'Cipro 250mg',              // Ciprofloxacin
+    'Cipro 500mg',              // Ciprofloxacin
+    'Doxycycline 100mg',        // Doxycycline
+    'Ceporex 250mg',            // Cephalexin
+    'Ceporex 500mg',            // Cephalexin
+
+    // ── Antihistamines ────────────────────────────
+    'Zyrtec 10mg',              // Cetirizine
+    'Claritin 10mg',            // Loratadine
+    'Aerius 5mg',               // Desloratadine
+    'Telfast 120mg',            // Fexofenadine
+
+    // ── Respiratory & Asthma ─────────────────────
+    'Ventolin Inhaler 100mcg',  // Salbutamol
+    'Seretide Inhaler 250mcg',  // Fluticasone + Salmeterol
+    'Symbicort Inhaler 160mcg', // Budesonide + Formoterol
+    'Nasonex Spray 50mcg',      // Mometasone
+    'Singulair 10mg',           // Montelukast
+    'Singulair 5mg',            // Montelukast
+    'Prednisolone 5mg',         // Prednisolone
+    'Prednisolone 10mg',        // Prednisolone
+    'Prednisolone 20mg',        // Prednisolone
+
+    // ── Gastrointestinal ─────────────────────────
+    'Nexium 40mg',              // Esomeprazole
+    'Losec 20mg',               // Omeprazole
+    'Gaviscon Standard dose',   // Alginate
+    'Rennie Standard dose',     // Calcium Carbonate
+    'Imodium 2mg',              // Loperamide
+    'Buscopan 10mg',            // Hyoscine Butylbromide
+    'Spasfon 80mg',             // Phloroglucinol
+    'Duspatalin 135mg',         // Mebeverine
+
+    // ── Diabetes ─────────────────────────────────
+    'Glucophage 500mg',         // Metformin
+    'Glucophage XR 500mg',      // Metformin Extended Release
+    'Glucophage XR 1000mg',     // Metformin Extended Release
+    'Januvia 100mg',            // Sitagliptin
+    'Diamicron 30mg',           // Gliclazide
+    'Diamicron 60mg',           // Gliclazide
+    'Amaryl 1mg',               // Glimepiride
+    'Amaryl 2mg',               // Glimepiride
+    'Amaryl 4mg',               // Glimepiride
+    'Insulin Lantus Injection',  // Insulin Glargine
+    'NovoRapid Injection',      // Insulin Aspart
+    'Humalog Injection',        // Insulin Lispro
+    'NovoMix 30 Injection',     // Insulin Aspart Mix
+    'Mixtard 30 Injection',     // Insulin Human 30/70
+
+    // ── Blood Pressure & Heart ────────────────────
+    'Concor 2.5mg',             // Bisoprolol
+    'Concor 5mg',               // Bisoprolol
+    'Concor 10mg',              // Bisoprolol
+    'Norvasc 5mg',              // Amlodipine
+    'Norvasc 10mg',             // Amlodipine
+    'Coversyl 5mg',             // Perindopril
+    'Coversyl 10mg',            // Perindopril
+    'Cozaar 50mg',              // Losartan
+    'Cozaar 100mg',             // Losartan
+    'Lasix 40mg',               // Furosemide
+    'Lasix 80mg',               // Furosemide
+    'Aspirin 100mg',            // Acetylsalicylic Acid
+    'Brilinta 90mg',            // Ticagrelor
+    'Plavix 75mg',              // Clopidogrel
+
+    // ── Cholesterol ───────────────────────────────
+    'Lipitor 20mg',             // Atorvastatin
+
+    // ── Thyroid ───────────────────────────────────
+    'Eltroxin 50mcg',           // Levothyroxine
+    'Eltroxin 100mcg',          // Levothyroxine
+    'Euthyrox 25mcg',           // Levothyroxine
+    'Euthyrox 50mcg',           // Levothyroxine
+    'Euthyrox 100mcg',          // Levothyroxine
+    'Carbimazole 5mg',          // Carbimazole
+    'Carbimazole 10mg',         // Carbimazole
+
+    // ── Mental Health ─────────────────────────────
+    'Xanax 0.25mg',             // Alprazolam
+    'Xanax 0.5mg',              // Alprazolam
+    'Xanax 1mg',                // Alprazolam
+    'Cipralex 10mg',            // Escitalopram
+    'Cipralex 20mg',            // Escitalopram
+    'Zoloft 50mg',              // Sertraline
+    'Zoloft 100mg',             // Sertraline
+
+    // ── Pregnancy & Supplements ───────────────────
+    'Folic Acid 400mcg',        // Folic Acid
+    'Folic Acid 5mg',           // Folic Acid
+    'Pregnacare Standard dose', // Folic Acid + Iron + Multivitamins
+    'Obimin Standard dose',     // Folic Acid + Iron + Multivitamins
+    'Calcimate 500mg',          // Calcium Carbonate
+    'Caltrate 600mg',           // Calcium Carbonate + Vitamin D
+    'Utrogestan 200mg',         // Progesterone
+    'Cyclogest 400mg',          // Progesterone
+    'Ondansetron 4mg',          // Ondansetron
+    'Ondansetron 8mg',          // Ondansetron
+    'Tardyferon 80mg',          // Iron (Ferrous Sulfate)
+    'Tardyferon 160mg',         // Iron (Ferrous Sulfate)
+
+    // ── Vitamins & Supplements ────────────────────
+    'Neurobion Standard dose',              // Vitamin B Complex
+    'Centrum Multivitamin Standard dose',   // Multivitamins
+
+    // ── Topical ───────────────────────────────────
+    'Voltaren Gel 1%',          // Diclofenac Topical
+    'Fucidin Cream 2%',         // Fusidic Acid
+    'Bepanthen Cream 5%',       // Dexpanthenol
+    'Canesten Cream 1%',        // Clotrimazole
   ];
 
   // ─────────────────────────────────────────────

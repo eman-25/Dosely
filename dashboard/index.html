@@ -124,8 +124,21 @@ body { background: var(--c5); }
 <!-- ANALYTICS -->
 <div id="analyticsPage" class="hidden fade">
 <h1 class="text-3xl font-bold mb-6" style="color: var(--c1)">Analytics</h1>
-<p>Advanced analytics coming soon...</p>
-</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+  <!-- TOP 5 TRENDING -->
+  <div class="bg-white p-6 rounded-xl shadow">
+    <h3 class="text-lg font-semibold mb-3">Top 5 Most Searched Medicines</h3>
+    <canvas id="trendingChart"></canvas>
+  </div>
+
+  <!-- FUTURE: USER ACTIVITY -->
+  <div class="bg-white p-6 rounded-xl shadow">
+    <h3 class="text-lg font-semibold mb-3">User Activity</h3>
+    <p class="text-gray-500">Coming soon...</p>
+  </div>
+
+</div></div>
 
 </div>
 
@@ -136,7 +149,7 @@ body { background: var(--c5); }
 
 <script>
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
+  apiKey: "AIzaSyBJ_FUCYzXVDGEAQP4D9KLOjFhgjT56lZ8",
   authDomain: "dosley-76bd1.firebaseapp.com",
   projectId: "dosley-76bd1",
 };
