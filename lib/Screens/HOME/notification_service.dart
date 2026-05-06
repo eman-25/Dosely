@@ -13,6 +13,21 @@ class NotificationService {
 
     tz_data.initializeTimeZones();
 
+    // Use device's UTC offset to find the right timezone
+    final offsetHours = DateTime.now().timeZoneOffset.inHours;
+    final offsetMinutes = DateTime.now().timeZoneOffset.inMinutes % 60;
+    final sign = offsetHours >= 0 ? '+' : '-';
+    final h = offsetHours.abs().toString().padLeft(2, '0');
+    final m = offsetMinutes.abs().toString().padLeft(2, '0');
+    final tzName = 'Etc/GMT${sign == '+' ? '-' : '+'}${offsetHours.abs()}';
+
+    try {
+      tz.setLocalLocation(tz.getLocation(tzName));
+    } catch (_) {
+      // fallback to UTC if timezone not found
+      tz.setLocalLocation(tz.UTC);
+    }
+
     const AndroidInitializationSettings android =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -43,7 +58,6 @@ class NotificationService {
     required int minute,
     required List<int> weekdays,
   }) async {
-    // Cancel existing notifications for this medicine first
     await cancelMedicine(id);
 
     for (final weekday in weekdays) {
@@ -51,8 +65,8 @@ class NotificationService {
 
       await _plugin.zonedSchedule(
         notifId,
-        'Time to take $name',
-        'Don\'t forget your medication!',
+        'Time to take $name 💊',
+        "Don't forget your medication!",
         _nextWeekdayTime(weekday, hour, minute),
         const NotificationDetails(
           android: AndroidNotificationDetails(
@@ -76,14 +90,14 @@ class NotificationService {
     }
   }
 
-  // ── Cancel all notifications for one medicine (up to 7 days) ─────────────
+  // ── Cancel all notifications for one medicine ─────────────────────────────
   static Future<void> cancelMedicine(int id) async {
     for (int weekday = 1; weekday <= 7; weekday++) {
       await _plugin.cancel(id * 10 + weekday);
     }
   }
 
-  // ── Cancel every notification (call on logout) ────────────────────────────
+  // ── Cancel every notification ─────────────────────────────────────────────
   static Future<void> cancelAll() async {
     await _plugin.cancelAll();
   }

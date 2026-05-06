@@ -617,7 +617,7 @@ class _ScheduleCard extends StatelessWidget {
 
     final startDate = _toDate(data['startDate']);
     final endDate   = _toDate(data['endDate']);
-    final days      = List<int>.from(data['days'] as List? ?? []);
+    final days      = List<int>.from(data['selectedDays'] as List? ?? []);
 
     if (startDate != null && today.isBefore(
         DateTime(startDate.year, startDate.month, startDate.day))) return false;
@@ -639,7 +639,6 @@ class _ScheduleCard extends StatelessWidget {
           .collection('users')
           .doc(uid)
           .collection('medicine_table')
-          .orderBy('addedAt', descending: false)
           .snapshots(),
       builder: (context, snapshot) {
         final docs = snapshot.data?.docs ?? [];
@@ -647,8 +646,8 @@ class _ScheduleCard extends StatelessWidget {
         final medsList = todayDocs.map((d) {
           final data = d.data();
           final name   = (data['medicineName'] ?? '').toString();
-          final hour   = (data['hour']   as int?) ?? 8;
-          final minute = (data['minute'] as int?) ?? 0;
+          final hour   = ((data['timeHour'] as num?)?.toInt()) ?? 8;
+          final minute = ((data['timeMinute'] as num?)?.toInt()) ?? 0;
           final time   = TimeOfDay(hour: hour, minute: minute);
           final h      = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
           final m      = time.minute.toString().padLeft(2, '0');
