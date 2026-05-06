@@ -179,6 +179,17 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     _jumpToBottom();
   }
 
+  void _deleteConversation(String id) {
+    setState(() {
+      _conversations.removeWhere((c) => c.id == id);
+      // If we deleted the active chat, switch to the first available one
+      if (_currentConvId == id) {
+        _currentConvId = _conversations.isNotEmpty ? _conversations.first.id : '';
+      }
+    });
+    _saveChats();
+  }
+
   // ── Chat logic (UNCHANGED) ────────────────────────────────────────────────────
   List<Map<String, String>> _buildHistoryForModel(List<_ChatMessage> messages) {
     final items = <Map<String, String>>[];
@@ -830,6 +841,51 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
                                     : FontWeight.w500,
                                 fontSize: 13.5,
                                 color: _c1,
+                              ),
+                            ),
+                            trailing: GestureDetector(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20)),
+                                    title: const Text('Delete chat?',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF48466E))),
+                                    content: Text(
+                                      'This will permanently delete "${conv.title}".',
+                                      style: const TextStyle(fontSize: 13.5),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Cancel',
+                                            style: TextStyle(color: Colors.black54)),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                          Navigator.pop(context); // close drawer
+                                          _deleteConversation(conv.id);
+                                        },
+                                        child: const Text('Delete',
+                                            style: TextStyle(
+                                                color: Colors.redAccent,
+                                                fontWeight: FontWeight.w700)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              child: Icon(
+                                Icons.delete_outline_rounded,
+                                size: 18,
+                                color: isActive
+                                    ? Colors.redAccent.withValues(alpha: 0.7)
+                                    : Colors.black26,
                               ),
                             ),
                             onTap: () => _switchChat(conv.id),
