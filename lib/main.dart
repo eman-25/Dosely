@@ -29,11 +29,13 @@ import 'screens/settings/report_problem.dart';
 import 'screens/settings/logout.dart';
 import 'screens/HOME/settings_panel.dart';
 import 'Screens/Splash_Screen.dart';
+import 'screens/HOME/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();           
-  await EasyLocalization.ensureInitialized();
+  await Firebase.initializeApp();
+  await NotificationService.init(); // ← add this
+  await EasyLocalization.ensureInitialized(); 
 
   runApp(
     EasyLocalization(

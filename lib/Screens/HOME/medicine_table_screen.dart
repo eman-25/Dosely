@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import '../Main Features/Pill_Assistant_Home.dart';
+import 'notification_service.dart';
 
 class MedicineTableScreen extends StatefulWidget {
   const MedicineTableScreen({super.key});
@@ -206,7 +207,7 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
     setState(() => _adding = true);
 
     try {
-      await _tableRef.add({
+      final docRef = await _tableRef.add({
         'medicineName': (prefill['name'] ?? '').toString(),
         'genericName': (prefill['generic_name'] ?? '').toString(),
         'dosage': (prefill['dosage'] ?? '').toString(),
@@ -221,6 +222,15 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
         'startDate': _dateKey(selectedDay),
         'addedAt': FieldValue.serverTimestamp(),
       });
+
+      // Schedule notification for this medicine
+      await NotificationService.scheduleMedicine(
+        id: NotificationService.idFromDocId(docRef.id),
+        name: (prefill['name'] ?? 'Medicine').toString(),
+        hour: result['hour'] as int,
+        minute: result['minute'] as int,
+        weekdays: List<int>.from(result['days'] as List),
+      );
 
       _showMessage('Medicine added to your schedule.');
     } catch (e) {
@@ -386,6 +396,16 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
         'timeMinute': selectedTime.minute,
         'selectedDays': selectedWeekdays.toList()..sort(),
       });
+
+      // Reschedule notification with updated time/days
+      await NotificationService.scheduleMedicine(
+        id: NotificationService.idFromDocId(doc.id),
+        name: nameCtrl.text.trim(),
+        hour: selectedTime.hour,
+        minute: selectedTime.minute,
+        weekdays: selectedWeekdays.toList(),
+      );
+
       _showMessage('Medicine updated.');
     } catch (e) {
       _showMessage('Failed to update medicine: $e');
@@ -419,6 +439,10 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
 
     try {
       await doc.reference.delete();
+      // Cancel scheduled notification for this medicine
+      await NotificationService.cancelMedicine(
+        NotificationService.idFromDocId(doc.id),
+      );
       _showMessage('Medicine deleted.');
     } catch (e) {
       _showMessage('Failed to delete medicine: $e');
