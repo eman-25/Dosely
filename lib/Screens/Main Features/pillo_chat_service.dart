@@ -2,7 +2,7 @@ import 'package:firebase_ai/firebase_ai.dart';
 
 class PilloChatService {
   static final GenerativeModel _model = FirebaseAI.googleAI().generativeModel(
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash-preview-05-20',
   );
 
   /// [userProfile] is the full health profile loaded from Firestore.
