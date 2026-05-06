@@ -37,6 +37,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
   /// Health profile loaded from Firestore (users/{uid} document).
   Map<String, dynamic> _userProfile = {};
 
+  /// Scanned medicines loaded from Firestore (users/{uid}/scan_results).
+  List<Map<String, dynamic>> _scanHistory = [];
+
   // ── Getters ─────────────────────────────────────────────────────────────────
   _ChatConversation? get _currentConversation {
     if (_currentConvId.isEmpty) return null;
@@ -104,36 +107,48 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     await prefs.setString('pillo_memory', jsonEncode(_memory));
   }
 
-  // ── Firestore health profile ──────────────────────────────────────────────────
+  // ── Firestore health profile + scan history ─────────────────────────────────
   Future<void> _loadUserProfile() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final uid = user.uid;
+      final firestore = FirebaseFirestore.instance;
 
-      if (doc.exists && doc.data() != null) {
-        setState(() => _userProfile = doc.data()!);
+      // Load profile and scan history in parallel
+      final results = await Future.wait([
+        firestore.collection('users').doc(uid).get(),
+        firestore.collection('users').doc(uid).collection('scan_results').get(),
+      ]);
 
-        // Mirror key fields into local memory so they survive session gaps.
-        final data = doc.data()!;
-        void mirror(String firestoreKey, String memoryKey) {
-          final val = data[firestoreKey]?.toString().trim() ?? '';
-          if (val.isNotEmpty && val.toLowerCase() != 'none') {
-            _memory[memoryKey] = val;
-          }
+      final profileDoc = results[0] as DocumentSnapshot<Map<String, dynamic>>;
+      final scansSnap  = results[1] as QuerySnapshot<Map<String, dynamic>>;
+
+      if (profileDoc.exists && profileDoc.data() != null) {
+        final data = profileDoc.data()!;
+        setState(() => _userProfile = data);
+
+        // Mirror health info into memory for quick access
+        final health = data['healthInfo'] as Map<String, dynamic>? ?? {};
+        void mirror(Map m, String key, String memKey) {
+          final val = (m[key] ?? '').toString().trim();
+          if (val.isNotEmpty && val.toLowerCase() != 'none') _memory[memKey] = val;
         }
-        mirror('allergies', 'allergies');
-        mirror('chronicConditions', 'chronic_conditions');
-        mirror('currentMedications', 'current_medications');
-        mirror('specialConditions', 'special_conditions');
-        mirror('username', 'name');
+        mirror(health, 'allergies', 'allergies');
+        mirror(health, 'chronicConditions', 'chronic_conditions');
+        mirror(health, 'currentMedications', 'current_medications');
+        mirror(health, 'specialConditions', 'special_conditions');
+        mirror(data, 'username', 'name');
+      }
+
+      // Load all scanned medicines
+      if (scansSnap.docs.isNotEmpty) {
+        setState(() {
+          _scanHistory = scansSnap.docs.map((d) => d.data()).toList();
+        });
       }
     } catch (e) {
-      // Non-fatal – Pillo will still work without Firestore data.
       debugPrint('PillAssistantHome: failed to load user profile: $e');
     }
   }
@@ -242,7 +257,8 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
         text.isNotEmpty ? text : 'The user uploaded an image.',
         previousMessages: historyBeforeCurrentMessage,
         memory: _memory,
-        userProfile: _userProfile, // ← Firestore health data
+        userProfile: _userProfile,
+        scanHistory: _scanHistory, // ← scanned medicines history
         hasImage: image != null,
       );
       setState(() => _messages.add(_ChatMessage.bot(reply)));

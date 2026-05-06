@@ -1,113 +1,123 @@
 import 'package:firebase_ai/firebase_ai.dart';
 
 class PilloChatService {
-  static final GenerativeModel _model = FirebaseAI.googleAI().generativeModel(
-    model: 'gemini-2.5-flash',
-  );
-
-  /// [userProfile] is the full health profile loaded from Firestore.
-  /// Keys expected (all optional): name, allergies, chronicConditions,
-  /// currentMedications, specialConditions, uid, username, lastUpdatedAt.
+  /// [userProfile]   – full Firestore users/{uid} document
+  /// [scanHistory]   – list of users/{uid}/scan_results documents
   static Future<String> send(
     String message, {
     List<Map<String, String>> previousMessages = const [],
     Map<String, String> memory = const {},
     Map<String, dynamic> userProfile = const {},
+    List<Map<String, dynamic>> scanHistory = const [],
     bool hasImage = false,
   }) async {
-    // ── Trim history ────────────────────────────────────────────────────────────
-    final trimmedHistory = previousMessages.length > 12
-        ? previousMessages.sublist(previousMessages.length - 12)
+    // ── Trim conversation history ────────────────────────────────────────────────
+    final trimmedHistory = previousMessages.length > 10
+        ? previousMessages.sublist(previousMessages.length - 10)
         : previousMessages;
 
     final historyText = trimmedHistory
-        .map((m) {
-          final role = (m['role'] ?? 'user').trim();
-          final content = (m['content'] ?? '').trim();
-          return '$role: $content';
-        })
-        .where((line) => line.trim().isNotEmpty)
+        .map((m) => '${(m['role'] ?? 'user').trim()}: ${(m['content'] ?? '').trim()}')
+        .where((l) => l.trim().isNotEmpty)
         .join('\n');
 
-    // ── Build health profile block from Firestore data ──────────────────────────
-    final profileLines = <String>[];
+    // ── Build user profile block ─────────────────────────────────────────────────
+    final health = userProfile['healthInfo'] as Map<String, dynamic>? ?? {};
+    final username = (userProfile['username'] ?? userProfile['name'] ?? '').toString().trim();
+    final dob      = (userProfile['dob'] ?? '').toString().trim();
+    final gender   = (userProfile['gender'] ?? '').toString().trim();
 
-    void addIfPresent(String label, String key) {
-      final val = userProfile[key]?.toString().trim() ?? '';
-      if (val.isNotEmpty && val.toLowerCase() != 'none') {
-        profileLines.add('- $label: $val');
-      }
+    String age = '';
+    if (dob.isNotEmpty) {
+      try {
+        final born = DateTime.parse(dob);
+        age = '${DateTime.now().difference(born).inDays ~/ 365} years old';
+      } catch (_) {}
     }
 
-    final username = userProfile['username']?.toString().trim() ??
-        userProfile['name']?.toString().trim() ??
-        '';
-    if (username.isNotEmpty) profileLines.add('- Name: $username');
+    String healthVal(String key) => (health[key] ?? '').toString().trim();
 
-    addIfPresent('Allergies', 'allergies');
-    addIfPresent('Chronic conditions', 'chronicConditions');
-    addIfPresent('Current medications', 'currentMedications');
-    addIfPresent('Special conditions', 'specialConditions');
+    final allergies         = healthVal('allergies');
+    final chronicConditions = healthVal('chronicConditions');
+    final currentMeds       = healthVal('currentMedications');
+    final specialConditions = healthVal('specialConditions');
 
-    final profileText = profileLines.isEmpty
-        ? '- No health profile available yet.'
-        : profileLines.join('\n');
+    final profileLines = <String>[];
+    if (username.isNotEmpty)       profileLines.add('- Name: $username');
+    if (age.isNotEmpty)            profileLines.add('- Age: $age');
+    if (gender.isNotEmpty)         profileLines.add('- Gender: $gender');
+    if (allergies.isNotEmpty && allergies.toLowerCase() != 'none')
+                                   profileLines.add('- ALLERGIES: $allergies');
+    if (chronicConditions.isNotEmpty && chronicConditions.toLowerCase() != 'none')
+                                   profileLines.add('- Chronic conditions: $chronicConditions');
+    if (currentMeds.isNotEmpty && currentMeds.toLowerCase() != 'none')
+                                   profileLines.add('- Current medications: $currentMeds');
+    if (specialConditions.isNotEmpty && specialConditions.toLowerCase() != 'none')
+                                   profileLines.add('- Special conditions: $specialConditions');
+    final profileText = profileLines.isEmpty ? '- No profile data yet.' : profileLines.join('\n');
 
-    // ── Build in-chat memory block ───────────────────────────────────────────────
-    final memoryText = memory.entries
-        .where((e) => e.value.trim().isNotEmpty)
-        .map((e) => '- ${e.key}: ${e.value}')
-        .join('\n');
+    // ── Build scanned medicines block ────────────────────────────────────────────
+    String scanText = '- No medicines scanned yet.';
+    if (scanHistory.isNotEmpty) {
+      final lines = <String>[];
+      for (final s in scanHistory) {
+        final name       = (s['medicineName'] ?? '').toString();
+        final generic    = (s['genericName'] ?? '').toString();
+        final dosage     = (s['dosage'] ?? '').toString();
+        final status     = (s['status'] ?? '').toString();
+        final score      = (s['score']?.toString() ?? '');
+        final reasons    = (s['reasons'] as List?)?.map((r) => r.toString()).join(', ') ?? '';
+        final matched    = (s['matchedDosages'] as List?)?.map((d) => d.toString()).join(', ') ?? '';
+        lines.add(
+          '- $name ($generic) | dosage: $dosage | matched dosages: $matched'
+          ' | status: $status | safety score: $score'
+          '${reasons.isNotEmpty ? " | notes: $reasons" : ""}',
+        );
+      }
+      scanText = lines.join('\n');
+    }
 
     // ── Compose prompt ───────────────────────────────────────────────────────────
-    final prompt = [
-      Content.text('''
-You are Pillo, a smart and caring medicine assistant inside a mobile health app.
+    final promptText = '''
+You are Pillo, a clinical medicine assistant in a mobile health app.
+Think like an experienced doctor — precise, caring, and concise.
 
-════════════════════════════════════════
-USER HEALTH PROFILE (from their account)
-════════════════════════════════════════
+PATIENT PROFILE:
 $profileText
 
-════════════════════════════════════════
-ADDITIONAL MEMORY (from this chat session)
-════════════════════════════════════════
-${memoryText.isEmpty ? '- none yet' : memoryText}
+PATIENT SCANNED MEDICINES (their personal medicine history):
+$scanText
 
-════════════════════════════════════════
-YOUR BEHAVIOUR RULES
-════════════════════════════════════════
-1. ALWAYS use the health profile above when giving advice. This is the most important context.
-2. Proactively warn the user if:
-   - A medicine they mention conflicts with their known allergies.
-   - A medicine is risky given their chronic condition (e.g. NSAIDs + hypertension, ibuprofen allergy conflicts).
-   - A medicine is unsafe during pregnancy if specialConditions includes "Pregnant".
-   - A medicine interacts badly with their current medications.
-3. Give personalised advice, not generic advice. Example: do not say "consult your doctor about NSAIDs" — say "Given your hypertension, NSAIDs like ibuprofen can raise blood pressure further, so you should ask your doctor for a safer alternative."
-4. If the user asks about a medicine and their profile has relevant info, always mention how it relates to them specifically.
-5. Keep answers clear and conversational. Use short paragraphs. Avoid jargon unless the user uses it first.
-6. Never guarantee a medicine is 100% safe for anyone.
-7. Always end important advice with a reminder to confirm with a doctor or pharmacist.
-8. Do not ignore previous conversation context.
-9. If an image is attached but no text was extracted, acknowledge it and ask what they need help with regarding it.
-10. Address the user by their name (${username.isEmpty ? 'their name if known' : username}) when it feels natural.
+CLINICAL RULES:
+1. Always cross-check any medicine against the patient's allergies, conditions, age, gender, and special conditions.
+2. When recommending, pick the BEST option from their scanned medicines if relevant, and explain why it fits them.
+3. Warn with a clear flag if a medicine is unsafe for this patient (allergy, pregnancy, hypertension, etc).
+4. Give a specific dosage recommendation based on their profile — never generic "take as directed".
+5. If pregnant: apply strict pregnancy safety to everything.
+6. If hypertension: warn about NSAIDs, decongestants, high-sodium drugs.
+7. Never say a medicine is 100% safe.
 
-════════════════════════════════════════
-PREVIOUS CONVERSATION
-════════════════════════════════════════
-${historyText.isEmpty ? 'No previous conversation.' : historyText}
+RESPONSE FORMAT — BE SHORT:
+- Max 5-6 lines. No long text.
+- For medicine questions use exactly this format:
+  Best option: [medicine name] — [why it suits THIS patient specifically]
+  Dosage: [specific dose for this patient]
+  Watch out: [specific risk for this patient, or "None for this patient"]
+  Confirm with your doctor before use.
+- For simple questions: 1-3 short sentences only.
+- Never repeat the patient profile back to them.
 
-════════════════════════════════════════
-CURRENT USER MESSAGE
-════════════════════════════════════════
-$message
+CONVERSATION SO FAR:
+${historyText.isEmpty ? 'None.' : historyText}
 
-Attached image: ${hasImage ? 'Yes — the user has uploaded an image.' : 'No'}
-''')
-    ];
+PATIENT SAYS:
+$message${hasImage ? '\n[Patient attached an image]' : ''}
+''';
 
-    // Try each model in order until one works
-    final modelsToTry = [
+    final prompt = [Content.text(promptText)];
+
+    // ── Try models in order (fallback on overload) ───────────────────────────────
+    const modelsToTry = [
       'gemini-2.5-flash',
       'gemini-2.5-flash-lite',
       'gemini-2.0-flash-001',
@@ -119,9 +129,7 @@ Attached image: ${hasImage ? 'Yes — the user has uploaded an image.' : 'No'}
         final model = FirebaseAI.googleAI().generativeModel(model: modelName);
         final response = await model.generateContent(prompt);
         final text = response.text;
-        if (text != null && text.trim().isNotEmpty) {
-          return text.trim();
-        }
+        if (text != null && text.trim().isNotEmpty) return text.trim();
       } catch (e) {
         final err = e.toString().toLowerCase();
         final isOverloaded = err.contains('overloaded') ||
@@ -129,9 +137,7 @@ Attached image: ${hasImage ? 'Yes — the user has uploaded an image.' : 'No'}
             err.contains('unavailable') ||
             err.contains('resource exhausted') ||
             err.contains('429');
-        // If overloaded, try next model. Otherwise, report the error.
         if (!isOverloaded) return 'Pillo error: $e';
-        // else: continue to next model
       }
     }
 
