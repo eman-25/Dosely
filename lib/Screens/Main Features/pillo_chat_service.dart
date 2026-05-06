@@ -106,35 +106,35 @@ Attached image: ${hasImage ? 'Yes — the user has uploaded an image.' : 'No'}
 ''')
     ];
 
-    try {
-      final response = await _model.generateContent(prompt);
-      final text = response.text;
+    // Try each model in order until one works
+    final modelsToTry = [
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-2.0-flash-001',
+      'gemini-2.0-flash-lite-001',
+    ];
 
-      if (text == null || text.trim().isEmpty) {
-        return 'Sorry, I got an empty reply. Please try again.';
+    for (final modelName in modelsToTry) {
+      try {
+        final model = FirebaseAI.googleAI().generativeModel(model: modelName);
+        final response = await model.generateContent(prompt);
+        final text = response.text;
+        if (text != null && text.trim().isNotEmpty) {
+          return text.trim();
+        }
+      } catch (e) {
+        final err = e.toString().toLowerCase();
+        final isOverloaded = err.contains('overloaded') ||
+            err.contains('503') ||
+            err.contains('unavailable') ||
+            err.contains('resource exhausted') ||
+            err.contains('429');
+        // If overloaded, try next model. Otherwise, report the error.
+        if (!isOverloaded) return 'Pillo error: $e';
+        // else: continue to next model
       }
-
-      return text.trim();
-    } catch (e) {
-      final errorStr = e.toString().toLowerCase();
-
-      if (errorStr.contains('overloaded') ||
-          errorStr.contains('503') ||
-          errorStr.contains('unavailable')) {
-        try {
-          final fallbackModel = FirebaseAI.googleAI().generativeModel(
-            model: 'gemini-2.0-flash-001',
-          );
-          final fallbackResponse = await fallbackModel.generateContent(prompt);
-          final fallbackText = fallbackResponse.text;
-          if (fallbackText != null && fallbackText.trim().isNotEmpty) {
-            return fallbackText.trim();
-          }
-        } catch (_) {}
-        return 'Pillo is a bit busy right now. Please try again in a few seconds.';
-      }
-
-      return 'Pillo error: $e';
     }
+
+    return 'Pillo is very busy right now. Please wait a moment and try again.';
   }
 }
