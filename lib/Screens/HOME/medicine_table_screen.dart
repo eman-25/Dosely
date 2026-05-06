@@ -136,14 +136,7 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
-            Positioned(
-              left: 22,
-              bottom: 22,
-              child: _RoundFab(
-                icon: Icons.add_rounded,
-                onTap: _showMedicinePickerSheet,
-              ),
-            ),
+
             Positioned(
               right: 22,
               bottom: 22,
