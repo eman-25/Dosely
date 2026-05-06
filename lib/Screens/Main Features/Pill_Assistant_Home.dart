@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'pillo_chat_service.dart';
 
 class PillAssistantHome extends StatefulWidget {
@@ -32,6 +34,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
   bool _loaded = false;
   File? _pickedImage;
 
+  /// Health profile loaded from Firestore (users/{uid} document).
+  Map<String, dynamic> _userProfile = {};
+
   // ── Getters ─────────────────────────────────────────────────────────────────
   _ChatConversation? get _currentConversation {
     if (_currentConvId.isEmpty) return null;
@@ -49,6 +54,7 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
   void initState() {
     super.initState();
     _loadChats();
+    _loadUserProfile(); // ← load health data from Firestore
   }
 
   @override
@@ -98,7 +104,41 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     await prefs.setString('pillo_memory', jsonEncode(_memory));
   }
 
-  // ── Image picking (UNCHANGED) ─────────────────────────────────────────────────
+  // ── Firestore health profile ──────────────────────────────────────────────────
+  Future<void> _loadUserProfile() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        setState(() => _userProfile = doc.data()!);
+
+        // Mirror key fields into local memory so they survive session gaps.
+        final data = doc.data()!;
+        void mirror(String firestoreKey, String memoryKey) {
+          final val = data[firestoreKey]?.toString().trim() ?? '';
+          if (val.isNotEmpty && val.toLowerCase() != 'none') {
+            _memory[memoryKey] = val;
+          }
+        }
+        mirror('allergies', 'allergies');
+        mirror('chronicConditions', 'chronic_conditions');
+        mirror('currentMedications', 'current_medications');
+        mirror('specialConditions', 'special_conditions');
+        mirror('username', 'name');
+      }
+    } catch (e) {
+      // Non-fatal – Pillo will still work without Firestore data.
+      debugPrint('PillAssistantHome: failed to load user profile: $e');
+    }
+  }
+
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final x = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
@@ -202,6 +242,7 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
         text.isNotEmpty ? text : 'The user uploaded an image.',
         previousMessages: historyBeforeCurrentMessage,
         memory: _memory,
+        userProfile: _userProfile, // ← Firestore health data
         hasImage: image != null,
       );
       setState(() => _messages.add(_ChatMessage.bot(reply)));
