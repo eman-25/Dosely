@@ -605,8 +605,18 @@ class _ScheduleCard extends StatelessWidget {
     final today = DateTime.now();
     final todayWeekday = today.weekday; // 1=Mon … 7=Sun
 
-    final startDate = (data['startDate'] as Timestamp?)?.toDate();
-    final endDate   = (data['endDate']   as Timestamp?)?.toDate();
+    // startDate/endDate can be Timestamp or String — handle both
+    DateTime? _toDate(dynamic val) {
+      if (val == null) return null;
+      if (val is Timestamp) return val.toDate();
+      if (val is String && val.isNotEmpty) {
+        try { return DateTime.parse(val); } catch (_) {}
+      }
+      return null;
+    }
+
+    final startDate = _toDate(data['startDate']);
+    final endDate   = _toDate(data['endDate']);
     final days      = List<int>.from(data['days'] as List? ?? []);
 
     if (startDate != null && today.isBefore(
