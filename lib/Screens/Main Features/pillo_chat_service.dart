@@ -1,8 +1,7 @@
-import 'package:firebase_ai/firebase_ai.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'api_key.dart';
 
 class PilloChatService {
-  /// [userProfile]   – full Firestore users/{uid} document
-  /// [scanHistory]   – list of users/{uid}/scan_results documents
   static Future<String> send(
     String message, {
     List<Map<String, String>> previousMessages = const [],
@@ -11,7 +10,7 @@ class PilloChatService {
     List<Map<String, dynamic>> scanHistory = const [],
     bool hasImage = false,
   }) async {
-    // ── Trim conversation history ────────────────────────────────────────────────
+    // ── Trim conversation history ────────────────────────────────────────────
     final trimmedHistory = previousMessages.length > 10
         ? previousMessages.sublist(previousMessages.length - 10)
         : previousMessages;
@@ -21,7 +20,7 @@ class PilloChatService {
         .where((l) => l.trim().isNotEmpty)
         .join('\n');
 
-    // ── Build user profile block ─────────────────────────────────────────────────
+    // ── Build user profile block ─────────────────────────────────────────────
     final health = userProfile['healthInfo'] as Map<String, dynamic>? ?? {};
     final username = (userProfile['username'] ?? userProfile['name'] ?? '').toString().trim();
     final dob      = (userProfile['dob'] ?? '').toString().trim();
@@ -43,31 +42,31 @@ class PilloChatService {
     final specialConditions = healthVal('specialConditions');
 
     final profileLines = <String>[];
-    if (username.isNotEmpty)       profileLines.add('- Name: $username');
-    if (age.isNotEmpty)            profileLines.add('- Age: $age');
-    if (gender.isNotEmpty)         profileLines.add('- Gender: $gender');
+    if (username.isNotEmpty) profileLines.add('- Name: $username');
+    if (age.isNotEmpty)      profileLines.add('- Age: $age');
+    if (gender.isNotEmpty)   profileLines.add('- Gender: $gender');
     if (allergies.isNotEmpty && allergies.toLowerCase() != 'none')
-                                   profileLines.add('- ALLERGIES: $allergies');
+      profileLines.add('- ALLERGIES: $allergies');
     if (chronicConditions.isNotEmpty && chronicConditions.toLowerCase() != 'none')
-                                   profileLines.add('- Chronic conditions: $chronicConditions');
+      profileLines.add('- Chronic conditions: $chronicConditions');
     if (currentMeds.isNotEmpty && currentMeds.toLowerCase() != 'none')
-                                   profileLines.add('- Current medications: $currentMeds');
+      profileLines.add('- Current medications: $currentMeds');
     if (specialConditions.isNotEmpty && specialConditions.toLowerCase() != 'none')
-                                   profileLines.add('- Special conditions: $specialConditions');
+      profileLines.add('- Special conditions: $specialConditions');
     final profileText = profileLines.isEmpty ? '- No profile data yet.' : profileLines.join('\n');
 
-    // ── Build scanned medicines block ────────────────────────────────────────────
+    // ── Build scanned medicines block ────────────────────────────────────────
     String scanText = '- No medicines scanned yet.';
     if (scanHistory.isNotEmpty) {
       final lines = <String>[];
       for (final s in scanHistory) {
-        final name       = (s['medicineName'] ?? '').toString();
-        final generic    = (s['genericName'] ?? '').toString();
-        final dosage     = (s['dosage'] ?? '').toString();
-        final status     = (s['status'] ?? '').toString();
-        final score      = (s['score']?.toString() ?? '');
-        final reasons    = (s['reasons'] as List?)?.map((r) => r.toString()).join(', ') ?? '';
-        final matched    = (s['matchedDosages'] as List?)?.map((d) => d.toString()).join(', ') ?? '';
+        final name    = (s['medicineName'] ?? '').toString();
+        final generic = (s['genericName'] ?? '').toString();
+        final dosage  = (s['dosage'] ?? '').toString();
+        final status  = (s['status'] ?? '').toString();
+        final score   = (s['score']?.toString() ?? '');
+        final reasons = (s['reasons'] as List?)?.map((r) => r.toString()).join(', ') ?? '';
+        final matched = (s['matchedDosages'] as List?)?.map((d) => d.toString()).join(', ') ?? '';
         lines.add(
           '- $name ($generic) | dosage: $dosage | matched dosages: $matched'
           ' | status: $status | safety score: $score'
@@ -77,7 +76,7 @@ class PilloChatService {
       scanText = lines.join('\n');
     }
 
-    // ── Compose prompt ───────────────────────────────────────────────────────────
+    // ── Compose prompt ───────────────────────────────────────────────────────
     final promptText = '''
 You are Pillo, a clinical medicine assistant in a mobile health app.
 Think like an experienced doctor — precise, caring, and concise.
@@ -114,33 +113,36 @@ PATIENT SAYS:
 $message${hasImage ? '\n[Patient attached an image]' : ''}
 ''';
 
-    final prompt = [Content.text(promptText)];
-
-    // ── Try models in order (fallback on overload) ───────────────────────────────
+    // ── Try models in order (fallback on quota/overload) ─────────────────────
     const modelsToTry = [
-      'gemini-2.5-flash',
-      'gemini-2.5-flash-lite',
-      'gemini-2.0-flash-001',
-      'gemini-2.0-flash-lite-001',
+      'gemini-2.0-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-1.5-flash-8b',
     ];
 
     for (final modelName in modelsToTry) {
       try {
-        final model = FirebaseAI.googleAI().generativeModel(model: modelName);
-        final response = await model.generateContent(prompt);
+        final model = GenerativeModel(
+          model: modelName,
+          apiKey: apiKey,
+        );
+        final response = await model.generateContent([Content.text(promptText)]);
         final text = response.text;
         if (text != null && text.trim().isNotEmpty) return text.trim();
       } catch (e) {
         final err = e.toString().toLowerCase();
-        final isOverloaded = err.contains('overloaded') ||
-            err.contains('503') ||
-            err.contains('unavailable') ||
+        final isQuotaOrBusy = err.contains('quota') ||
+            err.contains('429') ||
             err.contains('resource exhausted') ||
-            err.contains('429');
-        if (!isOverloaded) return 'Pillo error: $e';
+            err.contains('overloaded') ||
+            err.contains('503') ||
+            err.contains('unavailable');
+        // If it's not a quota/busy error, report it immediately
+        if (!isQuotaOrBusy) return 'Pillo error: $e';
+        // Otherwise try next model
       }
     }
 
-    return 'Pillo is very busy right now. Please wait a moment and try again.';
+    return 'Pillo is very busy right now. Please try again in a moment.';
   }
 }
