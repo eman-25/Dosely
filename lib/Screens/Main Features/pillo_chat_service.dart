@@ -116,6 +116,24 @@ Attached image: ${hasImage ? 'Yes — the user has uploaded an image.' : 'No'}
 
       return text.trim();
     } catch (e) {
+      final errorStr = e.toString().toLowerCase();
+
+      if (errorStr.contains('overloaded') ||
+          errorStr.contains('503') ||
+          errorStr.contains('unavailable')) {
+        try {
+          final fallbackModel = FirebaseAI.googleAI().generativeModel(
+            model: 'gemini-2.0-flash-001',
+          );
+          final fallbackResponse = await fallbackModel.generateContent(prompt);
+          final fallbackText = fallbackResponse.text;
+          if (fallbackText != null && fallbackText.trim().isNotEmpty) {
+            return fallbackText.trim();
+          }
+        } catch (_) {}
+        return 'Pillo is a bit busy right now. Please try again in a few seconds.';
+      }
+
       return 'Pillo error: $e';
     }
   }
