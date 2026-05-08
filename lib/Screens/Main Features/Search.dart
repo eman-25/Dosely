@@ -1,7 +1,7 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../services/medicine_lookup_service.dart';
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
   @override
@@ -41,38 +41,69 @@ class _SearchScreenState extends State<SearchScreen> {
   }
   Future<void> _openMedicineDetails(
     BuildContext context,
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) async {
+    QueryDocumentSnapshot<Map<String, dynamic>>? doc, {
+    String? searchName,
+  }) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    final data = doc.data();
     if (uid == null) {
       _showMessage('User is not logged in.');
       return;
     }
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
+
     try {
-      final safety = await _checkMedicineSafety(
-        uid: uid,
-        medicine: data,
-      );
+      Map<String, dynamic>? result;
+
+      if (doc != null) {
+        // Medicine already in Firestore — still run safety check via new service
+        result = await MedicineLookupService.lookupByName(
+          uid: uid,
+          name: (doc.data()['name'] ?? '').toString(),
+        );
+        // Fallback to doc data + basic safety if lookup fails
+        result ??= {
+          ...doc.data(),
+          'status': 'safe',
+          'reasons': ['No issues found based on your health profile'],
+        };
+      } else if (searchName != null && searchName.isNotEmpty) {
+        // Live lookup for typed search — hits DailyMed/OpenFDA and saves to Firestore
+        result = await MedicineLookupService.lookupByName(
+          uid: uid,
+          name: searchName,
+        );
+      }
+
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       if (!mounted) return;
+
+      if (result == null) {
+        _showMessage('Medicine not found. Try a different name.');
+        return;
+      }
+
+      final safety = {
+        'status': result['status'] ?? 'safe',
+        'reasons': List<String>.from(result['reasons'] ?? []),
+      };
+
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (_) => _MedicineDetailsSheet(
-          medicine: data,
+          medicine: result!,
           safety: safety,
           isAddingToSchedule: _isAddingToSchedule,
           onAddToSchedule: () => _addToSchedule(
             uid: uid,
-            medicine: data,
+            medicine: result!,
             safety: safety,
           ),
         ),
@@ -80,7 +111,7 @@ class _SearchScreenState extends State<SearchScreen> {
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
-      _showMessage('Error while checking medicine: $e');
+      _showMessage('Error: $e');
     }
   }
   Future<Map<String, dynamic>> _checkMedicineSafety({
@@ -358,19 +389,52 @@ class _SearchScreenState extends State<SearchScreen> {
                   }
                   final docs = snapshot.data!.docs;
                   final filtered = _filterMedicines(docs);
-                  if (docs.isEmpty) {
+                  if (docs.isEmpty && _query.isEmpty) {
                     return const Center(
                       child: Text(
-                        'No medicines found in Firebase.',
+                        'No medicines in database yet.\nSearch by name to look one up.',
+                        textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 16),
                       ),
                     );
                   }
-                  if (filtered.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'No medicine found.',
-                        style: TextStyle(fontSize: 16),
+                  if (filtered.isEmpty && _query.isNotEmpty) {
+                    // Not in Firestore — offer live lookup
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.search_off_rounded,
+                                size: 48, color: Colors.black26),
+                            const SizedBox(height: 16),
+                            Text(
+                              '"$_query" not found in local database.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  fontSize: 16, color: Colors.black54),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: darkAccent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                              ),
+                              onPressed: () => _openMedicineDetails(
+                                context,
+                                null,
+                                searchName: _query.trim(),
+                              ),
+                              icon: const Icon(Icons.travel_explore_rounded),
+                              label: Text('Search online for "$_query"'),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }
@@ -686,4 +750,3 @@ class _MedicineDetailsSheet extends StatelessWidget {
     );
   }
 }
-

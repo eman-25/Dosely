@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'Pill_Assistant_Home.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 class MedicineResultScreen extends StatefulWidget {
   final Map<String, dynamic> medicineData;
   final String? imagePath;
@@ -17,54 +19,133 @@ class MedicineResultScreen extends StatefulWidget {
   @override
   State<MedicineResultScreen> createState() => _MedicineResultScreenState();
 }
+
 class _MedicineResultScreenState extends State<MedicineResultScreen> {
+  static const Color _c1     = Color(0xFF48466E);
+  static const Color _c2     = Color(0xFF3E84A8);
+  static const Color _bg     = Color(0xFFF7FBFD);
+  static const Color _safe   = Color(0xFF1B8A5A);
+  static const Color _warn   = Color(0xFFD97706);
+  static const Color _danger = Color(0xFFDC2626);
+
   @override
-void initState() {
-  super.initState();
-  _trackMedication();
-}
-
-Future<void> _trackMedication() async {
-  try {
-    final String medicineName =
-        (widget.medicineData['name'] ?? 'Unknown').toString();
-
-    if (medicineName.isEmpty || medicineName == 'Unknown') return;
-
-    await FirebaseFirestore.instance.collection('medication_events').add({
-      "medication_name": medicineName,
-      "event_type": widget.imagePath != null ? "scan/upload" : "search",
-      "timestamp": FieldValue.serverTimestamp(),
-    });
-
-  } catch (e) {
-    print("Tracking error: $e");
+  void initState() {
+    super.initState();
+    _trackMedication();
   }
-}
-  
-  static const Color _c1 = Color(0xFF48466E);
-  static const Color _c2 = Color(0xFF3E84A8);
-  static const Color _bg = Color(0xFFF7FBFD);
+
+  Future<void> _trackMedication() async {
+    try {
+      final name = (widget.medicineData['name'] ?? '').toString();
+      if (name.isEmpty) return;
+      await FirebaseFirestore.instance.collection('medication_events').add({
+        'medication_name': name,
+        'event_type': widget.imagePath != null ? 'scan/upload' : 'search',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
+  }
+
+  // ── Parsed data ─────────────────────────────────────────────────────────────
+
+  String get _name =>
+      _cap((widget.medicineData['name'] ?? 'Unknown Medicine').toString());
+
+  String get _generic =>
+      _cap((widget.medicineData['generic_name'] ?? '').toString());
+
+  String get _dosage =>
+      (widget.medicineData['dosage'] ?? '').toString().trim();
+
+  String get _status =>
+      (widget.medicineData['status'] ?? 'unknown').toString().toLowerCase();
+
+  List<String> get _reasons =>
+      List<String>.from(widget.medicineData['reasons'] ?? []);
+
+  String get _allergyTrigger =>
+      (widget.medicineData['allergy_trigger'] ?? '').toString().trim().toLowerCase();
+
+  String get _pregnancyWarning =>
+      (widget.medicineData['pregnancy_warning'] ?? '').toString().trim().toLowerCase();
+
+  String get _description {
+    final raw = (widget.medicineData['description'] ?? '').toString().trim();
+    final usable = raw.isNotEmpty &&
+        !raw.toLowerCase().contains('see product label') &&
+        !raw.toLowerCase().contains('consult your pharmacist') &&
+        raw.length > 15;
+
+    if (usable) {
+      // Strip junk prefixes, keep only first clean sentence
+      String s = raw
+          .replaceAll(RegExp(
+              r'\b(USES|USES:|DESCRIPTION:|INDICATIONS:|PURPOSE:)\b\s*',
+              caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      final dot = s.indexOf('.');
+      if (dot > 20 && dot < 200) s = s.substring(0, dot + 1);
+      if (s.length > 200) s = '${s.substring(0, 200)}...';
+      return s;
+    }
+
+    // Fallback: build a minimal indication from the generic name
+    final generic = (widget.medicineData['generic_name'] ?? '').toString().trim();
+    if (generic.isNotEmpty) {
+      return 'A medicine containing $generic. Consult the package leaflet for full indications.';
+    }
+    return 'Consult the package leaflet or your pharmacist for full indications.';
+  }
+
+  // ── Status helpers ──────────────────────────────────────────────────────────
+
+  Color get _statusColor {
+    switch (_status) {
+      case 'safe':     return _safe;
+      case 'caution':  return _warn;
+      case 'not safe': return _danger;
+      default:         return _c2;
+    }
+  }
+
+  Color get _statusBg {
+    switch (_status) {
+      case 'safe':     return const Color(0xFFEAF7F1);
+      case 'caution':  return const Color(0xFFFFF8EB);
+      case 'not safe': return const Color(0xFFFFF0F0);
+      default:         return const Color(0xFFEAF4FA);
+    }
+  }
+
+  IconData get _statusIcon {
+    switch (_status) {
+      case 'safe':     return Icons.check_circle_rounded;
+      case 'caution':  return Icons.warning_amber_rounded;
+      case 'not safe': return Icons.cancel_rounded;
+      default:         return Icons.medication_rounded;
+    }
+  }
+
+  String get _statusLabel {
+    switch (_status) {
+      case 'safe':     return 'Safe for you';
+      case 'caution':  return 'Use with caution';
+      case 'not safe': return 'Not safe for you';
+      default:         return 'Result';
+    }
+  }
+
+  bool get _canAddToSchedule => _status != 'not safe';
+
+  bool get _hasFlags =>
+      (_allergyTrigger.isNotEmpty && _allergyTrigger != 'none') ||
+      (_pregnancyWarning == 'caution' || _pregnancyWarning == 'avoid');
+
+  // ── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final String medicineName =
-        (widget.medicineData['name'] ?? 'Unknown Medicine').toString();
-    final String genericName =
-        (widget.medicineData['generic_name'] ?? 'Unknown').toString();
-    final String dosage = (widget.medicineData['dosage'] ?? 'Unknown').toString();
-    final String description =
-        (widget.medicineData['description'] ?? 'No description available').toString();
-    final String status = (widget.medicineData['status'] ?? 'unknown').toString();
-    final List<String> reasons =
-        List<String>.from(widget.medicineData['reasons'] ?? const <String>[]);
-    final double score = widget.medicineData['score'] is num
-        ? (widget.medicineData['score'] as num).toDouble()
-        : 0.0;
-
-    final _StatusUi statusUi = _getStatusUi(status);
-    final bool canAddToSchedule = status.toLowerCase() != 'not safe';
-
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
@@ -74,288 +155,241 @@ Future<void> _trackMedication() async {
         centerTitle: true,
         title: const Text(
           'Scan Result',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+
+            // ── Scanned image (small) ─────────────────────────────────────
             if (widget.imagePath != null && widget.imagePath!.isNotEmpty) ...[
               ClipRRect(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
                 child: Image.file(
                   File(widget.imagePath!),
-                  height: 220,
+                  height: 150,
                   width: double.infinity,
                   fit: BoxFit.cover,
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
             ],
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [statusUi.softColor, Colors.white],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: statusUi.color.withOpacity(0.10),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: 82,
-                    height: 82,
-                    decoration: BoxDecoration(
-                      color: statusUi.color.withOpacity(0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(statusUi.icon, size: 42, color: statusUi.color),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    statusUi.title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: statusUi.color,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    medicineName,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: _c1,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _infoChip(Icons.medication_rounded, dosage),
-                      _infoChip(
-                        Icons.analytics_rounded,
-                        'Score ${score.toStringAsFixed(2)}',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            _sectionTitle('Medicine Details'),
-            _buildInfoCard(
-              'Medicine Name',
-              medicineName,
-              icon: Icons.local_pharmacy_rounded,
-            ),
-            _buildInfoCard(
-              'Generic Name',
-              genericName,
-              icon: Icons.science_rounded,
-            ),
-            _buildInfoCard(
-              'Dosage',
-              dosage,
-              icon: Icons.straighten_rounded,
-            ),
-            _buildInfoCard(
-              'Description',
-              description,
-              icon: Icons.description_rounded,
-            ),
-            if (status != 'unknown')
-              _buildInfoCard(
-                'Safety Status',
-                status.toUpperCase(),
-                icon: statusUi.icon,
-                accentColor: statusUi.color,
-              ),
-            if (reasons.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              _sectionTitle('Why this result?'),
-              ...reasons.map(
-                (reason) => Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: statusUi.color.withOpacity(0.18)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.check_circle_rounded,
-                          color: statusUi.color, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          reason,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            color: _c1,
-                            fontWeight: FontWeight.w600,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+
+            // ── VERDICT CARD — the most important thing ───────────────────
+            _verdictCard(),
+            const SizedBox(height: 12),
+
+            // ── INDICATIONS FOR USE — always shown ───────────────────────
+            _descriptionTile(),
+            const SizedBox(height: 8),
+
+            // ── FLAG PILLS (allergy / pregnancy) ─────────────────────────
+            if (_hasFlags) ...[
+              _flagRow(),
+              const SizedBox(height: 12),
             ],
-            if (!canAddToSchedule) ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.red.withOpacity(0.22)),
-                ),
-                child: const Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.block_rounded, color: Colors.red),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'This medicine cannot be added to your schedule because it is marked as not safe.',
-                        style: TextStyle(
-                          color: _c1,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: canAddToSchedule ? _c2 : Colors.grey.shade400,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade400,
-                      disabledForegroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: canAddToSchedule
-                        ? () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Added to your schedule'),
-                              ),
-                            );
-                          }
-                        : null,
-                    icon: Icon(
-                      canAddToSchedule
-                          ? Icons.add_task_rounded
-                          : Icons.block_rounded,
-                    ),
-                    label: Text(
-                      canAddToSchedule
-                          ? 'Add to Schedule'
-                          : 'Cannot Add to Schedule',
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _c1,
-                      side: BorderSide(color: _c2.withOpacity(0.35)),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PillAssistantHome(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.smart_toy_rounded),
-                    label: const Text(
-                      'Ask Pillo',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+
+            // ── WHY THIS RESULT ───────────────────────────────────────────
+            _reasonsCard(),
+            const SizedBox(height: 20),
+
+            // ── ACTION BUTTONS ────────────────────────────────────────────
+            _actionButtons(context),
+            const SizedBox(height: 14),
+
+            // ── DISCLAIMER ────────────────────────────────────────────────
+            _disclaimer(),
           ],
         ),
       ),
     );
   }
 
-  static Widget _sectionTitle(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w900,
-          color: _c1,
-        ),
+  // ── Widget builders ─────────────────────────────────────────────────────────
+
+  Widget _verdictCard() {
+    final showDosage = _dosage.isNotEmpty &&
+        !_dosage.toLowerCase().contains('see product') &&
+        _dosage.length < 80;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _statusBg,
+        border: Border.all(color: _statusColor.withOpacity(0.30), width: 1.5),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          // Status label
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(_statusIcon, color: _statusColor, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                _statusLabel,
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  color: _statusColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(height: 1, color: const Color(0xFFE2E8F0)),
+          const SizedBox(height: 14),
+
+          // Medicine name
+          Text(
+            _name,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF1E293B),
+              letterSpacing: -0.3,
+            ),
+          ),
+
+          // Generic name
+          if (_generic.isNotEmpty && _generic.toLowerCase() != _name.toLowerCase()) ...[
+            const SizedBox(height: 3),
+            Text(
+              _generic,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade500,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+
+          // Dosage pill
+          if (showDosage) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Text(
+                _dosage,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF475569),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  static Widget _infoChip(IconData icon, String text) {
+  Widget _descriptionTile() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.medication_liquid_rounded,
+                  size: 15, color: Color(0xFF3E84A8)),
+              SizedBox(width: 6),
+              Text(
+                'What it\'s used for',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF3E84A8),
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          Text(
+            _description,
+            style: const TextStyle(
+              fontSize: 13.5,
+              height: 1.55,
+              color: Color(0xFF334155),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _flagRow() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        if (_allergyTrigger.isNotEmpty && _allergyTrigger != 'none')
+          _flagPill(
+            icon: Icons.warning_rounded,
+            label: 'Contains: ${_allergyTrigger}',
+            color: Colors.deepOrange,
+          ),
+        if (_pregnancyWarning == 'avoid')
+          _flagPill(
+            icon: Icons.pregnant_woman_rounded,
+            label: _status == 'not safe'
+                ? 'Unsafe in pregnancy'
+                : 'Not for use in pregnancy',
+            color: _status == 'not safe'
+                ? Colors.red.shade700
+                : Colors.orange.shade700,
+          ),
+        if (_pregnancyWarning == 'caution')
+          _flagPill(
+            icon: Icons.pregnant_woman_rounded,
+            label: 'Caution in pregnancy',
+            color: Colors.orange.shade700,
+          ),
+      ],
+    );
+  }
+
+  Widget _flagPill({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: color.withOpacity(0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: _c2),
-          const SizedBox(width: 6),
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
           Text(
-            text,
-            style: const TextStyle(
-              color: _c1,
-              fontWeight: FontWeight.w700,
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ],
@@ -363,65 +397,161 @@ Future<void> _trackMedication() async {
     );
   }
 
-  static Widget _buildInfoCard(
-    String title,
-    String value, {
-    required IconData icon,
-    Color? accentColor,
-  }) {
-    final Color displayColor = accentColor ?? _c2;
+  Widget _reasonsCard() {
+    if (_reasons.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _statusBg,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        border: Border.all(color: _statusColor.withOpacity(0.22)),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: displayColor.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: displayColor),
+          Row(
+            children: [
+              Icon(Icons.shield_outlined, size: 15, color: _statusColor),
+              const SizedBox(width: 6),
+              Text(
+                'Why this result?',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _statusColor,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
+          const SizedBox(height: 10),
+          ..._reasons.map((reason) {
+            final isGood = reason.toLowerCase().contains('no issues');
+            final icon = isGood
+                ? Icons.check_circle_outline_rounded
+                : _status == 'not safe'
+                    ? Icons.cancel_outlined
+                    : Icons.arrow_right_rounded;
+            final iconColor = isGood ? _safe : _statusColor;
+            final textColor = isGood
+                ? _safe
+                : const Color(0xFF1E293B);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, size: 17, color: iconColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      reason,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        height: 1.5,
+                        color: textColor,
+                        fontWeight:
+                            isGood ? FontWeight.w400 : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionButtons(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  _canAddToSchedule ? _c2 : Colors.grey.shade400,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade400,
+              disabledForegroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              elevation: 0,
+            ),
+            onPressed:
+                _canAddToSchedule ? () => _navigateToSchedule(context) : null,
+            icon: Icon(
+              _canAddToSchedule
+                  ? Icons.add_task_rounded
+                  : Icons.block_rounded,
+              size: 19,
+            ),
+            label: Text(
+              _canAddToSchedule ? 'Add to Schedule' : 'Cannot Add',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _c2,
+              side: const BorderSide(color: _c2, width: 1.5),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            onPressed: () {
+              final uid = FirebaseAuth.instance.currentUser?.uid;
+              if (uid == null) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PillAssistantHome(uid: uid),
+                ),
+              );
+            },
+            icon: const Icon(Icons.smart_toy_rounded, size: 19),
+            label: const Text(
+              'Ask Pillo',
+              style:
+                  TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _disclaimer() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFCD34D).withOpacity(0.6)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_amber_rounded,
+              size: 16, color: Color(0xFFD97706)),
+          SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: _c1,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+            child: Text(
+              'These results are based on your health profile and do not replace a visit to a doctor or pharmacist. Always seek professional medical advice before taking any medication.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF92400E),
+                height: 1.5,
+              ),
             ),
           ),
         ],
@@ -429,50 +559,32 @@ Future<void> _trackMedication() async {
     );
   }
 
-  static _StatusUi _getStatusUi(String status) {
-    switch (status.toLowerCase()) {
-      case 'safe':
-        return const _StatusUi(
-          title: 'This medicine looks safe',
-          color: Colors.green,
-          softColor: Color(0xFFEAF8EF),
-          icon: Icons.verified_rounded,
-        );
-      case 'caution':
-        return const _StatusUi(
-          title: 'Use caution',
-          color: Colors.orange,
-          softColor: Color(0xFFFFF4E5),
-          icon: Icons.warning_amber_rounded,
-        );
-      case 'not safe':
-        return const _StatusUi(
-          title: 'This medicine is not safe',
-          color: Colors.red,
-          softColor: Color(0xFFFFEBEE),
-          icon: Icons.dangerous_rounded,
-        );
-      default:
-        return const _StatusUi(
-          title: 'Medicine Identified',
-          color: _c2,
-          softColor: Color(0xFFEAF4FA),
-          icon: Icons.medication_rounded,
-        );
-    }
+  void _navigateToSchedule(BuildContext context) {
+    // ── Replace with your actual schedule screen navigation ──────────────
+    // Navigator.push(context, MaterialPageRoute(
+    //   builder: (_) => YourScheduleScreen(
+    //     medicineName: widget.medicineData['name'] ?? '',
+    //     genericName:  widget.medicineData['generic_name'] ?? '',
+    //     dosage:       widget.medicineData['dosage'] ?? '',
+    //   ),
+    // ));
+    final name    = widget.medicineData['name'] ?? '';
+    final generic = widget.medicineData['generic_name'] ?? '';
+    final dosage  = widget.medicineData['dosage'] ?? '';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+        'Adding $name${generic.isNotEmpty ? " ($generic)" : ""}${dosage.isNotEmpty ? " · $dosage" : ""} to schedule.',
+      ),
+      backgroundColor: _c2,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
   }
-}
 
-class _StatusUi {
-  final String title;
-  final Color color;
-  final Color softColor;
-  final IconData icon;
-
-  const _StatusUi({
-    required this.title,
-    required this.color,
-    required this.softColor,
-    required this.icon,
-  });
+  static String _cap(String s) => s
+      .split(' ')
+      .map((w) => w.isEmpty
+          ? ''
+          : w[0].toUpperCase() + w.substring(1).toLowerCase())
+      .join(' ');
 }

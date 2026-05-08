@@ -151,7 +151,7 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
                 icon: Icons.smart_toy_rounded,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const PillAssistantHome()),
+                  MaterialPageRoute(builder: (_) => PillAssistantHome( uid: FirebaseAuth.instance.currentUser!.uid),),
                 ),
               ),
             ),

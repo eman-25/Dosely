@@ -2,8 +2,7 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../services/firebase_medicine_checker.dart';
-import '../../services/medicine_service.dart';
+import '../../services/medicine_lookup_service.dart';
 import 'medicine_result_screen.dart';
 
 class Upload extends StatefulWidget {
@@ -50,25 +49,18 @@ class _UploadState extends State<Upload> {
     });
 
     try {
-      final ocrText = await MedicineService.processImage(image.path);
-
-      if (ocrText.trim().isEmpty) {
-        _showError('No text found in the image. Try a clearer photo.');
-        return;
-      }
-
-      if (!mounted) return;
-      setState(() => _statusText = 'Checking against your health profile…');
-
-      final result = await FirebaseMedicineChecker.checkMedicine(
+      final result = await MedicineLookupService.lookupFromImage(
         uid: user.uid,
-        ocrText: ocrText,
+        imagePath: image.path,
+        onStatus: (msg) {
+          if (mounted) setState(() => _statusText = msg);
+        },
       );
 
       if (!mounted) return;
 
       if (result == null) {
-        _showError('No matching medicine found in the database.');
+        _showError('No matching medicine found. Try a clearer photo of the medicine name.');
         return;
       }
 
@@ -77,7 +69,7 @@ class _UploadState extends State<Upload> {
         MaterialPageRoute(
           builder: (_) => MedicineResultScreen(
             imagePath: image.path,
-            ocrText: ocrText,
+            ocrText: result['_ocrText'] ?? '',
             medicineData: result,
           ),
         ),

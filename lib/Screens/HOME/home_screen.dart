@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../models/user_data.dart';
 import 'settings_panel.dart';
@@ -11,6 +12,7 @@ import '../Main Features/Scan.dart';
 import '../Main Features/Upload.dart';
 import '../Main Features/Search.dart';
 import '../Main Features/Pill_Assistant_Home.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -158,9 +160,8 @@ class _HomeScreenState extends State<HomeScreen>
                               onSearch: () => Navigator.push(context,
                                   MaterialPageRoute(builder: (_) => const SearchScreen())),
                               onChat: () => Navigator.push(context,
-                                  MaterialPageRoute(builder: (_) => const PillAssistantHome())),
+                                    MaterialPageRoute(builder: (_) => PillAssistantHome(uid: FirebaseAuth.instance.currentUser!.uid))),
                             ),
-
                             const SizedBox(height: 22),
 
                             // Schedule card

@@ -3,7 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import '../../services/firebase_medicine_checker.dart';
+import '../../services/medicine_lookup_service.dart';
 import 'medicine_result_screen.dart';
 
 class Scan extends StatefulWidget {
@@ -104,7 +104,7 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
 
       final uid = user.uid;
 
-      final medicineResult = await FirebaseMedicineChecker.checkMedicine(
+      final medicineResult = await MedicineLookupService.lookupFromOcr(
         uid: uid,
         ocrText: ocrText,
       );

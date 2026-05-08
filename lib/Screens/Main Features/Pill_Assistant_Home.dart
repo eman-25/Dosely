@@ -3,10 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'pillo_chat_service.dart';
+import '../../services/pillo_chat_service.dart';
 
 class PillAssistantHome extends StatefulWidget {
-  const PillAssistantHome({super.key});
+  final String uid;
+  const PillAssistantHome({super.key, required this.uid});
 
   @override
   State<PillAssistantHome> createState() => _PillAssistantHomeState();
@@ -26,7 +27,7 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
 
   final List<_ChatConversation> _conversations = [];
   late String _currentConvId = '';
-  final Map<String, String> _memory = {};
+  PilloContext _pilloContext = const PilloContext();
 
   bool _sending = false;
   bool _loaded = false;
@@ -63,7 +64,6 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     final prefs = await SharedPreferences.getInstance();
     final rawConvs = prefs.getString('pillo_conversations');
     final rawCurrentId = prefs.getString('pillo_current_conv_id');
-    final rawMemory = prefs.getString('pillo_memory');
 
     if (rawConvs != null && rawConvs.isNotEmpty) {
       final List decoded = jsonDecode(rawConvs);
@@ -73,18 +73,16 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
       );
     }
 
-    if (rawMemory != null && rawMemory.isNotEmpty) {
-      final decoded = Map<String, dynamic>.from(jsonDecode(rawMemory));
-      _memory
-        ..clear()
-        ..addAll(decoded.map((key, value) => MapEntry(key, value.toString())));
-    }
-
     if (_conversations.isNotEmpty) {
       _currentConvId = rawCurrentId ?? _conversations.first.id;
     }
 
-    setState(() => _loaded = true);
+    // Load full health profile from Firestore for context-aware responses
+    final ctx = await PilloChatService.loadUserContext(widget.uid);
+    setState(() {
+      _pilloContext = ctx;
+      _loaded = true;
+    });
     _jumpToBottom();
   }
 
@@ -95,7 +93,6 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
       jsonEncode(_conversations.map((c) => c.toJson()).toList()),
     );
     await prefs.setString('pillo_current_conv_id', _currentConvId);
-    await prefs.setString('pillo_memory', jsonEncode(_memory));
   }
 
   // ── Image picking (UNCHANGED) ─────────────────────────────────────────────────
@@ -137,27 +134,6 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     return items;
   }
 
-  void _updateMemoryFromUserText(String text) {
-    final lower = text.toLowerCase();
-    if (lower.contains('my name is ')) {
-      final i = lower.indexOf('my name is ');
-      final value = text.substring(i + 'my name is '.length).trim();
-      if (value.isNotEmpty) _memory['name'] = value;
-    }
-    if (lower.contains('i am allergic to ')) {
-      final i = lower.indexOf('i am allergic to ');
-      final value = text.substring(i + 'i am allergic to '.length).trim();
-      if (value.isNotEmpty) _memory['allergies'] = value;
-    }
-    if (lower.contains('i take ')) {
-      final i = lower.indexOf('i take ');
-      final value = text.substring(i + 'i take '.length).trim();
-      if (value.isNotEmpty) _memory['current_medicines'] = value;
-    }
-    if (lower.contains('i am pregnant')) _memory['pregnancy'] = 'pregnant';
-    if (lower.contains('i have asthma')) _memory['condition'] = 'asthma';
-  }
-
   Future<void> _send() async {
     final text = _controller.text.trim();
     final image = _pickedImage;
@@ -187,7 +163,6 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
       _sending = true;
       if (text.isNotEmpty) {
         _messages.add(_ChatMessage.user(text));
-        _updateMemoryFromUserText(text);
       }
       if (image != null) _messages.add(_ChatMessage.userImage(image));
       _controller.clear();
@@ -201,7 +176,7 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
       final reply = await PilloChatService.send(
         text.isNotEmpty ? text : 'The user uploaded an image.',
         previousMessages: historyBeforeCurrentMessage,
-        memory: _memory,
+        context: _pilloContext,
         hasImage: image != null,
       );
       setState(() => _messages.add(_ChatMessage.bot(reply)));
@@ -674,8 +649,8 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
               ),
             ),
 
-            // Memory chip
-            if (_memory.isNotEmpty)
+            // Profile context chip
+            if (!_pilloContext.isEmpty)
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -683,18 +658,17 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
                 decoration: BoxDecoration(
                   color: _c3.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(14),
-                  border:
-                      Border.all(color: _c3.withValues(alpha: 0.3)),
+                  border: Border.all(color: _c3.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.memory_rounded, color: _c2, size: 14),
+                        Icon(Icons.person_rounded, color: _c2, size: 14),
                         SizedBox(width: 6),
                         Text(
-                          'MEMORY',
+                          'HEALTH PROFILE LOADED',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -706,9 +680,12 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      _memory.entries
-                          .map((e) => '${e.key}: ${e.value}')
-                          .join(' • '),
+                      [
+                        if (_pilloContext.name.isNotEmpty) _pilloContext.name,
+                        if (_pilloContext.allergies.isNotEmpty) 'Allergies: ${_pilloContext.allergies}',
+                        if (_pilloContext.scheduledMedicines.isNotEmpty)
+                          '${_pilloContext.scheduledMedicines.length} scheduled medicine(s)',
+                      ].join(' • '),
                       style: const TextStyle(fontSize: 12, color: _c2),
                     ),
                   ],
