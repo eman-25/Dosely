@@ -1,284 +1,240 @@
-// ============================================================
-//  pillo_chat_service.dart
-//
-//  Pillo — personalised medicine AI assistant powered by Gemini.
-//
-//  What changed from the original:
-//
-//  1. loadUserContext() — reads the user's full health profile,
-//     scheduled medicines, and last scan result from Firestore.
-//     This replaces the shallow manual memory extraction.
-//
-//  2. send() — now accepts a PilloContext object. The system
-//     prompt is rebuilt on every call with live, structured data
-//     so Pillo always has accurate, up-to-date information.
-//
-//  3. The system prompt is structured in clearly labelled sections
-//     so Gemini never confuses profile data with conversation history.
-//
-//  4. Safety guardrails are enforced in the prompt: Pillo never
-//     overrides the scan engine result, never claims 100% safety,
-//     and always defers serious decisions to a pharmacist/doctor.
-//
-//  Nothing in PillAssistantHome.dart needs to change except calling
-//  loadUserContext() before the first send() and passing the context.
-// ============================================================
-
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_ai/firebase_ai.dart';
+import '../Screens/Main Features/api_key.dart'; // your const apiKey = 'YOUR_KEY';
 
-// ── Context object — holds everything loaded from Firestore ──────────────────
-class PilloContext {
-  final String name;
-  final String allergies;
-  final String chronicConditions;
-  final String currentMedications;
-  final String specialConditions;
-  final String gender;
-  final String dob;
-  final List<String> scheduledMedicines; // from medicine_table sub-collection
-  final Map<String, dynamic>? lastScanResult; // last scan_results document
-
-  const PilloContext({
-    this.name = '',
-    this.allergies = '',
-    this.chronicConditions = '',
-    this.currentMedications = '',
-    this.specialConditions = '',
-    this.gender = '',
-    this.dob = '',
-    this.scheduledMedicines = const [],
-    this.lastScanResult,
-  });
-
-  bool get isEmpty =>
-      name.isEmpty &&
-      allergies.isEmpty &&
-      currentMedications.isEmpty &&
-      scheduledMedicines.isEmpty;
-}
-
-// ── Service ───────────────────────────────────────────────────────────────────
 class PilloChatService {
-  static final _db = FirebaseFirestore.instance;
+  static final _firestore = FirebaseFirestore.instance;
 
-  static final GenerativeModel _model = FirebaseAI.googleAI().generativeModel(
-    model: 'gemini-1.5-flash',   // free tier available; 2.0-flash requires billing
-  );
-
-  // =========================================================================
-  //  CONTEXT LOADER
-  //  Call this once when PillAssistantHome opens (or when user logs in).
-  //  Pass the result into every subsequent send() call.
-  // =========================================================================
+  // ──────────────────────────────────────────────────────────────────────────
+  // Load user context (profile + scan history) from Firestore
+  // Called on app init to populate Pillo's context
+  // ──────────────────────────────────────────────────────────────────────────
   static Future<PilloContext> loadUserContext(String uid) async {
     try {
-      // ── 1. User root document (profile + health info) ──────────────────
-      final userDoc = await _db.collection('users').doc(uid).get();
-      if (!userDoc.exists) return const PilloContext();
+      // Fetch user profile document
+      final userDoc = await _firestore.collection('users').doc(uid).get();
+      final userProfile = userDoc.data() ?? {};
 
-      final raw = userDoc.data() ?? {};
-      final health = Map<String, dynamic>.from(raw['healthInfo'] ?? {});
-
-      // ── 2. Scheduled medicines ─────────────────────────────────────────
-      final tableSnap = await _db
-          .collection('users')
-          .doc(uid)
-          .collection('medicine_table')
-          .get();
-
-      final scheduled = <String>[];
-      for (final doc in tableSnap.docs) {
-        final d = doc.data();
-        final name = d['medicineName']?.toString().trim() ?? '';
-        final generic = d['genericName']?.toString().trim() ?? '';
-        final dose = d['dosage']?.toString().trim() ?? '';
-        final freq = d['frequency']?.toString().trim() ?? '';
-        if (name.isNotEmpty) {
-          final entry = [
-            name,
-            if (generic.isNotEmpty && generic != name) '($generic)',
-            if (dose.isNotEmpty) dose,
-            if (freq.isNotEmpty) '— $freq',
-          ].join(' ');
-          scheduled.add(entry);
-        }
-      }
-
-      // ── 3. Most recent scan result ─────────────────────────────────────
-      final scanSnap = await _db
+      // Fetch scan history (last 10 scans)
+      final scansSnap = await _firestore
           .collection('users')
           .doc(uid)
           .collection('scan_results')
           .orderBy('createdAt', descending: true)
-          .limit(1)
+          .limit(10)
           .get();
 
-      Map<String, dynamic>? lastScan;
-      if (scanSnap.docs.isNotEmpty) {
-        lastScan = scanSnap.docs.first.data();
-      }
+      final scanHistory = scansSnap.docs
+          .map((doc) => doc.data())
+          .toList();
 
       return PilloContext(
-        name:               raw['username']?.toString() ?? '',
-        gender:             raw['gender']?.toString() ?? '',
-        dob:                raw['dob']?.toString() ?? '',
-        allergies:          health['allergies']?.toString() ?? '',
-        chronicConditions:  health['chronicConditions']?.toString() ?? '',
-        currentMedications: health['currentMedications']?.toString() ?? '',
-        specialConditions:  health['specialConditions']?.toString() ?? '',
-        scheduledMedicines: scheduled,
-        lastScanResult:     lastScan,
+        userProfile: userProfile,
+        scanHistory: scanHistory,
+        memory: {},
       );
     } catch (e) {
-      // Network error — return empty context, Pillo will still work
+      // Return empty context on error — app will still work
+      print('⚠️ Error loading user context: $e');
       return const PilloContext();
     }
   }
 
-  // =========================================================================
-  //  SEND
-  //  Builds a fully-structured prompt and calls Gemini.
-  // =========================================================================
+  // ──────────────────────────────────────────────────────────────────────────
+  // Send message to Gemini with patient context
+  // ──────────────────────────────────────────────────────────────────────────
   static Future<String> send(
     String message, {
     List<Map<String, String>> previousMessages = const [],
-    PilloContext context = const PilloContext(),
+    Map<String, dynamic> userProfile = const {},
+    List<Map<String, dynamic>> scanHistory = const [],
     bool hasImage = false,
   }) async {
-    // Trim history to last 14 messages to stay within token budget
-    final trimmedHistory = previousMessages.length > 14
-        ? previousMessages.sublist(previousMessages.length - 14)
+    // ── Trim conversation history to last 10 messages ──────────────────────
+    final trimmedHistory = previousMessages.length > 10
+        ? previousMessages.sublist(previousMessages.length - 10)
         : previousMessages;
 
     final historyText = trimmedHistory
-        .map((m) {
-          final role = (m['role'] ?? 'user').trim();
-          final content = (m['content'] ?? '').trim();
-          return '$role: $content';
-        })
-        .where((line) => line.isNotEmpty)
+        .map((m) => '${(m['role'] ?? 'user').trim()}: ${(m['content'] ?? '').trim()}')
+        .where((l) => l.trim().isNotEmpty)
         .join('\n');
 
-    // ── Build system prompt ────────────────────────────────────────────────
-    final systemPrompt = _buildSystemPrompt(context);
+    // ── Extract and format user profile ────────────────────────────────────
+    final health = userProfile['healthInfo'] as Map<String, dynamic>? ?? {};
+    final username = (userProfile['username'] ?? userProfile['name'] ?? '').toString().trim();
+    final dob      = (userProfile['dob'] ?? '').toString().trim();
+    final gender   = (userProfile['gender'] ?? '').toString().trim();
 
-    // ── Build last-scan section ────────────────────────────────────────────
-    final scanSection = _buildScanSection(context.lastScanResult);
+    // Calculate age from DOB
+    String age = '';
+    if (dob.isNotEmpty) {
+      try {
+        final born = DateTime.parse(dob);
+        age = '${DateTime.now().difference(born).inDays ~/ 365} years old';
+      } catch (_) {}
+    }
 
-    final prompt = [
-      Content.text('''
-$systemPrompt
+    String healthVal(String key) => (health[key] ?? '').toString().trim();
 
-════════════════════════════════════════
-LAST MEDICINE SCAN RESULT
-════════════════════════════════════════
-$scanSection
+    final allergies         = healthVal('allergies');
+    final chronicConditions = healthVal('chronicConditions');
+    final currentMeds       = healthVal('currentMedications');
+    final specialConditions = healthVal('specialConditions');
 
-════════════════════════════════════════
-CONVERSATION HISTORY (most recent last)
-════════════════════════════════════════
-${historyText.isEmpty ? 'No previous messages.' : historyText}
+    // Build profile section for Pillo
+    final profileLines = <String>[];
+    if (username.isNotEmpty) profileLines.add('- Name: $username');
+    if (age.isNotEmpty)      profileLines.add('- Age: $age');
+    if (gender.isNotEmpty)   profileLines.add('- Gender: $gender');
+    if (allergies.isNotEmpty && allergies.toLowerCase() != 'none')
+      profileLines.add('- ALLERGIES: $allergies');
+    if (chronicConditions.isNotEmpty && chronicConditions.toLowerCase() != 'none')
+      profileLines.add('- Chronic conditions: $chronicConditions');
+    if (currentMeds.isNotEmpty && currentMeds.toLowerCase() != 'none')
+      profileLines.add('- Current medications: $currentMeds');
+    if (specialConditions.isNotEmpty && specialConditions.toLowerCase() != 'none')
+      profileLines.add('- Special conditions: $specialConditions');
+    
+    final profileText = profileLines.isEmpty ? '- No profile data yet.' : profileLines.join('\n');
 
-════════════════════════════════════════
-CURRENT USER MESSAGE
-════════════════════════════════════════
-${message.trim()}
+    // ── Build scanned medicines section ────────────────────────────────────
+    String scanText = '- No medicines scanned yet.';
+    if (scanHistory.isNotEmpty) {
+      final lines = <String>[];
+      for (final s in scanHistory) {
+        final name    = (s['medicineName'] ?? '').toString();
+        final generic = (s['genericName'] ?? '').toString();
+        final dosage  = (s['dosage'] ?? '').toString();
+        final status  = (s['status'] ?? '').toString();
+        final score   = (s['score']?.toString() ?? '');
+        final reasons = (s['reasons'] as List?)?.map((r) => r.toString()).join(', ') ?? '';
+        final matched = (s['matchedDosages'] as List?)?.map((d) => d.toString()).join(', ') ?? '';
+        
+        lines.add(
+          '- $name ($generic) | dosage: $dosage | matched dosages: $matched'
+          ' | status: $status | safety score: $score'
+          '${reasons.isNotEmpty ? " | notes: $reasons" : ""}',
+        );
+      }
+      scanText = lines.join('\n');
+    }
 
-Attached image: ${hasImage ? 'Yes — the user has uploaded an image. Acknowledge it but base your answer only on the text context above unless image content was explicitly extracted and passed to you.' : 'No'}
-''')
+    // ── Compose the system prompt for Pillo ────────────────────────────────
+    final promptText = '''
+You are Pillo, a clinical medicine assistant in a mobile health app.
+You reason like an experienced doctor — thorough, caring, and specific to this patient.
+
+PATIENT PROFILE:
+$profileText
+
+PATIENT SCANNED MEDICINES (their personal medicine history):
+$scanText
+
+CLINICAL RULES:
+1. Always cross-check any medicine against the patient's allergies, conditions, age, gender, and special conditions.
+2. When recommending, pick the BEST option from their scanned history if relevant, explain why it fits them personally.
+3. ALWAYS specify: how many TABLETS/CAPSULES per dose (e.g. '1 tablet', '2 tablets'), the strength per tablet (mg), how many times per day, hours apart, and for how many days. Use the matchedDosages from their scan history to determine the right tablet count.
+4. ALWAYS mention what to take it with (food, water, milk) and what to avoid (alcohol, other drugs, foods).
+5. Warn clearly (with ⚠️) if a medicine conflicts with their allergies, conditions, or other medications.
+6. If pregnant: apply strict pregnancy safety rules — flag anything unsafe.
+7. If hypertension: warn about NSAIDs, decongestants, high-sodium drugs.
+8. Mention how long until the medicine starts working.
+9. Mention what to do if they miss a dose.
+10. Never say a medicine is 100% safe.
+
+RESPONSE FORMAT — USE THIS EXACT STRUCTURE FOR MEDICINE QUESTIONS:
+✅ Best option: [medicine name] — [why it suits THIS patient specifically]
+
+💊 Dosage:
+• Tablets: [e.g. 1 tablet / 2 tablets per dose]
+• Strength: [e.g. 500mg per tablet]
+• Frequency: [e.g. every 6–8 hours, max 4 tablets/day]
+• Duration: [e.g. 3–5 days, or as needed]
+• Take with: [e.g. a full glass of water, with food]
+
+⏱ Works in: [e.g. 30–60 minutes]
+
+🚫 Avoid: [alcohol / specific foods / other medicines that interact]
+
+⚠️ Watch out: [specific risk for THIS patient based on their profile, or "No major concerns for your profile"]
+
+📋 If you miss a dose: [what to do]
+
+🩺 Always confirm with your doctor or pharmacist before use.
+
+For simple conversational questions (greetings, non-medicine topics): reply in 1-3 friendly sentences only, no format needed.
+
+CONVERSATION SO FAR:
+${historyText.isEmpty ? 'None.' : historyText}
+
+PATIENT SAYS:
+$message${hasImage ? '\n[Patient attached an image]' : ''}
+''';
+
+    // ── Try multiple models with graceful fallback ──────────────────────────
+    const modelsToTry = [
+      'gemini-2.5-flash-lite',
+      'gemini-2.5-flash',
+      'gemini-1.5-flash',
     ];
 
-    try {
-      final response = await _model.generateContent(prompt);
-      final text = response.text;
-      if (text == null || text.trim().isEmpty) {
-        return 'Sorry, I received an empty response. Please try again.';
+    for (final modelName in modelsToTry) {
+      try {
+        final model = GenerativeModel(
+          model: modelName,
+          apiKey: apiKey,
+        );
+        final response = await model.generateContent([Content.text(promptText)]);
+        final text = response.text;
+        if (text != null && text.trim().isNotEmpty) return text.trim();
+      } catch (e) {
+        final err = e.toString().toLowerCase();
+        
+        // Check if it's a quota/rate limit error (temporary)
+        final isQuotaOrBusy = err.contains('quota') ||
+            err.contains('429') ||
+            err.contains('resource exhausted') ||
+            err.contains('overloaded') ||
+            err.contains('503') ||
+            err.contains('unavailable');
+        
+        // If it's not temporary, report immediately instead of trying next model
+        if (!isQuotaOrBusy) {
+          return 'Pillo error: $e';
+        }
+        // Otherwise try next model
       }
-      return text.trim();
-    } catch (e) {
-      return 'I\'m having trouble connecting right now. Please try again in a moment.\n\nError: $e';
     }
+
+    // All models failed due to quota
+    return 'Pillo is very busy right now. Please try again in a moment.';
   }
+}
 
-  // =========================================================================
-  //  SYSTEM PROMPT BUILDER
-  // =========================================================================
-  static String _buildSystemPrompt(PilloContext ctx) {
-    final profileSection = ctx.isEmpty
-        ? '- No profile data loaded. Ask the user to complete their health profile in the app settings.'
-        : [
-            if (ctx.name.isNotEmpty)         '- Name: ${ctx.name}',
-            if (ctx.gender.isNotEmpty)        '- Gender: ${ctx.gender}',
-            if (ctx.dob.isNotEmpty)           '- Date of birth: ${ctx.dob}',
-            if (ctx.allergies.isNotEmpty)     '- Allergies: ${ctx.allergies}',
-            if (ctx.chronicConditions.isNotEmpty)
-              '- Chronic conditions: ${ctx.chronicConditions}',
-            if (ctx.currentMedications.isNotEmpty)
-              '- Current medications (from profile): ${ctx.currentMedications}',
-            if (ctx.specialConditions.isNotEmpty)
-              '- Special conditions: ${ctx.specialConditions}',
-            if (ctx.scheduledMedicines.isNotEmpty)
-              '- Scheduled medicines:\n${ctx.scheduledMedicines.map((m) => '    • $m').join('\n')}',
-          ].join('\n');
+// ──────────────────────────────────────────────────────────────────────────
+// Data model: Holds user context for Pillo
+// ──────────────────────────────────────────────────────────────────────────
 
-    return '''
-You are Pillo, a smart and caring medicine assistant built into the Dosely app.
+class PilloContext {
+  final Map<String, dynamic> userProfile;
+  final List<Map<String, dynamic>> scanHistory;
+  final Map<String, String> memory;
 
-════════════════════════════════════════
-YOUR ROLE
-════════════════════════════════════════
-- Help users understand their medicines, scan results, and health profile.
-- Answer in simple, clear, friendly language. Avoid medical jargon unless the user asks for detail.
-- Keep answers concise. Expand only if the user asks for more.
-- You have access to the user's full health profile below. Use it actively.
-- When the user asks about safety, interactions, or dosage — cross-reference against their known allergies, conditions, and current medications.
-- Never claim a medicine is 100% safe. Always acknowledge individual variation.
-- Never override the scan engine result. If the app said "not safe", support that finding — never contradict it.
-- For serious medical decisions (starting, stopping, or changing a medicine) always recommend consulting a pharmacist or doctor.
-- If the user's profile is incomplete, gently encourage them to fill it in for better advice.
+  const PilloContext({
+    this.userProfile = const {},
+    this.scanHistory = const [],
+    this.memory = const {},
+  });
 
-════════════════════════════════════════
-USER HEALTH PROFILE  (live from Firestore — treat as ground truth)
-════════════════════════════════════════
-$profileSection
-
-════════════════════════════════════════
-SAFETY RULES YOU MUST ALWAYS FOLLOW
-════════════════════════════════════════
-1. If the user's allergy list contains a substance and they ask about a medicine containing it → clearly warn them.
-2. If the user is pregnant (special conditions or scan flag) and a medicine is marked "avoid" in pregnancy → clearly warn them.
-3. If a medicine the user is asking about appears in their scheduled or current medication list → flag potential duplication.
-4. Never suggest stopping a prescribed medicine. Say "consult your doctor before making changes."
-5. Never diagnose. Describe symptoms and recommend professional evaluation.
-6. If you are unsure, say so clearly. Do not fabricate drug information.
-''';
-  }
-
-  // =========================================================================
-  //  LAST SCAN RESULT FORMATTER
-  // =========================================================================
-  static String _buildScanSection(Map<String, dynamic>? scan) {
-    if (scan == null) return 'No scan has been performed yet in this session.';
-
-    final name    = scan['medicineName']?.toString() ?? 'Unknown';
-    final generic = scan['genericName']?.toString() ?? '';
-    final dosage  = scan['dosage']?.toString() ?? '';
-    final status  = scan['status']?.toString() ?? 'unknown';
-    final reasons = List<String>.from(scan['reasons'] ?? []);
-
-    final statusLabel = {
-      'safe':     '✅ SAFE',
-      'caution':  '⚠️ USE WITH CAUTION',
-      'not safe': '❌ NOT SAFE FOR THIS USER',
-    }[status.toLowerCase()] ?? 'ℹ️ $status';
-
-    return [
-      '- Medicine: $name${generic.isNotEmpty ? ' ($generic)' : ''}',
-      if (dosage.isNotEmpty) '- Dosage: $dosage',
-      '- Safety result: $statusLabel',
-      if (reasons.isNotEmpty)
-        '- Reasons:\n${reasons.map((r) => '    • $r').join('\n')}',
-    ].join('\n');
+  factory PilloContext.fromFirestore({
+    required Map<String, dynamic> userData,
+    required List<Map<String, dynamic>> scans,
+  }) {
+    return PilloContext(
+      userProfile: userData,
+      scanHistory: scans,
+      memory: {},
+    );
   }
 }

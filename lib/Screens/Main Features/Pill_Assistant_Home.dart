@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../services/pillo_chat_service.dart';
+import '../../services/pillo_chat_service.dart' show PilloChatService, PilloContext;
 
 class PillAssistantHome extends StatefulWidget {
   final String uid;
@@ -59,7 +59,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     super.dispose();
   }
 
-  // ── Persistence (UNCHANGED) ──────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Load chats from local storage + Firestore context
+  // ──────────────────────────────────────────────────────────────────────────────
   Future<void> _loadChats() async {
     final prefs = await SharedPreferences.getInstance();
     final rawConvs = prefs.getString('pillo_conversations');
@@ -86,6 +88,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     _jumpToBottom();
   }
 
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Save chats to local storage
+  // ──────────────────────────────────────────────────────────────────────────────
   Future<void> _saveChats() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
@@ -95,7 +100,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     await prefs.setString('pillo_current_conv_id', _currentConvId);
   }
 
-  // ── Image picking (UNCHANGED) ─────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Image picking from gallery
+  // ──────────────────────────────────────────────────────────────────────────────
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final x = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
@@ -103,7 +110,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     setState(() => _pickedImage = File(x.path));
   }
 
-  // ── Conversation management (UNCHANGED) ──────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Create a new chat conversation
+  // ──────────────────────────────────────────────────────────────────────────────
   void _startNewChat() {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     setState(() {
@@ -114,6 +123,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     Navigator.of(context).pop();
   }
 
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Switch to existing chat conversation
+  // ──────────────────────────────────────────────────────────────────────────────
   void _switchChat(String id) {
     setState(() => _currentConvId = id);
     _saveChats();
@@ -121,7 +133,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     _jumpToBottom();
   }
 
-  // ── Chat logic (UNCHANGED) ────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Build message history for LLM context
+  // ──────────────────────────────────────────────────────────────────────────────
   List<Map<String, String>> _buildHistoryForModel(List<_ChatMessage> messages) {
     final items = <Map<String, String>>[];
     for (final m in messages) {
@@ -134,12 +148,16 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     return items;
   }
 
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Send message to Pillo and get response
+  // ──────────────────────────────────────────────────────────────────────────────
   Future<void> _send() async {
     final text = _controller.text.trim();
     final image = _pickedImage;
 
     if (text.isEmpty && image == null) return;
 
+    // Create conversation if it doesn't exist
     if (_currentConversation == null) {
       final id = DateTime.now().millisecondsSinceEpoch.toString();
       final titleBase = text.isNotEmpty ? text : 'Image';
@@ -151,14 +169,18 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     }
 
     final conv = _currentConversation!;
+    
+    // Update title if it's a new chat
     if (conv.title == 'New Chat' && text.isNotEmpty) {
       setState(() {
         conv.title = text.length > 25 ? '${text.substring(0, 25)}...' : text;
       });
     }
 
+    // Get history before adding current message
     final historyBeforeCurrentMessage = _buildHistoryForModel(conv.messages);
 
+    // Add user message(s) to conversation
     setState(() {
       _sending = true;
       if (text.isNotEmpty) {
@@ -173,12 +195,15 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     _jumpToBottom();
 
     try {
+      // Call Pillo with user profile and scan history context
       final reply = await PilloChatService.send(
         text.isNotEmpty ? text : 'The user uploaded an image.',
         previousMessages: historyBeforeCurrentMessage,
-        context: _pilloContext,
+        userProfile: _pilloContext.userProfile,
+        scanHistory: _pilloContext.scanHistory,
         hasImage: image != null,
       );
+      
       setState(() => _messages.add(_ChatMessage.bot(reply)));
     } catch (e) {
       setState(() => _messages.add(_ChatMessage.bot('Error: $e')));
@@ -189,6 +214,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     }
   }
 
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Scroll to bottom of messages
+  // ──────────────────────────────────────────────────────────────────────────────
   void _jumpToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scroll.hasClients) return;
@@ -200,7 +228,9 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     });
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Main build method
+  // ──────────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     if (!_loaded) {
@@ -217,195 +247,56 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: Colors.white,
-      endDrawer: _buildDrawer(),
-      body: Stack(
-        children: [
-          // ── Background gradient (same as home screen) ──────────────────
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: [0.0, 0.22, 0.45],
-                colors: [_c1, _c2, Colors.white],
-              ),
-            ),
-          ),
-
-          SafeArea(
-            child: Column(
-              children: [
-                // ── Custom header ──────────────────────────────────────────
-                _buildHeader(),
-                const SizedBox(height: 10),
-
-                // ── Frosted chat card ──────────────────────────────────────
-                Expanded(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: _c5,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                    ),
-                    child: ClipRRect(
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(32)),
-                      child: Column(
-                        children: [
-                          // Handle bar
-                          Container(
-                            margin: const EdgeInsets.only(top: 10, bottom: 2),
-                            width: 36,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.black12,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-
-                          // Messages or empty state
-                          if (isEmpty)
-                            Expanded(child: _buildEmptyState())
-                          else
-                            Expanded(child: _buildMessages()),
-
-                          // Input bar
-                          _buildInputBar(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-    );
-  }
-
-  // ── Header ────────────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      child: Row(
-        children: [
-          _circleBtn(Icons.arrow_back_ios_new_rounded,
-              () => Navigator.pop(context)),
-          const Spacer(),
-          Column(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3), width: 1.5),
-                ),
-                child: const Icon(Icons.smart_toy_rounded,
-                    color: Colors.white, size: 22),
-              ),
-              const SizedBox(height: 3),
-              const Text(
-                'Pillo',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 15,
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          _circleBtn(Icons.menu_rounded,
-              () => _scaffoldKey.currentState?.openEndDrawer()),
-        ],
-      ),
-    );
-  }
-
-  Widget _circleBtn(IconData icon, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.16),
-          shape: BoxShape.circle,
-          border:
-              Border.all(color: Colors.white.withValues(alpha: 0.22)),
-        ),
-        child: Icon(icon, color: Colors.white, size: 18),
-      ),
-    );
-  }
-
-  // ── Empty state ───────────────────────────────────────────────────────────────
-  Widget _buildEmptyState() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 32, 28, 16),
-        child: Column(
+        key: _scaffoldKey,
+        backgroundColor: Colors.white,
+        endDrawer: _buildDrawer(),
+        body: Stack(
           children: [
-            // Pillo avatar
+            // ── Background gradient ────────────────────────────────────────
             Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [_c1, _c3],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.0, 0.22, 0.45],
+                  colors: [_c1, _c2, Colors.white],
                 ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: _c3.withValues(alpha: 0.38),
-                    blurRadius: 22,
-                    offset: const Offset(0, 8),
+              ),
+            ),
+
+            SafeArea(
+              child: Column(
+                children: [
+                  // ── Custom header ──────────────────────────────────────────
+                  _buildHeader(),
+                  const SizedBox(height: 10),
+
+                  // ── Messages (or empty state) ──────────────────────────────
+                  Expanded(
+                    child: isEmpty
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            controller: _scroll,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 16,
+                            ),
+                            itemCount: _messages.length +
+                                (_sending ? 1 : 0), // +1 for typing indicator
+                            itemBuilder: (_, i) {
+                              if (i == _messages.length) {
+                                return const _TypingIndicator();
+                              }
+                              final msg = _messages[i];
+                              return _buildChatBubble(msg);
+                            },
+                          ),
                   ),
+
+                  // ── Input area ────────────────────────────────────────────
+                  _buildInputArea(),
                 ],
               ),
-              child:
-                  const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 48),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Hi, I\'m Pillo!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: _c1,
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Ask me about medicines, dosages,\ndrug interactions, or any health questions.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.black45,
-                height: 1.55,
-              ),
-            ),
-            const SizedBox(height: 28),
-            // Suggestion chips
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: const [
-                _SuggestionChip('Medicine interactions'),
-                _SuggestionChip('Dosage guide'),
-                _SuggestionChip('Side effects'),
-                _SuggestionChip('Is this safe for me?'),
-              ],
             ),
           ],
         ),
@@ -413,394 +304,268 @@ class _PillAssistantHomeState extends State<PillAssistantHome> {
     );
   }
 
-  // ── Messages list ─────────────────────────────────────────────────────────────
-  Widget _buildMessages() {
-    return ListView.builder(
-      controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-      itemCount: _messages.length + (_sending ? 1 : 0),
-      itemBuilder: (ctx, i) {
-        if (i == _messages.length && _sending) {
-          return const _TypingIndicator();
-        }
-        return _MessageBubble(message: _messages[i]);
-      },
-    );
-  }
-
-  // ── Input bar ─────────────────────────────────────────────────────────────────
-  Widget _buildInputBar() {
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Build header with title and menu button
+  // ──────────────────────────────────────────────────────────────────────────────
+  Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.fromLTRB(
-          14, 10, 14, MediaQuery.of(context).padding.bottom + 12),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x10000000),
-            blurRadius: 12,
-            offset: Offset(0, -3),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Image preview
-          if (_pickedImage != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(_pickedImage!,
-                          width: 56, height: 56, fit: BoxFit.cover),
-                    ),
-                    Positioned(
-                      top: -5,
-                      right: -5,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _pickedImage = null),
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: const BoxDecoration(
-                              color: Colors.red, shape: BoxShape.circle),
-                          child: const Icon(Icons.close,
-                              size: 11, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          const Text(
+            'Pillo',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
             ),
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Image pick button
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: _c3.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.add_photo_alternate_rounded,
-                      color: _c2, size: 20),
-                ),
-              ),
-              const SizedBox(width: 10),
-
-              // Text field
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: _c5,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                        color: _c3.withValues(alpha: 0.4), width: 1.2),
-                  ),
-                  child: TextField(
-                    controller: _controller,
-                    textCapitalization: TextCapitalization.sentences,
-                    minLines: 1,
-                    maxLines: 4,
-                    style: const TextStyle(color: _c1, fontSize: 14.5),
-                    decoration: const InputDecoration(
-                      hintText: 'Ask Pillo something…',
-                      hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                      border: InputBorder.none,
-                    ),
-                    onSubmitted: (_) => _send(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-
-              // Send button
-              GestureDetector(
-                onTap: _sending ? null : _send,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: _sending
-                        ? null
-                        : const LinearGradient(
-                            colors: [_c1, _c2],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                    color: _sending ? Colors.black12 : null,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: _sending
-                      ? const Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.2, color: _c3),
-                          ),
-                        )
-                      : const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 20),
-                ),
-              ),
-            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
           ),
         ],
       ),
     );
   }
 
-  // ── Drawer ────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Build side drawer with chat history
+  // ──────────────────────────────────────────────────────────────────────────────
   Widget _buildDrawer() {
     return Drawer(
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.horizontal(left: Radius.circular(28)),
-      ),
       child: SafeArea(
         child: Column(
           children: [
-            // Drawer header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [_c1, _c2],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(12),
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.smart_toy_rounded,
-                        color: Colors.white, size: 26),
+                  ListTile(
+                    leading: const Icon(Icons.add, color: _c1),
+                    title: const Text('New Chat'),
+                    onTap: _startNewChat,
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Conversations',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${_conversations.length} chat${_conversations.length == 1 ? '' : 's'}',
-                    style:
-                        TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
-                  ),
+                  const Divider(),
+                  ..._conversations.map((conv) {
+                    final isCurrent = conv.id == _currentConvId;
+                    return ListTile(
+                      title: Text(conv.title),
+                      selected: isCurrent,
+                      selectedTileColor: _c3.withValues(alpha: 0.2),
+                      onTap: () => _switchChat(conv.id),
+                    );
+                  }),
                 ],
               ),
-            ),
-
-            // New conversation button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: GestureDetector(
-                onTap: _startNewChat,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [_c1, _c3]),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'New Conversation',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // Profile context chip
-            if (!_pilloContext.isEmpty)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _c3.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _c3.withValues(alpha: 0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.person_rounded, color: _c2, size: 14),
-                        SizedBox(width: 6),
-                        Text(
-                          'HEALTH PROFILE LOADED',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: _c1,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      [
-                        if (_pilloContext.name.isNotEmpty) _pilloContext.name,
-                        if (_pilloContext.allergies.isNotEmpty) 'Allergies: ${_pilloContext.allergies}',
-                        if (_pilloContext.scheduledMedicines.isNotEmpty)
-                          '${_pilloContext.scheduledMedicines.length} scheduled medicine(s)',
-                      ].join(' • '),
-                      style: const TextStyle(fontSize: 12, color: _c2),
-                    ),
-                  ],
-                ),
-              ),
-
-            const Divider(height: 1),
-
-            // Conversations list
-            Expanded(
-              child: _conversations.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No conversations yet',
-                        style: TextStyle(color: Colors.black38, fontSize: 13),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      itemCount: _conversations.length,
-                      itemBuilder: (ctx, i) {
-                        final conv = _conversations[i];
-                        final isActive = conv.id == _currentConvId;
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? _c3.withValues(alpha: 0.12)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(14),
-                            border: isActive
-                                ? Border.all(
-                                    color: _c3.withValues(alpha: 0.35))
-                                : null,
-                          ),
-                          child: ListTile(
-                            dense: true,
-                            leading: Container(
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(
-                                gradient: isActive
-                                    ? const LinearGradient(
-                                        colors: [_c1, _c3])
-                                    : null,
-                                color:
-                                    isActive ? null : const Color(0xFFF2F2F2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.chat_bubble_rounded,
-                                size: 16,
-                                color: isActive ? Colors.white : Colors.black38,
-                              ),
-                            ),
-                            title: Text(
-                              conv.title,
-                              style: TextStyle(
-                                fontWeight: isActive
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                fontSize: 13.5,
-                                color: _c1,
-                              ),
-                            ),
-                            onTap: () => _switchChat(conv.id),
-                          ),
-                        );
-                      },
-                    ),
             ),
           ],
         ),
       ),
     );
   }
-}
 
-// ── Message bubble ────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Build empty state with Pillo intro and suggestions
+  // ──────────────────────────────────────────────────────────────────────────────
+  Widget _buildEmptyState() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 40),
+          
+          // Pillo avatar
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [_c1, _c3],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.smart_toy_rounded,
+                color: Colors.white, size: 40),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Title
+          const Text(
+            'Hi! I\'m Pillo',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: _c1,
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Subtitle
+          Text(
+            'Your personal medicine assistant',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: _c1.withValues(alpha: 0.7),
+              fontSize: 16,
+            ),
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Suggestion chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _SuggestionChip('What medicine is safe?'),
+                const SizedBox(width: 8),
+                _SuggestionChip('Drug interactions?'),
+                const SizedBox(width: 8),
+                _SuggestionChip('When to take it?'),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 60),
+        ],
+      ),
+    );
+  }
 
-class _MessageBubble extends StatelessWidget {
-  final _ChatMessage message;
-  const _MessageBubble({required this.message});
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Build message input area
+  // ──────────────────────────────────────────────────────────────────────────────
+  Widget _buildInputArea() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade200),
+        ),
+      ),
+      padding: EdgeInsets.only(
+        left: 14,
+        right: 14,
+        top: 10,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 10,
+      ),
+      child: Row(
+        children: [
+          // Message input field
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: _c5,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        hintText: 'Ask Pillo...',
+                        hintStyle: TextStyle(color: Colors.grey),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Image picker button
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: IconButton(
+                      icon: const Icon(Icons.image, color: _c3),
+                      onPressed: _pickImage,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(width: 8),
+          
+          // Send button
+          Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [_c1, _c2],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(
+                _sending ? Icons.hourglass_top : Icons.send,
+                color: Colors.white,
+              ),
+              onPressed: _sending ? null : _send,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  static const _c1 = Color(0xFF48466E);
-  static const _c2 = Color(0xFF3E84A8);
-  static const _c3 = Color(0xFF4ACED0);
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Build individual chat bubble
+  // ──────────────────────────────────────────────────────────────────────────────
+  Widget _buildChatBubble(_ChatMessage message) {
+    final isUser = message.isUser;
 
-  @override
-  Widget build(BuildContext context) {
+    // Image message
     if (message.isImage) {
       return Align(
         alignment: Alignment.centerRight,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: Image.file(message.imageFile!, width: 160),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(5),
+            ),
+            child: Image.file(
+              message.imageFile!,
+              width: 150,
+              height: 150,
+              fit: BoxFit.cover,
+            ),
           ),
         ),
       );
     }
 
-    final isUser = message.isUser;
-
+    // Text message
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment:
+              isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Pillo avatar on bot messages
+            // Bot avatar
             if (!isUser)
               Container(
                 width: 28,
@@ -814,7 +579,7 @@ class _MessageBubble extends StatelessWidget {
                     color: Colors.white, size: 14),
               ),
 
-            // Bubble
+            // Message bubble
             Container(
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.68,
@@ -876,7 +641,9 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-// ── Typing indicator ──────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════════
+// TYPING INDICATOR WIDGET
+// ══════════════════════════════════════════════════════════════════════════════════
 
 class _TypingIndicator extends StatefulWidget {
   const _TypingIndicator();
@@ -911,6 +678,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            // Bot avatar
             Container(
               width: 28,
               height: 28,
@@ -922,6 +690,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
               child: const Icon(Icons.smart_toy_rounded,
                   color: Colors.white, size: 14),
             ),
+            // Typing bubble
             Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -972,7 +741,9 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   }
 }
 
-// ── Suggestion chip ───────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════════
+// SUGGESTION CHIP WIDGET
+// ══════════════════════════════════════════════════════════════════════════════════
 
 class _SuggestionChip extends StatelessWidget {
   final String text;
@@ -1000,8 +771,11 @@ class _SuggestionChip extends StatelessWidget {
   }
 }
 
-// ── Data models (UNCHANGED) ───────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════════
+// DATA MODELS
+// ══════════════════════════════════════════════════════════════════════════════════
 
+/// Represents a single chat message
 class _ChatMessage {
   final bool isUser;
   final String? text;
@@ -1028,6 +802,7 @@ class _ChatMessage {
       );
 }
 
+/// Represents a complete conversation
 class _ChatConversation {
   final String id;
   String title;
