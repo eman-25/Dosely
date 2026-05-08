@@ -5,7 +5,8 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.4
+  # Updated to meet minimum requirements for modern Firebase AI plugins
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -30,12 +31,16 @@ dependencies:
   http: ^1.2.2
   shared_preferences: ^2.3.0
 
-  # Firebase (Auth + Firestore for profiles & history)
-  firebase_core: ^3.15.2
-  firebase_auth: ^5.7.0
-  cloud_firestore: ^5.6.12
+  # Firebase
+  firebase_core: ^4.7.0
+  firebase_auth: ^6.4.0
+  cloud_firestore: ^6.3.0
+  
+  # Official consolidated AI package (replaces vertex_ai and google_generative_ai)
+  firebase_ai: ^3.11.0
+
   permission_handler: ^12.0.1
-  google_generative_ai: ^0.4.6
+  #google_generative_ai: ^0.4.6
   flutter_email_sender: ^8.0.0
   image: ^4.8.0
   flutter_local_notifications: ^18.0.1
