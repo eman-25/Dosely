@@ -45,6 +45,7 @@ dependencies:
   image: ^4.8.0
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.4
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:
