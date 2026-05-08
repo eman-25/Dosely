@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../models/user_data.dart';
@@ -599,19 +600,62 @@ class _ScheduleCard extends StatelessWidget {
 
   const _ScheduleCard({required this.onViewAll});
 
+  /// Returns true if this medicine doc should appear today
+  bool _appearsToday(Map<String, dynamic> data) {
+    final today = DateTime.now();
+    final todayWeekday = today.weekday; // 1=Mon … 7=Sun
+
+    // startDate/endDate can be Timestamp or String — handle both
+    DateTime? _toDate(dynamic val) {
+      if (val == null) return null;
+      if (val is Timestamp) return val.toDate();
+      if (val is String && val.isNotEmpty) {
+        try { return DateTime.parse(val); } catch (_) {}
+      }
+      return null;
+    }
+
+    final startDate = _toDate(data['startDate']);
+    final endDate   = _toDate(data['endDate']);
+    final days      = List<int>.from(data['selectedDays'] as List? ?? []);
+
+    if (startDate != null && today.isBefore(
+        DateTime(startDate.year, startDate.month, startDate.day))) return false;
+    if (endDate != null && today.isAfter(
+        DateTime(endDate.year, endDate.month, endDate.day, 23, 59))) return false;
+    if (days.isNotEmpty && !days.contains(todayWeekday)) return false;
+
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final userData = Provider.of<UserData>(context);
-    final medsStr = userData.currentMedications;
-    final medsList = medsStr.isNotEmpty
-        ? medsStr
-            .split(',')
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty && e != 'None')
-            .toList()
-        : <String>[];
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    return Container(
+    if (uid == null) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('medicine_table')
+          .snapshots(),
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? [];
+        final todayDocs = docs.where((d) => _appearsToday(d.data())).toList();
+        final medsList = todayDocs.map((d) {
+          final data = d.data();
+          final name   = (data['medicineName'] ?? '').toString();
+          final hour   = ((data['timeHour'] as num?)?.toInt()) ?? 8;
+          final minute = ((data['timeMinute'] as num?)?.toInt()) ?? 0;
+          final time   = TimeOfDay(hour: hour, minute: minute);
+          final h      = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+          final m      = time.minute.toString().padLeft(2, '0');
+          final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+          return {'name': name, 'time': '$h:$m $period'};
+        }).toList();
+
+        return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.93),
@@ -718,19 +762,25 @@ class _ScheduleCard extends StatelessWidget {
                 : Column(
                     children: medsList
                         .take(3)
-                        .map((med) => _MedRow(name: med))
+                        .map((med) => _MedRow(
+                              name: med['name'] as String,
+                              time: med['time'] as String,
+                            ))
                         .toList(),
                   ),
           ),
         ],
       ),
+        );
+      },
     );
   }
 }
 
 class _MedRow extends StatelessWidget {
   final String name;
-  const _MedRow({required this.name});
+  final String time;
+  const _MedRow({required this.name, required this.time});
 
   @override
   Widget build(BuildContext context) {
@@ -777,9 +827,9 @@ class _MedRow extends StatelessWidget {
               color: const Color(0xFF48466E).withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Text(
-              '8:00 AM',
-              style: TextStyle(
+            child: Text(
+              time,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF48466E),
