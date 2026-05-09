@@ -36,20 +36,37 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   void initState() {
     super.initState();
     _trackMedication();
-    // ✅ Initialize Gemini before calling
-    DescriptionSimplifierService.initialize();
     _simplifyDescriptionOnLoad(); // ✅ Auto-simplify on screen load
   }
 
-  // ✅ NEW: Generate simple explanation using Pillo's Gemini API
+  // ✅ ENHANCED: Generate explanation + personalized dosage based on user health
   Future<void> _simplifyDescriptionOnLoad() async {
     setState(() {
       _isSimplifying = true;
     });
 
-    final simplified = await DescriptionSimplifierService.generateSimpleExplanation(
+    // Extract user's age from DOB if available
+    int? ageInYears;
+    if (widget.medicineData['dob'] != null && (widget.medicineData['dob'] as String).isNotEmpty) {
+      try {
+        final dob = DateTime.parse(widget.medicineData['dob'] as String);
+        ageInYears = DateTime.now().difference(dob).inDays ~/ 365;
+      } catch (_) {}
+    }
+
+    // Get weight if available (you may need to add this to medicineData or fetch from UserData)
+    double? weightInKg;
+    // If you have weight in your user profile, add it here
+    // weightInKg = widget.medicineData['weight'];
+
+    final simplified = await DescriptionSimplifierService.generateDetailedExplanation(
       medicineName: _name,
       genericName: _generic,
+      ageInYears: ageInYears,
+      weightInKg: weightInKg,
+      allergies: widget.medicineData['allergies'] ?? '',
+      chronicConditions: widget.medicineData['chronicConditions'] ?? '',
+      specialConditions: widget.medicineData['specialConditions'] ?? '',
     );
 
     if (mounted) {
