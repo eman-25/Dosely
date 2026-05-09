@@ -3,7 +3,6 @@ import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dosely/services/user_service.dart';
-import 'package:dosely/screens/settings/edit_personalhealthinfo.dart';
 
 class PrivacyScreen extends StatefulWidget {
   const PrivacyScreen({super.key});
