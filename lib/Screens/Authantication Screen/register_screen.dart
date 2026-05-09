@@ -4,6 +4,7 @@ import 'package:country_picker/country_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '/theme.dart';
 import '../../models/user_data.dart';
 import 'package:dosely/services/user_service.dart';
@@ -62,7 +63,62 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _confirmPasswordController.text.isNotEmpty;
   }
 
+  // ✅ NEW: Check if email exists in Firestore
+  Future<bool> _emailExistsInFirestore(String email) async {
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email.trim())
+          .limit(1)
+          .get();
+      return query.docs.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ✅ NEW: Try to login with the existing account and complete registration
+  Future<bool> _tryRecoverOrphanedAccount(String email, String password) async {
+    try {
+      print('🔄 Trying to recover orphaned account: $email');
+      
+      // Try to sign in with provided credentials
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      print('✅ Signed in to existing account, now creating Firestore profile');
+
+      // Send verification if not verified
+      if (!credential.user!.emailVerified) {
+        await credential.user!.sendEmailVerification();
+      }
+
+      // Save profile to Firestore
+      await UserService.saveBasicProfile(
+        username: _usernameController.text.trim(),
+        email: email,
+        dob: _dobController.text,
+        gender: _selectedGender ?? 'Prefer not to say',
+        country: _selectedCountry ?? '',
+      );
+
+      print('✅ Profile saved successfully');
+      return true;
+    } on FirebaseAuthException catch (e) {
+      print('❌ Recovery failed: ${e.code}');
+      // If wrong password, the email truly belongs to someone else
+      return false;
+    } catch (e) {
+      print('❌ Recovery error: $e');
+      return false;
+    }
+  }
+
   Future<void> _register() async {
+    // At the very start of _register() function
+    await FirebaseAuth.instance.signOut();
     if (!_isFormValid()) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('complete_fields'.tr())),
@@ -78,46 +134,102 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
     try {
-      // 1️⃣ Create Firebase Auth account
+      // 1️⃣ Try to create new Firebase Auth account
       final credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+        email: email,
+        password: password,
       );
 
-      // 2️⃣ Send email verification
+      // 2️⃣ Send verification
       await credential.user!.sendEmailVerification();
 
-      // 3️⃣ Save basic profile to Firestore (linked to UID)
+      // 3️⃣ Save to Firestore
       await UserService.saveBasicProfile(
         username: _usernameController.text.trim(),
-        email: _emailController.text.trim(),
+        email: email,
         dob: _dobController.text,
         gender: _selectedGender ?? 'Prefer not to say',
         country: _selectedCountry ?? '',
       );
 
-      // 4️⃣ Also update local provider so next screen has data
+      // 4️⃣ Update local provider
       if (mounted) {
         final userData = Provider.of<UserData>(context, listen: false);
         userData.updateProfile(
           username: _usernameController.text.trim(),
-          email: _emailController.text.trim(),
+          email: email,
           dob: _dobController.text,
           gender: _selectedGender ?? 'Prefer not to say',
           country: _selectedCountry ?? '',
         );
 
-        // 5️⃣ Go to health personalization screen
         Navigator.pushNamed(context, '/personalInfo');
       }
     } on FirebaseAuthException catch (e) {
+      // ✅ FIX: Handle "email-already-in-use" smartly
+      if (e.code == 'email-already-in-use') {
+        print('⚠️ Email exists in Auth, checking Firestore...');
+        
+        // Check if email exists in Firestore
+        final existsInFirestore = await _emailExistsInFirestore(email);
+        
+        if (!existsInFirestore) {
+          // ✅ Orphaned account! Try to recover it
+          print('🔧 Orphaned account detected - attempting recovery');
+          
+          final recovered = await _tryRecoverOrphanedAccount(email, password);
+          
+          if (recovered) {
+            // Successfully recovered!
+            if (mounted) {
+              final userData = Provider.of<UserData>(context, listen: false);
+              userData.updateProfile(
+                username: _usernameController.text.trim(),
+                email: email,
+                dob: _dobController.text,
+                gender: _selectedGender ?? 'Prefer not to say',
+                country: _selectedCountry ?? '',
+              );
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Welcome back! Completing your registration...'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+
+              Navigator.pushNamed(context, '/personalInfo');
+            }
+            return;
+          } else {
+            // Wrong password for orphaned account
+            if (mounted) {
+              _showRecoveryDialog(email);
+            }
+            return;
+          }
+        } else {
+          // Email truly exists with full profile
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('email_already_used'.tr()),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      // Other Firebase Auth errors
       String message;
       switch (e.code) {
-        case 'email-already-in-use':
-          message = 'email_already_used'.tr();
-          break;
         case 'weak-password':
           message = 'weak_password'.tr();
           break;
@@ -133,7 +245,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } catch (e) {
-      // Firestore save error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save profile: $e')),
@@ -142,6 +253,79 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // ✅ Show dialog for orphaned account recovery
+  void _showRecoveryDialog(String email) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: Colors.orange),
+            SizedBox(width: 10),
+            Text('Account Already Exists'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'An account with $email already exists.',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'You can either:',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '• Login if you remember your password',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              '• Reset your password if you forgot it',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              '• Use a different email address',
+              style: TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamedAndRemoveUntil(
+                context, '/forgotPassword', (route) => false);
+            },
+            child: const Text('Reset Password'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamedAndRemoveUntil(
+                context, '/login', (route) => false);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Login'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
