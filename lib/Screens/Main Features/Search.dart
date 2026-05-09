@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../services/medicine_lookup_service.dart';
+import '../../services/medicine_api_layer.dart'; // ✅ Import the API layer
 import 'medicine_result_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -123,6 +124,35 @@ class _SearchScreenState extends State<SearchScreen> {
     }).toList();
   }
 
+  // ✅ NEW: Search the 3 APIs when Firestore has no results
+  Future<List<Map<String, dynamic>>> _searchAPIs(String query) async {
+    if (query.isEmpty) return [];
+    
+    final results = <Map<String, dynamic>>[];
+    
+    try {
+      // Call MedicineApiLayer to fetch from the 3 APIs
+      final medicine = await MedicineApiLayer.fetchAndEnrich(query);
+      
+      if (medicine != null) {
+        // Convert MedicineModel to Map<String, dynamic>
+        results.add({
+          'name': medicine.name,
+          'generic_name': medicine.genericName,
+          'dosage': medicine.dosage,
+          'description': medicine.description,
+          'pregnancy_warning': medicine.pregnancyWarning,
+          'avoid_combinations': medicine.avoidCombinations,
+          'source': 'API (OpenFDA/RxNorm/DailyMed)',
+        });
+      }
+    } catch (e) {
+      print('❌ API search error: $e');
+    }
+    
+    return results;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -174,30 +204,67 @@ class _SearchScreenState extends State<SearchScreen> {
 
             // Body
             Expanded(
-              child: _query.isEmpty
-                  ? _searchHint()
-                  : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: FirebaseFirestore.instance
-                          .collection('medicines')
-                          .orderBy('name')
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: FirebaseFirestore.instance
+                    .collection('medicines')
+                    .orderBy('name')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Center(
+                        child: Text('Something went wrong.'));
+                  }
+                  if (!snapshot.hasData) {
+                    return const Center(
+                        child: CircularProgressIndicator());
+                  }
+
+                  // ✅ If no query, show ALL medicines from Firestore
+                  if (_query.isEmpty) {
+                    final allMedicines = snapshot.data!.docs;
+                    
+                    if (allMedicines.isEmpty) {
+                      return _searchHint();
+                    }
+                    
+                    return _resultList(allMedicines);
+                  }
+
+                  // ✅ If query exists, filter and search APIs if needed
+                  final filtered = _filterDocs(snapshot.data!.docs);
+
+                  // If no local results, search APIs
+                  if (filtered.isEmpty) {
+                    return FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _searchAPIs(_query),
+                      builder: (context, apiSnapshot) {
+                        if (apiSnapshot.connectionState == ConnectionState.waiting) {
                           return const Center(
-                              child: Text('Something went wrong.'));
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(),
+                                SizedBox(height: 12),
+                                Text('Searching APIs...'),
+                              ],
+                            ),
+                          );
                         }
-                        if (!snapshot.hasData) {
-                          return const Center(
-                              child: CircularProgressIndicator());
+
+                        final apiResults = apiSnapshot.data ?? [];
+
+                        if (apiResults.isEmpty) {
+                          return _notFoundLocally();
                         }
 
-                        final filtered = _filterDocs(snapshot.data!.docs);
-
-                        if (filtered.isEmpty) return _notFoundLocally();
-
-                        return _resultList(filtered);
+                        return _resultListFromAPI(apiResults);
                       },
-                    ),
+                    );
+                  }
+
+                  return _resultList(filtered);
+                },
+              ),
             ),
           ],
         ),
@@ -270,6 +337,24 @@ class _SearchScreenState extends State<SearchScreen> {
         return _MedicineCard(
           medicine: medicine,
           onTap: () => _openMedicineDetails(context, doc: doc),
+          source: 'Saved',
+        );
+      },
+    );
+  }
+
+  // ✅ NEW: Display results from APIs
+  Widget _resultListFromAPI(List<Map<String, dynamic>> results) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      itemCount: results.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final medicine = results[index];
+        return _MedicineCard(
+          medicine: medicine,
+          onTap: () => _openMedicineDetails(context, searchName: medicine['name'] ?? ''),
+          source: medicine['source'] ?? 'API',
         );
       },
     );
@@ -280,8 +365,13 @@ class _SearchScreenState extends State<SearchScreen> {
 class _MedicineCard extends StatelessWidget {
   final Map<String, dynamic> medicine;
   final VoidCallback onTap;
+  final String source;
 
-  const _MedicineCard({required this.medicine, required this.onTap});
+  const _MedicineCard({
+    required this.medicine,
+    required this.onTap,
+    required this.source,
+  });
 
   String get _imageUrl {
     for (final key in [
@@ -291,6 +381,11 @@ class _MedicineCard extends StatelessWidget {
       if (v.isNotEmpty) return v;
     }
     return '';
+  }
+
+  Color get _sourceBadgeColor {
+    if (source.contains('API')) return const Color(0xFF3B82F6); // Blue for API
+    return const Color(0xFF10B981); // Green for Saved
   }
 
   @override
@@ -310,7 +405,7 @@ class _MedicineCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -345,13 +440,35 @@ class _MedicineCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                    ),
+                  // ✅ Name + Source badge
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _sourceBadgeColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          source,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: _sourceBadgeColor,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   if (generic.isNotEmpty && generic != name) ...[
                     const SizedBox(height: 2),

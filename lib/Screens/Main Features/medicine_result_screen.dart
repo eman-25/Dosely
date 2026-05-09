@@ -29,14 +29,14 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   static const Color _warn   = Color(0xFFD97706);
   static const Color _danger = Color(0xFFDC2626);
 
-  String? _simplifiedDescription; // ✅ Cache for simplified description
+  String? _simplifiedDescription;
   bool _isSimplifying = false;
 
   @override
   void initState() {
     super.initState();
     _trackMedication();
-    _simplifyDescriptionOnLoad(); // ✅ Auto-simplify on screen load
+    _simplifyDescriptionOnLoad();
   }
 
   // ✅ ENHANCED: Generate explanation + personalized dosage based on user health
@@ -45,7 +45,6 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
       _isSimplifying = true;
     });
 
-    // Extract user's age from DOB if available
     int? ageInYears;
     if (widget.medicineData['dob'] != null && (widget.medicineData['dob'] as String).isNotEmpty) {
       try {
@@ -54,10 +53,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
       } catch (_) {}
     }
 
-    // Get weight if available (you may need to add this to medicineData or fetch from UserData)
     double? weightInKg;
-    // If you have weight in your user profile, add it here
-    // weightInKg = widget.medicineData['weight'];
 
     final simplified = await DescriptionSimplifierService.generateDetailedExplanation(
       medicineName: _name,
@@ -79,10 +75,13 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
 
   Future<void> _trackMedication() async {
     try {
+      // ✅ FIXED: Use 'name' field (brand name), not generic name
       final name = (widget.medicineData['name'] ?? '').toString();
       if (name.isEmpty) return;
+      
       await FirebaseFirestore.instance.collection('medication_events').add({
-        'medication_name': name,
+        'medication_name': name,  // ✅ Brand name (e.g., "Panadol Extra")
+        'generic_name': widget.medicineData['generic_name'] ?? '',  // Also save generic for reference
         'event_type': widget.imagePath != null ? 'scan/upload' : 'search',
         'timestamp': FieldValue.serverTimestamp(),
       });
@@ -91,8 +90,12 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
 
   // ── Parsed data ─────────────────────────────────────────────────────────────
 
-  String get _name =>
-      _cap((widget.medicineData['name'] ?? 'Unknown Medicine').toString());
+  // Brand label as printed on the box. Already cleaned & title-cased by
+  // the lookup service, so we display it as-is (preserves "500mg", "5%", etc.)
+  String get _name {
+    final raw = (widget.medicineData['name'] ?? 'Unknown Medicine').toString().trim();
+    return raw.isEmpty ? 'Unknown Medicine' : raw;
+  }
 
   String get _generic =>
       _cap((widget.medicineData['generic_name'] ?? '').toString());
@@ -112,12 +115,12 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   String get _pregnancyWarning =>
       (widget.medicineData['pregnancy_warning'] ?? '').toString().trim().toLowerCase();
 
-  // ✅ UPDATED: Always show simplified description from Pillo
+  // ✅ UPDATED: Always show simplified description
   String get _description {
     if (_simplifiedDescription != null && _simplifiedDescription!.isNotEmpty) {
-      return _simplifiedDescription!; // ✅ Simple user-friendly version
+      return _simplifiedDescription!;
     }
-    return 'Loading explanation...'; // Show while simplifying
+    return 'Loading explanation...';
   }
 
   // ── Status helpers ──────────────────────────────────────────────────────────
@@ -181,55 +184,57 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
         elevation: 0,
         backgroundColor: _bg,
         foregroundColor: _c1,
-        centerTitle: true,
+        centerTitle: false,
         title: const Text(
-          'Scan Result',
+          'Medicine Details',
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
 
-            // ── Scanned image (small) ─────────────────────────────────────
+            // ── Scanned image ─────────────────────────────────────
             if (widget.imagePath != null && widget.imagePath!.isNotEmpty) ...[
               ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 child: Image.file(
                   File(widget.imagePath!),
-                  height: 150,
+                  height: 140,
                   width: double.infinity,
                   fit: BoxFit.cover,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
             ],
 
-            // ── VERDICT CARD ───────────────────────────────────────────────
-            _verdictCard(),
-            const SizedBox(height: 12),
+            // ✅ MODERN CARD: Brand Name + Dosage + Status + Generic Name
+            _modernMedicineCard(),
+            const SizedBox(height: 16),
 
-            // ── INDICATIONS FOR USE (NOW SIMPLIFIED!) ──────────────────────
+            // ── Description with AI explanation ────────────────────────────
             _descriptionTile(),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
 
-            // ── FLAG PILLS (allergy / pregnancy) ─────────────────────────
+            // ── Flags if needed ───────────────────────────────────────────
             if (_hasFlags) ...[
               _flagRow(),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
             ],
 
-            // ── WHY THIS RESULT ───────────────────────────────────────────
-            _reasonsCard(),
-            const SizedBox(height: 20),
+            // ── Why this result ───────────────────────────────────────────
+            if (_reasons.isNotEmpty) ...[
+              _reasonsCard(),
+              const SizedBox(height: 20),
+            ],
 
-            // ── ACTION BUTTONS ────────────────────────────────────────────
+            // ── Action buttons ────────────────────────────────────────────
             _actionButtons(context),
             const SizedBox(height: 14),
 
-            // ── DISCLAIMER ────────────────────────────────────────────────
+            // ── Disclaimer ────────────────────────────────────────────────
             _disclaimer(),
           ],
         ),
@@ -237,92 +242,145 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     );
   }
 
-  // ── Widget builders ─────────────────────────────────────────────────────────
-
-  Widget _verdictCard() {
-    final showDosage = _dosage.isNotEmpty &&
-        !_dosage.toLowerCase().contains('see product') &&
-        _dosage.length < 80;
-
+  // ✅ Card: Status FIRST (big banner) → Brand from box → Generic → Dosage
+  Widget _modernMedicineCard() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _statusBg,
-        border: Border.all(color: _statusColor.withValues(alpha: 0.30), width: 1.5),
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: _statusColor.withValues(alpha: 0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Status label
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(_statusIcon, color: _statusColor, size: 24),
-              const SizedBox(width: 8),
-              Text(
-                _statusLabel,
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w700,
-                  color: _statusColor,
+          // ── 1️⃣ STATUS BANNER (top, full width, most prominent) ──────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: _statusBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _statusColor.withValues(alpha: 0.30)),
+            ),
+            child: Row(
+              children: [
+                Icon(_statusIcon, color: _statusColor, size: 26),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Status',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _statusColor.withValues(alpha: 0.75),
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _statusLabel,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: _statusColor,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 14),
 
-          // Medicine name
+          const SizedBox(height: 18),
+
+          // ── 2️⃣ BRAND NAME (as printed on the box) ──────────────────────
+          Text(
+            'Name on box',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(
             _name,
-            textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
               color: _c1,
-              height: 1.2,
+              height: 1.15,
             ),
           ),
-          if (_generic.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              '(${ _generic})',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: _c1.withValues(alpha: 0.65),
-              ),
+
+          const SizedBox(height: 14),
+
+          // ── 3️⃣ GENERIC NAME (from drug databases) ──────────────────────
+          Text(
+            'Generic name',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+              letterSpacing: 0.4,
             ),
-          ],
-          if (showDosage) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _statusColor.withValues(alpha: 0.15),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                '💊 ${ _dosage}',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _c1.withValues(alpha: 0.8),
-                ),
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _generic.isNotEmpty ? _generic : 'Not available',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: _generic.isNotEmpty ? _c2 : Colors.grey.shade500,
+              fontStyle:
+                  _generic.isNotEmpty ? FontStyle.normal : FontStyle.italic,
             ),
-          ],
+          ),
+
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+
+          // ── 4️⃣ DOSAGE ──────────────────────────────────────────────────
+          Text(
+            'Dosage',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _dosage.isNotEmpty &&
+                    !_dosage.toLowerCase().contains('see product')
+                ? _dosage
+                : 'Check package',
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: _c1,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // ✅ UPDATED: Description tile with simplification loading state
+  // ✅ Updated: Description with loading indicator
   Widget _descriptionTile() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -346,7 +404,6 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
                   color: _c2,
                 ),
               ),
-              // ✅ Show loading spinner while simplifying
               if (_isSimplifying) ...[
                 const SizedBox(width: 8),
                 SizedBox(
@@ -376,17 +433,12 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   }
 
   Widget _flagRow() {
-    // ✅ FIXED: Only show alerts if there's ACTUAL conflict
     final hasRealAllergyConflict = _allergyTrigger.isNotEmpty && 
         _allergyTrigger != 'none' && 
-        _status == 'not safe'; // Only show if it's actually unsafe
+        _status == 'not safe';
     
     final hasPregnancyWarning = _pregnancyWarning == 'caution' || 
         _pregnancyWarning == 'avoid';
-
-    if (!hasRealAllergyConflict && !hasPregnancyWarning) {
-      return const SizedBox.shrink(); // ✅ Hide if no real issues
-    }
 
     return Row(
       children: [
@@ -462,7 +514,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
               Icon(Icons.shield_outlined, size: 15, color: _statusColor),
               const SizedBox(width: 6),
               Text(
-                'Why this result?',
+                'Safety Check',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,

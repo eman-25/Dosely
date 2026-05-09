@@ -113,6 +113,11 @@ class MedicineLookupService {
     for (final candidate in candidates) {
       final medicine = await _fetchMedicine(candidate);
       if (medicine != null) {
+        // ✅ Override `name` with the actual label printed on the box
+        // (the line of OCR text that contains this candidate),
+        // not the generic FDA name. Generic name stays in `generic_name`.
+        final boxLabel = _extractBoxLabel(ocrText, candidate);
+        if (boxLabel.isNotEmpty) medicine['name'] = boxLabel;
         return _runSafetyCheck(uid: uid, medicine: medicine, ocrText: ocrText);
       }
     }
@@ -140,6 +145,10 @@ class MedicineLookupService {
       onStatus?.call('Looking up $candidate…');
       final medicine = await _fetchMedicine(candidate);
       if (medicine != null) {
+        // ✅ Use the actual box label, not the FDA generic name
+        final boxLabel = _extractBoxLabel(ocrText, candidate);
+        if (boxLabel.isNotEmpty) medicine['name'] = boxLabel;
+
         onStatus?.call('Checking against your health profile…');
         final result = await _runSafetyCheck(
             uid: uid, medicine: medicine, ocrText: ocrText);
@@ -158,7 +167,67 @@ class MedicineLookupService {
     if (name.trim().isEmpty) return null;
     final medicine = await _fetchMedicine(name.trim().toLowerCase());
     if (medicine == null) return null;
+    // For typed search, keep what the user typed as the displayed name
+    medicine['name'] = _toTitleCase(name.trim());
     return _runSafetyCheck(uid: uid, medicine: medicine, ocrText: name);
+  }
+
+  // =========================================================================
+  //  Extract the actual brand label as it appears on the box.
+  //
+  //  Given the full OCR text and a winning candidate token (e.g. "panadol"),
+  //  finds the OCR line that contains that token and returns it cleaned up
+  //  so the result screen shows what the user actually scanned
+  //  ("Panadol Extra 500mg") rather than the FDA generic ("acetaminophen").
+  // =========================================================================
+  static String _extractBoxLabel(String ocrText, String candidate) {
+    final candidateLower = candidate.toLowerCase().trim();
+    if (candidateLower.isEmpty) return '';
+
+    final lines = ocrText
+        .split(RegExp(r'[\n\r]+'))
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+
+    // Pick the line that contains the candidate token AND looks like a
+    // product label (mostly letters, reasonable length, not a sentence).
+    String best = '';
+    for (final line in lines) {
+      final lower = line.toLowerCase();
+      if (!lower.contains(candidateLower)) continue;
+
+      // Clean obvious junk: trademark symbols, leading "Brand:" etc.
+      String cleaned = line
+          .replaceAll(RegExp(r'[®™©]'), '')
+          .replaceAll(RegExp(r'^[A-Za-z]+:\s*'), '')
+          .trim();
+
+      // Skip lines that are clearly sentences / instructions
+      if (cleaned.length > 50) continue;
+      // Must be mostly letters (and possibly a dose like "500mg")
+      if (!RegExp(r'^[a-zA-Z0-9\s\-\+\.,/]+$').hasMatch(cleaned)) continue;
+
+      // Prefer the SHORTEST qualifying line — brand labels are concise,
+      // long lines tend to be marketing copy.
+      if (best.isEmpty || cleaned.length < best.length) {
+        best = cleaned;
+      }
+    }
+
+    if (best.isEmpty) return '';
+
+    // Title-case it for display, preserving dose units (mg, ml, etc.)
+    return best
+        .split(RegExp(r'\s+'))
+        .map((w) {
+          if (w.isEmpty) return w;
+          // Keep dose units lowercase ("500mg" stays "500mg")
+          if (RegExp(r'^\d').hasMatch(w)) return w.toLowerCase();
+          return w[0].toUpperCase() + w.substring(1).toLowerCase();
+        })
+        .join(' ')
+        .trim();
   }
 
   // =========================================================================
@@ -249,19 +318,25 @@ class MedicineLookupService {
 
   // =========================================================================
   //  STEP 2 — FETCH MEDICINE DATA
-  //  Order: Firestore cache → DailyMed → OpenFDA → RxNorm approximate
+  //  Order: DailyMed → OpenFDA → RxNorm approximate
+  //  ✅ Firestore cache is NOT read — every scan hits live APIs so the user
+  //  sees real, up-to-date drug info, not whatever was previously stored.
+  //  Writes to Firestore are kept for analytics / offline future use only.
   // =========================================================================
   static Future<Map<String, dynamic>?> _fetchMedicine(String query) async {
     final q = _norm(query);
 
-    // a. Firestore cache
-    final cached = await _fromFirestore(q);
-    if (cached != null) {
-      // Preserve queried dosage if user specified one (e.g. "concor 5mg")
-      final queriedDosage = _extractDosageFromQuery(query);
-      if (queriedDosage != null) cached['dosage'] = queriedDosage;
-      return cached;
-    }
+    // ✅ DISABLED: Firestore cache read.
+    // Previously: if a doc existed in `medicines` collection it short-circuited
+    // the API calls, which sometimes returned stale or partial data.
+    // Now we always query the authoritative sources (DailyMed/OpenFDA/RxNorm).
+    //
+    // final cached = await _fromFirestore(q);
+    // if (cached != null) {
+    //   final queriedDosage = _extractDosageFromQuery(query);
+    //   if (queriedDosage != null) cached['dosage'] = queriedDosage;
+    //   return cached;
+    // }
 
     // Resolve brand name to generic for better API results
     final generic = _resolveGeneric(q);

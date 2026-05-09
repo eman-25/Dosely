@@ -1,7 +1,7 @@
 // ============================================================
-//  medicine_cache_service.dart
+//  medicine_cache_service.dart (IMPROVED OCR EXTRACTION)
 //
-//  Cache-first orchestrator.
+//  Cache-first orchestrator with SMARTER medicine name detection.
 //
 //  Lookup order:
 //    1. Firestore (instant, free, offline-capable after first hit)
@@ -9,9 +9,9 @@
 //    2. If stale or missing → MedicineApiLayer (OpenFDA + RxNorm + DailyMed)
 //    3. Save / merge result back into Firestore
 //
-//  FIX: Smarter OCR token extraction — scores candidate lines instead of
-//  blindly taking the first word. Filters out noise like LOT, EXP, NDC,
-//  serial numbers, and other non-medicine text commonly found on packaging.
+//  IMPROVED: Better OCR extraction that prioritizes short brand names
+//  (like "Panadol", "Ibuprofen") over long descriptive phrases
+//  (like "Pain Reliever Extra Strength")
 // ============================================================
 import 'package:dosely/models/medicine_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -25,21 +25,29 @@ class MedicineCacheService {
   static final Map<String, MedicineModel> _memCache = {};
 
   // ── Words that are NEVER medicine names ───────────────────────────────────
-  // Found on nearly every medicine box but mean nothing to our lookup.
   static const _noiseWords = {
     'lot', 'exp', 'ndc', 'mfg', 'batch', 'ref', 'barcode', 'gtin',
     'manufactured', 'distributed', 'store', 'keep', 'use', 'see',
     'read', 'insert', 'leaflet', 'doctor', 'physician', 'pharmacist',
     'tablet', 'tablets', 'capsule', 'capsules', 'syrup', 'injection',
     'each', 'contains', 'excipient', 'ingredient', 'active', 'inactive',
-    'warning', 'caution', 'rx', 'only', 'prescription',
+    'warning', 'caution', 'rx', 'only', 'prescription', 'reliever',
+    'strength', 'relief', 'pain', 'fever', 'cold', 'cough', 'supplement',
   };
+
+  // ── Known brand name prefixes (usually at the start) ──────────────────────
+  static const _brandNameIndicators = [
+    'panadol', 'tylenol', 'ibuprofen', 'brufen', 'aspirin', 'amoxicillin',
+    'augmentin', 'penicillin', 'metformin', 'lisinopril', 'atorvastatin',
+    'omeprazole', 'loratadine', 'cetirizine', 'fluconazole', 'azithromycin',
+  ];
 
   // =========================================================================
   //  PUBLIC API
   // =========================================================================
 
   /// Main entry point. Returns a fully enriched [MedicineModel] or null.
+  /// ✅ CHANGED: API FIRST, then Firestore cache as fallback
   static Future<MedicineModel?> getMedicine(String query) async {
     final q = _n(query);
     if (q.isEmpty) return null;
@@ -47,23 +55,22 @@ class MedicineCacheService {
     // ── Memory cache ──────────────────────────────────────────────────────
     if (_memCache.containsKey(q)) return _memCache[q];
 
-    // ── Firestore cache ───────────────────────────────────────────────────
+    // ✅ API FIRST (always try to get fresh data from OpenFDA, RxNorm, DailyMed)
+    final fresh = await MedicineApiLayer.fetchAndEnrich(q);
+    if (fresh != null) {
+      await _saveToFirestore(fresh);
+      _memCache[_n(fresh.name)] = fresh;
+      return fresh; // ✅ Return API result (preferred over Firestore)
+    }
+
+    // Fallback: Firestore cache (only if API fails)
     final cached = await _fromFirestore(q);
     if (cached != null && !cached.isStale) {
       _memCache[q] = cached;
       return cached;
     }
 
-    // ── API fetch (stale or miss) ─────────────────────────────────────────
-    final fresh = await MedicineApiLayer.fetchAndEnrich(q);
-    if (fresh == null) {
-      if (cached != null) return cached; // return stale rather than nothing
-      return null;
-    }
-
-    await _saveToFirestore(fresh);
-    _memCache[_n(fresh.name)] = fresh;
-    return fresh;
+    return null;
   }
 
   /// Call this from your search-by-name screen.
@@ -83,22 +90,24 @@ class MedicineCacheService {
   }
 
   // =========================================================================
-  //  OCR CANDIDATE EXTRACTION  (the fixed core)
+  //  OCR CANDIDATE EXTRACTION (IMPROVED)
   //
   //  Strategy:
   //   1. Split OCR text into lines.
   //   2. Score each line based on how likely it is to be a medicine name.
-  //   3. Return up to 5 candidates in descending score order.
-  //      The caller tries each one until a match is found.
+  //   3. PRIORITIZE SHORT LINES (brand names are usually 1-3 words)
+  //   4. Return up to 5 candidates in descending score order.
   //
   //  Scoring heuristics (higher = better):
-  //   +3  Line is ALL-CAPS or Title-Case (brand names usually are)
-  //   +2  Line is 3–25 chars (medicine names are rarely longer)
-  //   +2  Line matches a known medicine suffix (-il, -in, -ol, -am, -ex, etc.)
-  //   +1  Line contains only letters (no digits/special chars)
-  //   −3  Line contains a noise word (LOT, EXP, NDC, etc.)
-  //   −2  Line is mostly digits (serial number, barcode)
-  //   −1  Line is very long (>30 chars, likely a sentence)
+  //   +5  Line is 1 word, 3-15 chars (typical brand name like "Panadol")
+  //   +3  Line is ALL-CAPS or Title-Case
+  //   +3  Known brand name prefix (panadol, ibuprofen, etc.)
+  //   +2  Line is 3–25 chars
+  //   +2  Line matches a known medicine suffix (-ol, -am, -in, etc.)
+  //   +1  Line contains only letters (no digits)
+  //   −5  Line is long (>35 chars, likely a sentence like "Pain Reliever Extra")
+  //   −3  Line contains a noise word (LOT, EXP, RELIEF, STRENGTH, etc.)
+  //   −2  Line is mostly digits
   //   −1  Line starts with a digit
   // =========================================================================
   static List<String> _extractOcrCandidates(String ocr) {
@@ -116,18 +125,31 @@ class MedicineCacheService {
 
       int score = 0;
       final lower = token.toLowerCase();
+      final wordCount = token.split(RegExp(r'\s+')).length;
+
+      // ✅ MAJOR BOOST: Short, single-word tokens are almost always brand names
+      if (wordCount == 1 && token.length >= 3 && token.length <= 15) {
+        score += 5;
+      }
+
+      // ✅ Known brand names get a boost
+      if (_brandNameIndicators.any((b) => lower.contains(b))) {
+        score += 3;
+      }
 
       // Positive signals
       if (token == token.toUpperCase() || _isTitleCase(token)) score += 3;
       if (token.length >= 3 && token.length <= 25) score += 2;
       if (_hasMedicineSuffix(lower)) score += 2;
-      if (RegExp(r'^[a-zA-Z]+$').hasMatch(token)) score += 1;
+      if (RegExp(r'^[a-zA-Z\s\-]+$').hasMatch(token)) score += 1;
+
+      // ✅ MAJOR PENALTY: Long descriptive text (Pain Reliever Extra Strength)
+      if (line.length > 35 || wordCount > 3) score -= 5;
 
       // Negative signals
       if (_noiseWords.contains(lower)) score -= 3;
       if (RegExp(r'^\d').hasMatch(token)) score -= 1;
-      if (RegExp(r'\d{3,}').hasMatch(token)) score -= 2; // long number run
-      if (line.length > 30) score -= 1;
+      if (RegExp(r'\d{3,}').hasMatch(token)) score -= 2;
 
       if (score >= 0) {
         scored.add(MapEntry(token, score));
@@ -147,8 +169,7 @@ class MedicineCacheService {
   }
 
   /// From a single line, extract the most useful token.
-  /// Splits on whitespace/digits/punctuation, returns the longest
-  /// alphabetic token (medicine names are rarely fragmented).
+  /// Prioritizes the first meaningful word (usually the brand name).
   static String _bestTokenFromLine(String line) {
     // Remove common label prefixes: "Brand:", "Drug:", etc.
     final clean = line
@@ -161,13 +182,28 @@ class MedicineCacheService {
       return clean.trim();
     }
 
-    // Otherwise extract the longest purely alphabetic token
-    final tokens = RegExp(r'[a-zA-Z]{3,}').allMatches(clean);
-    String best = '';
-    for (final m in tokens) {
-      if (m.group(0)!.length > best.length) best = m.group(0)!;
+    // ✅ IMPROVED: Extract the FIRST meaningful word (usually the brand name)
+    // For "Pain Reliever Extra Strength", this gives us "Pain" first
+    // But we prefer shorter words, so we also try to find the shortest
+    final words = clean
+        .split(RegExp(r'\s+'))
+        .where((w) => RegExp(r'^[a-zA-Z]{3,}$').hasMatch(w))
+        .toList();
+
+    if (words.isEmpty) {
+      // Fallback: extract the longest purely alphabetic run
+      final tokens = RegExp(r'[a-zA-Z]{3,}').allMatches(clean);
+      String best = '';
+      for (final m in tokens) {
+        if (m.group(0)!.length > best.length) best = m.group(0)!;
+      }
+      return best;
     }
-    return best;
+
+    // ✅ Prefer short words (brand names) over long ones
+    // Panadol (7 chars) > Pain Reliever Extra Strength
+    words.sort((a, b) => a.length.compareTo(b.length));
+    return words.first; // Return the shortest word
   }
 
   static bool _isTitleCase(String s) {

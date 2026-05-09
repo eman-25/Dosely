@@ -29,6 +29,13 @@ class MedicineApiLayer {
   static const _short = Duration(seconds: 6);
   static const _long  = Duration(seconds: 12);
 
+  // ✅ NEW: Filter out descriptive product names
+  static const _descriptiveWords = {
+    'pain', 'reliever', 'relief', 'strength', 'extra', 'strong', 
+    'maximum', 'regular', 'gentle', 'fast', 'acting', 'action',
+    'caplet', 'tablet', 'capsule', 'syrup', 'liquid', 'formula',
+  };
+
   // =========================================================================
   //  GULF / MIDDLE-EAST BRAND → GENERIC NAME MAP
   //  Add any brand sold in Bahrain / GCC that OpenFDA won't recognise.
@@ -307,7 +314,9 @@ class MedicineApiLayer {
     // For Gulf brands: preserve the user's original brand name as `name`
     // even if OpenFDA knows it by a different brand.
     final resolvedBrand = _resolveOriginalBrand(originalQuery);
-    final name        = resolvedBrand ?? _firstOf(brandNames).toLowerCase();
+    
+    // ✅ FIXED: Use _getBestBrandName to filter out descriptive names
+    final name = resolvedBrand ?? _getBestBrandName(brandNames);
     final genericName = _firstOf(genericNames).toLowerCase();
 
     final aliasSet = <String>{};
@@ -359,6 +368,39 @@ class MedicineApiLayer {
         .trim();
     if (_brandToGeneric.containsKey(base)) return base;
     return null;
+  }
+
+  /// ✅ NEW: Get brand name, but filter out descriptive ones
+  /// Prefer actual brand names like "Panadol", not "Pain Reliever Extra Strength"
+  static String _getBestBrandName(List<String> brandNames) {
+    if (brandNames.isEmpty) return '';
+    
+    // ✅ Filter: keep only names that aren't pure descriptive text
+    final filtered = <String>[];
+    for (final name in brandNames) {
+      final lower = name.toLowerCase();
+      
+      // Count how many descriptive words are in this name
+      final descriptiveCount = _descriptiveWords
+          .where((word) => lower.contains(word))
+          .length;
+      
+      // If 2+ descriptive words: it's "Pain Reliever Extra Strength" ❌
+      // If 0-1 descriptive words: it's "Panadol Extra" ✅
+      if (descriptiveCount <= 1 && name.length <= 50) {
+        filtered.add(name);
+      }
+    }
+    
+    // If we filtered everything, use the shortest name
+    if (filtered.isEmpty) {
+      brandNames.sort((a, b) => a.length.compareTo(b.length));
+      return brandNames.first.toLowerCase();
+    }
+    
+    // Use the shortest filtered name (real brand names are short)
+    filtered.sort((a, b) => a.length.compareTo(b.length));
+    return filtered.first.toLowerCase();
   }
 
   // =========================================================================

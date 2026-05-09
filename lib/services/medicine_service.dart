@@ -33,7 +33,16 @@ class MedicineService {
     'each', 'contains', 'excipient', 'ingredient', 'active', 'inactive',
     'warning', 'caution', 'rx', 'only', 'prescription', 'storage',
     'date', 'dosage', 'dose', 'adults', 'children', 'oral', 'route',
+    'reliever', 'strength', 'relief', 'pain', 'fever', 'cold', 'cough',
+    'supplement', 'effective', 'extra',
   };
+
+  // ── Known brand name prefixes ──────────────────────
+  static const _brandNameIndicators = [
+    'panadol', 'tylenol', 'ibuprofen', 'brufen', 'aspirin', 'amoxicillin',
+    'augmentin', 'penicillin', 'metformin', 'lisinopril', 'atorvastatin',
+    'omeprazole', 'loratadine', 'cetirizine', 'fluconazole', 'azithromycin',
+  ];
 
   // =========================================================================
   //  1. IMAGE → OCR TEXT
@@ -47,18 +56,19 @@ class MedicineService {
   }
 
   // =========================================================================
-  //  2. OCR TEXT → RANKED MEDICINE NAME CANDIDATES
+  //  2. OCR TEXT → RANKED MEDICINE NAME CANDIDATES (IMPROVED)
   //
-  //  Scoring per line token:
-  //   +3  ALL-CAPS or TitleCase  (brand names are almost always one of these)
+  //  Scoring heuristics (higher = better):
+  //   +5  Line is 1 word, 3-15 chars (typical brand name like "Panadol")
+  //   +3  ALL-CAPS or TitleCase (brand names usually are)
+  //   +3  Known brand name (panadol, ibuprofen, etc.)
   //   +2  Length 3–25 chars
   //   +2  Known pharmaceutical INN suffix (-olol, -prazole, -mycin, etc.)
-  //   +2  Matched in the Bahrain MOH dictionary
   //   +1  Pure alpha (no digits or special chars)
+  //   −5  Line is long (>35 chars, likely a sentence like "Pain Reliever Extra")
   //   −3  Known noise word
   //   −2  Contains a run of 3+ digits (serial / barcode)
   //   −1  Starts with a digit
-  //   −1  Line longer than 30 chars (likely a sentence)
   // =========================================================================
   static List<String> extractMedicineCandidates(String ocrText) {
     final lines = ocrText
@@ -75,18 +85,31 @@ class MedicineService {
 
       int score = 0;
       final lower = token.toLowerCase();
+      final wordCount = token.split(RegExp(r'\s+')).length;
+
+      // ✅ MAJOR BOOST: Short, single-word tokens are almost always brand names
+      if (wordCount == 1 && token.length >= 3 && token.length <= 15) {
+        score += 5;
+      }
+
+      // ✅ Known brand names get a boost
+      if (_brandNameIndicators.any((b) => lower.contains(b))) {
+        score += 3;
+      }
 
       // Positive signals
       if (token == token.toUpperCase() || _isTitleCase(token)) score += 3;
       if (token.length >= 3 && token.length <= 25) score += 2;
       if (_hasMedicineSuffix(lower)) score += 2;
-      if (RegExp(r'^[a-zA-Z]+$').hasMatch(token)) score += 1;
+      if (RegExp(r'^[a-zA-Z\s\-]+$').hasMatch(token)) score += 1;
+
+      // ✅ MAJOR PENALTY: Long descriptive text (Pain Reliever Extra Strength)
+      if (line.length > 35 || wordCount > 3) score -= 5;
 
       // Negative signals
       if (_noiseWords.contains(lower)) score -= 3;
       if (RegExp(r'^\d').hasMatch(token)) score -= 1;
       if (RegExp(r'\d{3,}').hasMatch(token)) score -= 2;
-      if (line.length > 30) score -= 1;
 
       if (score >= 0) scored.add(MapEntry(token, score));
     }
@@ -229,13 +252,28 @@ class MedicineService {
       return clean.trim();
     }
 
-    // Otherwise pull the longest purely alphabetic run
-    final tokens = RegExp(r'[a-zA-Z]{3,}').allMatches(clean);
-    String best = '';
-    for (final m in tokens) {
-      if (m.group(0)!.length > best.length) best = m.group(0)!;
+    // ✅ IMPROVED: Extract the FIRST meaningful word (usually the brand name)
+    // For "Pain Reliever Extra Strength", prefer "Pain" (short)
+    // But prefer even shorter words, so find the shortest
+    final words = clean
+        .split(RegExp(r'\s+'))
+        .where((w) => RegExp(r'^[a-zA-Z]{3,}$').hasMatch(w))
+        .toList();
+
+    if (words.isEmpty) {
+      // Fallback: extract the longest purely alphabetic run
+      final tokens = RegExp(r'[a-zA-Z]{3,}').allMatches(clean);
+      String best = '';
+      for (final m in tokens) {
+        if (m.group(0)!.length > best.length) best = m.group(0)!;
+      }
+      return best;
     }
-    return best;
+
+    // ✅ Prefer short words (brand names) over long ones
+    // Panadol (7 chars) > Pain Reliever Extra Strength
+    words.sort((a, b) => a.length.compareTo(b.length));
+    return words.first; // Return the shortest word
   }
 
   static bool _isTitleCase(String s) {
