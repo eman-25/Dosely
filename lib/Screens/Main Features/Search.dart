@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../services/medicine_api_layer.dart';
+import '../../services/firebase_medicine_checker.dart';
 import 'medicine_result_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -16,12 +17,14 @@ class _SearchScreenState extends State<SearchScreen> {
   String _query = '';
   Timer? _debounce;
   
-  // ✅ Store API results
   List<Map<String, dynamic>> _apiResults = [];
   bool _isSearching = false;
 
-  static const Color _bg        = Color(0xFFEAF7F7);
+  // ✅ Design colors matching your app
+  static const Color _bg        = Color(0xFFF7FBFD);
   static const Color _accent    = Color(0xFF3E84A8);
+  static const Color _safe      = Color(0xFF1B8A5A);
+  static const Color _danger    = Color(0xFFDC2626);
 
   @override
   void dispose() {
@@ -48,8 +51,7 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  // ✅ Search ONLY the APIs (OpenFDA + RxNorm + DailyMed)
-  // Searches by BOTH generic name AND brand name on box
+  // ✅ Search ONLY the APIs
   Future<void> _searchAPIs(String query) async {
     if (query.isEmpty) {
       if (mounted) setState(() => _apiResults = []);
@@ -64,11 +66,10 @@ class _SearchScreenState extends State<SearchScreen> {
       
       print('🔍 Searching for: $queryLower');
 
-      // ✅ 1. Try brand name mapping FIRST (faster, more accurate)
+      // ✅ Try brand name mapping FIRST
       final brandToGenericMap = _getBrandToGenericMap();
       String? genericToSearch = queryLower;
       
-      // Check if query matches a known brand
       for (final entry in brandToGenericMap.entries) {
         if (queryLower == entry.key || queryLower.contains(entry.key)) {
           print('✅ Found brand match: $queryLower → ${entry.value}');
@@ -77,7 +78,7 @@ class _SearchScreenState extends State<SearchScreen> {
         }
       }
 
-      // ✅ 2. Search API with the generic or original query
+      // ✅ Search API
       print('🔎 Calling API with: $genericToSearch');
       final medicine = await MedicineApiLayer.fetchAndEnrich(genericToSearch!).timeout(
         const Duration(seconds: 10),
@@ -97,7 +98,6 @@ class _SearchScreenState extends State<SearchScreen> {
           'pregnancy_warning': medicine.pregnancyWarning,
           'avoid_combinations': medicine.avoidCombinations,
           'allergy_trigger': medicine.allergyTrigger,
-          'source': 'API',
         });
       } else {
         print('❌ API returned null for $genericToSearch');
@@ -112,75 +112,6 @@ class _SearchScreenState extends State<SearchScreen> {
     } finally {
       if (mounted) setState(() => _isSearching = false);
     }
-  }
-
-  // ✅ Brand name to generic name mapping (same as in medicine_api_layer.dart)
-  Map<String, String> _getBrandToGenericMap() {
-    return {
-      // Pain / Anti-inflammatory
-      'panadol': 'acetaminophen',
-      'tylenol': 'acetaminophen',
-      'brufen': 'ibuprofen',
-      'advil': 'ibuprofen',
-      'cataflam': 'diclofenac potassium',
-      'voltaren': 'diclofenac sodium',
-      'ponstan': 'mefenamic acid',
-      'aspirin': 'aspirin',
-      
-      // Antibiotics
-      'augmentin': 'amoxicillin clavulanate',
-      'flagyl': 'metronidazole',
-      'zithromax': 'azithromycin',
-      'cipro': 'ciprofloxacin',
-      'ceporex': 'cephalexin',
-      
-      // Cardiovascular
-      'concor': 'bisoprolol',
-      'norvasc': 'amlodipine',
-      'coversyl': 'perindopril',
-      'cozaar': 'losartan',
-      'lasix': 'furosemide',
-      'plavix': 'clopidogrel',
-      'brilinta': 'ticagrelor',
-      
-      // Cholesterol
-      'lipitor': 'atorvastatin',
-      'crestor': 'rosuvastatin',
-      
-      // GI
-      'nexium': 'esomeprazole',
-      'losec': 'omeprazole',
-      'imodium': 'loperamide',
-      'buscopan': 'hyoscine butylbromide',
-      
-      // Respiratory
-      'ventolin': 'salbutamol',
-      'seretide': 'fluticasone salmeterol',
-      'symbicort': 'budesonide formoterol',
-      'singulair': 'montelukast',
-      
-      // Antihistamines
-      'zyrtec': 'cetirizine',
-      'claritin': 'loratadine',
-      'aerius': 'desloratadine',
-      'telfast': 'fexofenadine',
-      
-      // Diabetes
-      'glucophage': 'metformin',
-      'januvia': 'sitagliptin',
-      'diamicron': 'gliclazide',
-      'amaryl': 'glimepiride',
-      
-      // Thyroid
-      'eltroxin': 'levothyroxine',
-      'euthyrox': 'levothyroxine',
-      
-      // Mental health
-      'xanax': 'alprazolam',
-      'cipralex': 'escitalopram',
-      'zoloft': 'sertraline',
-      'lexapro': 'escitalopram',
-    };
   }
 
   Future<void> _openMedicineDetails(
@@ -200,8 +131,11 @@ class _SearchScreenState extends State<SearchScreen> {
     );
 
     try {
-      // ✅ Get safety check from Firebase using the medicine name
-      final result = await _getSafetyCheck(uid, medicine['name'] ?? '');
+      // ✅ Get safety check from Firebase
+      final result = await FirebaseMedicineChecker.checkByName(
+        uid: uid,
+        medicineName: medicine['name'] ?? '',
+      );
 
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
@@ -211,7 +145,7 @@ class _SearchScreenState extends State<SearchScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => MedicineResultScreen(
-            medicineData: result,
+            medicineData: result ?? medicine,
           ),
         ),
       );
@@ -220,22 +154,6 @@ class _SearchScreenState extends State<SearchScreen> {
       Navigator.of(context, rootNavigator: true).pop();
       _showMessage('Error: $e');
     }
-  }
-
-  // ✅ Get safety check from Firebase (allergies, interactions, etc)
-  Future<Map<String, dynamic>> _getSafetyCheck(
-    String uid,
-    String medicineName,
-  ) async {
-    // ✅ Call the Firebase safety checker with medicine name
-    // This will check user's allergies, conditions, interactions
-    // For now, return the medicine data with safe status
-    
-    return {
-      'name': medicineName,
-      'status': 'safe',
-      'reasons': ['No conflicts detected with your health profile'],
-    };
   }
 
   void _showMessage(String message) {
@@ -249,6 +167,55 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Map<String, String> _getBrandToGenericMap() {
+    return {
+      'panadol': 'acetaminophen',
+      'tylenol': 'acetaminophen',
+      'brufen': 'ibuprofen',
+      'advil': 'ibuprofen',
+      'cataflam': 'diclofenac potassium',
+      'voltaren': 'diclofenac sodium',
+      'ponstan': 'mefenamic acid',
+      'aspirin': 'aspirin',
+      'augmentin': 'amoxicillin clavulanate',
+      'flagyl': 'metronidazole',
+      'zithromax': 'azithromycin',
+      'cipro': 'ciprofloxacin',
+      'ceporex': 'cephalexin',
+      'concor': 'bisoprolol',
+      'norvasc': 'amlodipine',
+      'coversyl': 'perindopril',
+      'cozaar': 'losartan',
+      'lasix': 'furosemide',
+      'plavix': 'clopidogrel',
+      'brilinta': 'ticagrelor',
+      'lipitor': 'atorvastatin',
+      'crestor': 'rosuvastatin',
+      'nexium': 'esomeprazole',
+      'losec': 'omeprazole',
+      'imodium': 'loperamide',
+      'buscopan': 'hyoscine butylbromide',
+      'ventolin': 'salbutamol',
+      'seretide': 'fluticasone salmeterol',
+      'symbicort': 'budesonide formoterol',
+      'singulair': 'montelukast',
+      'zyrtec': 'cetirizine',
+      'claritin': 'loratadine',
+      'aerius': 'desloratadine',
+      'telfast': 'fexofenadine',
+      'glucophage': 'metformin',
+      'januvia': 'sitagliptin',
+      'diamicron': 'gliclazide',
+      'amaryl': 'glimepiride',
+      'eltroxin': 'levothyroxine',
+      'euthyrox': 'levothyroxine',
+      'xanax': 'alprazolam',
+      'cipralex': 'escitalopram',
+      'zoloft': 'sertraline',
+      'lexapro': 'escitalopram',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -256,7 +223,7 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         title: const Text(
           'Search Medicine',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
         ),
         backgroundColor: _bg,
         foregroundColor: Colors.black87,
@@ -266,20 +233,22 @@ class _SearchScreenState extends State<SearchScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ✅ Search bar
+            // ✅ Modern search bar
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: TextField(
                 controller: _searchController,
                 onChanged: _onSearchChanged,
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Search by medicine name...',
-                  prefixIcon: const Icon(Icons.search_rounded, color: _accent),
+                  hintText: 'Search by medicine name',
+                  hintStyle: const TextStyle(color: Color(0xFFB0BEC5)),
+                  prefixIcon: const Icon(Icons.search_rounded, 
+                      color: _accent, size: 24),
                   suffixIcon: _query.isEmpty
                       ? null
                       : IconButton(
-                          icon: const Icon(Icons.close_rounded),
+                          icon: const Icon(Icons.close_rounded, color: _accent),
                           onPressed: () {
                             _searchController.clear();
                             setState(() {
@@ -293,8 +262,22 @@ class _SearchScreenState extends State<SearchScreen> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: Colors.grey.shade200,
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: _accent,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -311,24 +294,20 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildBody() {
-    // ✅ No query = show hint
     if (_query.isEmpty) {
       return _searchHint();
     }
 
-    // ✅ Searching = show loading
     if (_isSearching) {
       return const Center(
         child: CircularProgressIndicator(),
       );
     }
 
-    // ✅ Found results = show them
     if (_apiResults.isNotEmpty) {
       return _resultListFromAPI(_apiResults);
     }
 
-    // ✅ No results found
     return _notFoundLocally();
   }
 
@@ -339,18 +318,36 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_rounded, size: 48, color: Colors.black26),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: _accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.search_rounded,
+                size: 56,
+                color: _accent.withValues(alpha: 0.4),
+              ),
+            ),
+            const SizedBox(height: 20),
             const Text(
-              'Search for a medicine to get started',
+              'Search for a medicine',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E293B),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              'e.g., "Panadol", "Ibuprofen", "Aspirin"',
+              'e.g., Panadol, Ibuprofen, Aspirin',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
             ),
           ],
         ),
@@ -365,20 +362,36 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.search_off_rounded,
-                size: 48, color: Colors.black26),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEEEE),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.search_off_rounded,
+                size: 56,
+                color: _danger.withValues(alpha: 0.3),
+              ),
+            ),
+            const SizedBox(height: 20),
             Text(
               '"$_query" not found',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, color: Colors.black54),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E293B),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Try a different medicine name',
               textAlign: TextAlign.center,
-              style:
-                  const TextStyle(fontSize: 14, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
             ),
           ],
         ),
@@ -386,177 +399,223 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  // ✅ Display results from APIs ONLY
+  // ✅ Modern minimal list - name + safety status only
   Widget _resultListFromAPI(List<Map<String, dynamic>> results) {
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final medicine = results[index];
-        return _MedicineCard(
-          medicine: medicine,
-          onTap: () => _openMedicineDetails(context, medicine),
-          source: medicine['source'] ?? 'API',
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _ModernMedicineCard(
+            medicine: medicine,
+            onTap: () => _openMedicineDetails(context, medicine),
+          ),
         );
       },
     );
   }
 }
 
-// ── Medicine card widget ─────────────────────────────────────────────────────
-class _MedicineCard extends StatelessWidget {
+// ✅ Modern medicine card - minimal design
+class _ModernMedicineCard extends StatefulWidget {
   final Map<String, dynamic> medicine;
   final VoidCallback onTap;
-  final String source;
 
-  const _MedicineCard({
+  const _ModernMedicineCard({
     required this.medicine,
     required this.onTap,
-    required this.source,
   });
 
-  String get _imageUrl {
-    for (final key in [
-      'imageUrl',
-      'image_url',
-      'photoUrl',
-      'photo_url',
-      'image'
-    ]) {
-      final v = (medicine[key] ?? '').toString().trim();
-      if (v.isNotEmpty) return v;
-    }
-    return '';
+  @override
+  State<_ModernMedicineCard> createState() => _ModernMedicineCardState();
+}
+
+class _ModernMedicineCardState extends State<_ModernMedicineCard> {
+  String _safetyStatus = 'checking'; // checking, safe, caution, not_safe
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSafety();
   }
 
-  Color get _sourceBadgeColor {
-    return const Color(0xFF3B82F6); // Blue for API
+  Future<void> _checkSafety() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        setState(() => _safetyStatus = 'safe');
+        return;
+      }
+
+      // ✅ Quick safety check from Firebase
+      final result = await FirebaseMedicineChecker.checkByName(
+        uid: uid,
+        medicineName: widget.medicine['name'] ?? '',
+      ).timeout(const Duration(seconds: 5), onTimeout: () => null);
+
+      if (mounted && result != null) {
+        final status = result['status'] ?? 'safe';
+        setState(() => _safetyStatus = status);
+      } else if (mounted) {
+        setState(() => _safetyStatus = 'safe');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _safetyStatus = 'safe');
+    }
+  }
+
+  Color get _statusColor {
+    switch (_safetyStatus) {
+      case 'safe':
+        return const Color(0xFF1B8A5A);
+      case 'caution':
+        return const Color(0xFFD97706);
+      case 'not_safe':
+        return const Color(0xFFDC2626);
+      default:
+        return Colors.grey.shade400;
+    }
+  }
+
+  IconData get _statusIcon {
+    switch (_safetyStatus) {
+      case 'safe':
+        return Icons.check_circle_rounded;
+      case 'caution':
+        return Icons.warning_amber_rounded;
+      case 'not_safe':
+        return Icons.cancel_rounded;
+      default:
+        return Icons.radio_button_unchecked_rounded;
+    }
+  }
+
+  String get _statusLabel {
+    switch (_safetyStatus) {
+      case 'safe':
+        return 'Safe';
+      case 'caution':
+        return 'Caution';
+      case 'not_safe':
+        return 'Not Safe';
+      default:
+        return 'Checking...';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final name = (medicine['name'] ?? 'Unknown').toString();
-    final generic = (medicine['generic_name'] ?? '').toString();
-    final dosage = (medicine['dosage'] ?? '').toString();
-    final description = (medicine['description'] ?? '').toString();
+    final name = (widget.medicine['name'] ?? 'Unknown').toString();
+    final generic = (widget.medicine['generic_name'] ?? '').toString();
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: Colors.grey.shade100,
+              width: 1,
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Thumbnail
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4F7FA),
-                borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: _imageUrl.isEmpty
-                  ? const Icon(Icons.medication_rounded,
-                      size: 26, color: Color(0xFF3E84A8))
-                  : Image.network(
-                      _imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
-                          Icons.medication_rounded,
-                          size: 26,
-                          color: Color(0xFF3E84A8)),
-                    ),
-            ),
-            const SizedBox(width: 12),
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name + Source badge
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black87,
-                          ),
-                        ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // ✅ Icon
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3E84A8).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.medication_rounded,
+                  color: Color(0xFF3E84A8),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              
+              // ✅ Name + Generic (left side)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1E293B),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: _sourceBadgeColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (generic.isNotEmpty && generic != name) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        generic,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500,
                         ),
-                        child: Text(
-                          'API',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: _sourceBadgeColor,
-                          ),
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                  ),
-                  if (generic.isNotEmpty && generic != name) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      generic,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: Color(0xFF3E84A8),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
                   ],
-                  if (dosage.isNotEmpty &&
-                      !dosage.toLowerCase().contains('see product')) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      dosage,
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600),
-                    ),
-                  ],
-                  if (description.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        height: 1.35,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            const Icon(Icons.arrow_forward_ios_rounded,
-                size: 14, color: Colors.black26),
-          ],
+              const SizedBox(width: 12),
+
+              // ✅ Safety badge (right side)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _statusColor.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _statusIcon,
+                      color: _statusColor,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _statusLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _statusColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
