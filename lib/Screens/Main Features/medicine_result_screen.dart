@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'Pill_Assistant_Home.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/description_simplifier_service.dart';
 
 class MedicineResultScreen extends StatefulWidget {
   final Map<String, dynamic> medicineData;
@@ -28,10 +29,35 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   static const Color _warn   = Color(0xFFD97706);
   static const Color _danger = Color(0xFFDC2626);
 
+  String? _simplifiedDescription; // ✅ Cache for simplified description
+  bool _isSimplifying = false;
+
   @override
   void initState() {
     super.initState();
     _trackMedication();
+    // ✅ Initialize Gemini before calling
+    DescriptionSimplifierService.initialize();
+    _simplifyDescriptionOnLoad(); // ✅ Auto-simplify on screen load
+  }
+
+  // ✅ NEW: Generate simple explanation using Pillo's Gemini API
+  Future<void> _simplifyDescriptionOnLoad() async {
+    setState(() {
+      _isSimplifying = true;
+    });
+
+    final simplified = await DescriptionSimplifierService.generateSimpleExplanation(
+      medicineName: _name,
+      genericName: _generic,
+    );
+
+    if (mounted) {
+      setState(() {
+        _simplifiedDescription = simplified;
+        _isSimplifying = false;
+      });
+    }
   }
 
   Future<void> _trackMedication() async {
@@ -69,33 +95,12 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   String get _pregnancyWarning =>
       (widget.medicineData['pregnancy_warning'] ?? '').toString().trim().toLowerCase();
 
+  // ✅ UPDATED: Always show simplified description from Pillo
   String get _description {
-    final raw = (widget.medicineData['description'] ?? '').toString().trim();
-    final usable = raw.isNotEmpty &&
-        !raw.toLowerCase().contains('see product label') &&
-        !raw.toLowerCase().contains('consult your pharmacist') &&
-        raw.length > 15;
-
-    if (usable) {
-      // Strip junk prefixes, keep only first clean sentence
-      String s = raw
-          .replaceAll(RegExp(
-              r'\b(USES|USES:|DESCRIPTION:|INDICATIONS:|PURPOSE:)\b\s*',
-              caseSensitive: false), '')
-          .replaceAll(RegExp(r'\s+'), ' ')
-          .trim();
-      final dot = s.indexOf('.');
-      if (dot > 20 && dot < 200) s = s.substring(0, dot + 1);
-      if (s.length > 200) s = '${s.substring(0, 200)}...';
-      return s;
+    if (_simplifiedDescription != null && _simplifiedDescription!.isNotEmpty) {
+      return _simplifiedDescription!; // ✅ Simple user-friendly version
     }
-
-    // Fallback: build a minimal indication from the generic name
-    final generic = (widget.medicineData['generic_name'] ?? '').toString().trim();
-    if (generic.isNotEmpty) {
-      return 'A medicine containing $generic. Consult the package leaflet for full indications.';
-    }
-    return 'Consult the package leaflet or your pharmacist for full indications.';
+    return 'Loading explanation...'; // Show while simplifying
   }
 
   // ── Status helpers ──────────────────────────────────────────────────────────
@@ -138,9 +143,16 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
 
   bool get _canAddToSchedule => _status != 'not safe';
 
-  bool get _hasFlags =>
-      (_allergyTrigger.isNotEmpty && _allergyTrigger != 'none') ||
-      (_pregnancyWarning == 'caution' || _pregnancyWarning == 'avoid');
+  bool get _hasFlags {
+    final hasRealAllergyConflict = _allergyTrigger.isNotEmpty && 
+        _allergyTrigger != 'none' && 
+        _status == 'not safe';
+    
+    final hasPregnancyWarning = _pregnancyWarning == 'caution' || 
+        _pregnancyWarning == 'avoid';
+    
+    return hasRealAllergyConflict || hasPregnancyWarning;
+  }
 
   // ── Build ───────────────────────────────────────────────────────────────────
 
@@ -178,11 +190,11 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
               const SizedBox(height: 14),
             ],
 
-            // ── VERDICT CARD — the most important thing ───────────────────
+            // ── VERDICT CARD ───────────────────────────────────────────────
             _verdictCard(),
             const SizedBox(height: 12),
 
-            // ── INDICATIONS FOR USE — always shown ───────────────────────
+            // ── INDICATIONS FOR USE (NOW SIMPLIFIED!) ──────────────────────
             _descriptionTile(),
             const SizedBox(height: 8),
 
@@ -219,7 +231,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: _statusBg,
-        border: Border.all(color: _statusColor.withOpacity(0.30), width: 1.5),
+        border: Border.all(color: _statusColor.withValues(alpha: 0.30), width: 1.5),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -234,14 +246,12 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
                 _statusLabel,
                 style: TextStyle(
                   fontSize: 19,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   color: _statusColor,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Container(height: 1, color: const Color(0xFFE2E8F0)),
           const SizedBox(height: 14),
 
           // Medicine name
@@ -249,43 +259,43 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
             _name,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF1E293B),
-              letterSpacing: -0.3,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: _c1,
+              height: 1.2,
             ),
           ),
-
-          // Generic name
-          if (_generic.isNotEmpty && _generic.toLowerCase() != _name.toLowerCase()) ...[
-            const SizedBox(height: 3),
+          if (_generic.isNotEmpty) ...[
+            const SizedBox(height: 4),
             Text(
-              _generic,
+              '(${ _generic})',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
+                color: _c1.withValues(alpha: 0.65),
               ),
             ),
           ],
-
-          // Dosage pill
           if (showDosage) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(100),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                color: Colors.white.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _statusColor.withValues(alpha: 0.15),
+                  width: 1,
+                ),
               ),
               child: Text(
-                _dosage,
-                style: const TextStyle(
-                  fontSize: 13,
+                '💊 ${ _dosage}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF475569),
+                  color: _c1.withValues(alpha: 0.8),
                 ),
               ),
             ),
@@ -295,40 +305,52 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     );
   }
 
+  // ✅ UPDATED: Description tile with simplification loading state
   Widget _descriptionTile() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: _c2.withValues(alpha: 0.15), width: 1),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.medication_liquid_rounded,
-                  size: 15, color: Color(0xFF3E84A8)),
-              SizedBox(width: 6),
+              Icon(Icons.info_outlined, size: 16, color: _c2),
+              const SizedBox(width: 6),
               Text(
-                'What it\'s used for',
+                'What it does',
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF3E84A8),
-                  letterSpacing: 0.3,
+                  color: _c2,
                 ),
               ),
+              // ✅ Show loading spinner while simplifying
+              if (_isSimplifying) ...[
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(_c2),
+                  ),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 10),
           Text(
             _description,
             style: const TextStyle(
-              fontSize: 13.5,
-              height: 1.55,
+              fontSize: 14,
+              height: 1.6,
               color: Color(0xFF334155),
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],
@@ -337,25 +359,33 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   }
 
   Widget _flagRow() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 6,
+    // ✅ FIXED: Only show alerts if there's ACTUAL conflict
+    final hasRealAllergyConflict = _allergyTrigger.isNotEmpty && 
+        _allergyTrigger != 'none' && 
+        _status == 'not safe'; // Only show if it's actually unsafe
+    
+    final hasPregnancyWarning = _pregnancyWarning == 'caution' || 
+        _pregnancyWarning == 'avoid';
+
+    if (!hasRealAllergyConflict && !hasPregnancyWarning) {
+      return const SizedBox.shrink(); // ✅ Hide if no real issues
+    }
+
+    return Row(
       children: [
-        if (_allergyTrigger.isNotEmpty && _allergyTrigger != 'none')
+        if (hasRealAllergyConflict)
           _flagPill(
             icon: Icons.warning_rounded,
-            label: 'Contains: ${_allergyTrigger}',
-            color: Colors.deepOrange,
+            label: 'Allergy Alert',
+            color: Colors.red.shade700,
           ),
+        if (hasRealAllergyConflict && hasPregnancyWarning)
+          const SizedBox(width: 8),
         if (_pregnancyWarning == 'avoid')
           _flagPill(
             icon: Icons.pregnant_woman_rounded,
-            label: _status == 'not safe'
-                ? 'Unsafe in pregnancy'
-                : 'Not for use in pregnancy',
-            color: _status == 'not safe'
-                ? Colors.red.shade700
-                : Colors.orange.shade700,
+            label: 'Not for use in pregnancy',
+            color: Colors.red.shade700,
           ),
         if (_pregnancyWarning == 'caution')
           _flagPill(
@@ -375,9 +405,9 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: color.withOpacity(0.28)),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -405,7 +435,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
       decoration: BoxDecoration(
         color: _statusBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _statusColor.withOpacity(0.22)),
+        border: Border.all(color: _statusColor.withValues(alpha: 0.22)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,7 +566,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8EB),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFCD34D).withOpacity(0.6)),
+        border: Border.all(color: const Color(0xFFFCD34D).withValues(alpha: 0.6)),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -560,14 +590,6 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   }
 
   void _navigateToSchedule(BuildContext context) {
-    // ── Replace with your actual schedule screen navigation ──────────────
-    // Navigator.push(context, MaterialPageRoute(
-    //   builder: (_) => YourScheduleScreen(
-    //     medicineName: widget.medicineData['name'] ?? '',
-    //     genericName:  widget.medicineData['generic_name'] ?? '',
-    //     dosage:       widget.medicineData['dosage'] ?? '',
-    //   ),
-    // ));
     final name    = widget.medicineData['name'] ?? '';
     final generic = widget.medicineData['generic_name'] ?? '';
     final dosage  = widget.medicineData['dosage'] ?? '';
