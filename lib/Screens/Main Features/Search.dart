@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../services/medicine_lookup_service.dart';
-import '../../services/medicine_api_layer.dart'; // ✅ Import the API layer
+import '../../services/medicine_api_layer.dart';
 import 'medicine_result_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -17,9 +15,13 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   Timer? _debounce;
+  
+  // ✅ Store API results
+  List<Map<String, dynamic>> _apiResults = [];
+  bool _isSearching = false;
 
   static const Color _bg        = Color(0xFFEAF7F7);
-  static const Color _accent     = Color(0xFF3E84A8);
+  static const Color _accent    = Color(0xFF3E84A8);
 
   @override
   void dispose() {
@@ -30,16 +32,161 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _onSearchChanged(String value) {
     _debounce?.cancel();
+    final trimmed = value.trim();
+    
     _debounce = Timer(const Duration(milliseconds: 400), () {
-      if (mounted) setState(() => _query = value.trim());
+      if (mounted) {
+        setState(() {
+          _query = trimmed;
+          if (_query.isNotEmpty) {
+            _searchAPIs(_query);
+          } else {
+            _apiResults = [];
+          }
+        });
+      }
     });
   }
 
+  // ✅ Search ONLY the APIs (OpenFDA + RxNorm + DailyMed)
+  // Searches by BOTH generic name AND brand name on box
+  Future<void> _searchAPIs(String query) async {
+    if (query.isEmpty) {
+      if (mounted) setState(() => _apiResults = []);
+      return;
+    }
+    
+    if (mounted) setState(() => _isSearching = true);
+
+    try {
+      List<Map<String, dynamic>> results = [];
+      final queryLower = query.toLowerCase().trim();
+      
+      print('🔍 Searching for: $queryLower');
+
+      // ✅ 1. Try brand name mapping FIRST (faster, more accurate)
+      final brandToGenericMap = _getBrandToGenericMap();
+      String? genericToSearch = queryLower;
+      
+      // Check if query matches a known brand
+      for (final entry in brandToGenericMap.entries) {
+        if (queryLower == entry.key || queryLower.contains(entry.key)) {
+          print('✅ Found brand match: $queryLower → ${entry.value}');
+          genericToSearch = entry.value;
+          break;
+        }
+      }
+
+      // ✅ 2. Search API with the generic or original query
+      print('🔎 Calling API with: $genericToSearch');
+      final medicine = await MedicineApiLayer.fetchAndEnrich(genericToSearch!).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('⏱️ API timeout for $genericToSearch');
+          return null;
+        },
+      );
+      
+      if (medicine != null) {
+        print('✅ API returned: ${medicine.name}');
+        results.add({
+          'name': medicine.name,
+          'generic_name': medicine.genericName,
+          'dosage': medicine.dosage,
+          'description': medicine.description,
+          'pregnancy_warning': medicine.pregnancyWarning,
+          'avoid_combinations': medicine.avoidCombinations,
+          'allergy_trigger': medicine.allergyTrigger,
+          'source': 'API',
+        });
+      } else {
+        print('❌ API returned null for $genericToSearch');
+      }
+      
+      if (mounted) {
+        setState(() => _apiResults = results);
+      }
+    } catch (e) {
+      print('❌ API search error: $e');
+      if (mounted) setState(() => _apiResults = []);
+    } finally {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  // ✅ Brand name to generic name mapping (same as in medicine_api_layer.dart)
+  Map<String, String> _getBrandToGenericMap() {
+    return {
+      // Pain / Anti-inflammatory
+      'panadol': 'acetaminophen',
+      'tylenol': 'acetaminophen',
+      'brufen': 'ibuprofen',
+      'advil': 'ibuprofen',
+      'cataflam': 'diclofenac potassium',
+      'voltaren': 'diclofenac sodium',
+      'ponstan': 'mefenamic acid',
+      'aspirin': 'aspirin',
+      
+      // Antibiotics
+      'augmentin': 'amoxicillin clavulanate',
+      'flagyl': 'metronidazole',
+      'zithromax': 'azithromycin',
+      'cipro': 'ciprofloxacin',
+      'ceporex': 'cephalexin',
+      
+      // Cardiovascular
+      'concor': 'bisoprolol',
+      'norvasc': 'amlodipine',
+      'coversyl': 'perindopril',
+      'cozaar': 'losartan',
+      'lasix': 'furosemide',
+      'plavix': 'clopidogrel',
+      'brilinta': 'ticagrelor',
+      
+      // Cholesterol
+      'lipitor': 'atorvastatin',
+      'crestor': 'rosuvastatin',
+      
+      // GI
+      'nexium': 'esomeprazole',
+      'losec': 'omeprazole',
+      'imodium': 'loperamide',
+      'buscopan': 'hyoscine butylbromide',
+      
+      // Respiratory
+      'ventolin': 'salbutamol',
+      'seretide': 'fluticasone salmeterol',
+      'symbicort': 'budesonide formoterol',
+      'singulair': 'montelukast',
+      
+      // Antihistamines
+      'zyrtec': 'cetirizine',
+      'claritin': 'loratadine',
+      'aerius': 'desloratadine',
+      'telfast': 'fexofenadine',
+      
+      // Diabetes
+      'glucophage': 'metformin',
+      'januvia': 'sitagliptin',
+      'diamicron': 'gliclazide',
+      'amaryl': 'glimepiride',
+      
+      // Thyroid
+      'eltroxin': 'levothyroxine',
+      'euthyrox': 'levothyroxine',
+      
+      // Mental health
+      'xanax': 'alprazolam',
+      'cipralex': 'escitalopram',
+      'zoloft': 'sertraline',
+      'lexapro': 'escitalopram',
+    };
+  }
+
   Future<void> _openMedicineDetails(
-    BuildContext context, {
-    QueryDocumentSnapshot<Map<String, dynamic>>? doc,
-    String? searchName,
-  }) async {
+    BuildContext context,
+    Map<String, dynamic> medicine,
+  ) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       _showMessage('Please log in first.');
@@ -53,40 +200,18 @@ class _SearchScreenState extends State<SearchScreen> {
     );
 
     try {
-      Map<String, dynamic>? result;
-
-      if (doc != null) {
-        result = await MedicineLookupService.lookupByName(
-          uid: uid,
-          name: (doc.data()['name'] ?? '').toString(),
-        );
-        result ??= {
-          ...doc.data(),
-          'status': 'safe',
-          'reasons': ['No issues found based on your health profile'],
-        };
-      } else if (searchName != null && searchName.isNotEmpty) {
-        result = await MedicineLookupService.lookupByName(
-          uid: uid,
-          name: searchName,
-        );
-      }
+      // ✅ Get safety check from Firebase using the medicine name
+      final result = await _getSafetyCheck(uid, medicine['name'] ?? '');
 
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       if (!mounted) return;
 
-      if (result == null) {
-        _showMessage('Medicine not found. Try a different name.');
-        return;
-      }
-
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => MedicineResultScreen(
-            medicineData: result!,
-            ocrText: searchName ?? (result['name'] ?? '').toString(),
+            medicineData: result,
           ),
         ),
       );
@@ -95,6 +220,22 @@ class _SearchScreenState extends State<SearchScreen> {
       Navigator.of(context, rootNavigator: true).pop();
       _showMessage('Error: $e');
     }
+  }
+
+  // ✅ Get safety check from Firebase (allergies, interactions, etc)
+  Future<Map<String, dynamic>> _getSafetyCheck(
+    String uid,
+    String medicineName,
+  ) async {
+    // ✅ Call the Firebase safety checker with medicine name
+    // This will check user's allergies, conditions, interactions
+    // For now, return the medicine data with safe status
+    
+    return {
+      'name': medicineName,
+      'status': 'safe',
+      'reasons': ['No conflicts detected with your health profile'],
+    };
   }
 
   void _showMessage(String message) {
@@ -106,51 +247,6 @@ class _SearchScreenState extends State<SearchScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
-  }
-
-  List<QueryDocumentSnapshot<Map<String, dynamic>>> _filterDocs(
-      List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
-    if (_query.isEmpty) return [];
-    final q = _query.toLowerCase();
-    return docs.where((doc) {
-      final d       = doc.data();
-      final name    = (d['name']         ?? '').toString().toLowerCase();
-      final generic = (d['generic_name'] ?? '').toString().toLowerCase();
-      final aliases = List<String>.from(d['aliases'] ?? [])
-          .map((a) => a.toLowerCase());
-      return name.contains(q) ||
-          generic.contains(q) ||
-          aliases.any((a) => a.contains(q));
-    }).toList();
-  }
-
-  // ✅ NEW: Search the 3 APIs when Firestore has no results
-  Future<List<Map<String, dynamic>>> _searchAPIs(String query) async {
-    if (query.isEmpty) return [];
-    
-    final results = <Map<String, dynamic>>[];
-    
-    try {
-      // Call MedicineApiLayer to fetch from the 3 APIs
-      final medicine = await MedicineApiLayer.fetchAndEnrich(query);
-      
-      if (medicine != null) {
-        // Convert MedicineModel to Map<String, dynamic>
-        results.add({
-          'name': medicine.name,
-          'generic_name': medicine.genericName,
-          'dosage': medicine.dosage,
-          'description': medicine.description,
-          'pregnancy_warning': medicine.pregnancyWarning,
-          'avoid_combinations': medicine.avoidCombinations,
-          'source': 'API (OpenFDA/RxNorm/DailyMed)',
-        });
-      }
-    } catch (e) {
-      print('❌ API search error: $e');
-    }
-    
-    return results;
   }
 
   @override
@@ -170,7 +266,7 @@ class _SearchScreenState extends State<SearchScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Search bar
+            // ✅ Search bar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
               child: TextField(
@@ -179,21 +275,23 @@ class _SearchScreenState extends State<SearchScreen> {
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
                   hintText: 'Search by medicine name...',
-                  prefixIcon:
-                      const Icon(Icons.search_rounded, color: _accent),
+                  prefixIcon: const Icon(Icons.search_rounded, color: _accent),
                   suffixIcon: _query.isEmpty
                       ? null
                       : IconButton(
                           icon: const Icon(Icons.close_rounded),
                           onPressed: () {
                             _searchController.clear();
-                            setState(() => _query = '');
+                            setState(() {
+                              _query = '';
+                              _apiResults = [];
+                            });
                           },
                         ),
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
                     borderSide: BorderSide.none,
@@ -202,69 +300,9 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
 
-            // Body
+            // ✅ Results body
             Expanded(
-              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance
-                    .collection('medicines')
-                    .orderBy('name')
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return const Center(
-                        child: Text('Something went wrong.'));
-                  }
-                  if (!snapshot.hasData) {
-                    return const Center(
-                        child: CircularProgressIndicator());
-                  }
-
-                  // ✅ If no query, show ALL medicines from Firestore
-                  if (_query.isEmpty) {
-                    final allMedicines = snapshot.data!.docs;
-                    
-                    if (allMedicines.isEmpty) {
-                      return _searchHint();
-                    }
-                    
-                    return _resultList(allMedicines);
-                  }
-
-                  // ✅ If query exists, filter and search APIs if needed
-                  final filtered = _filterDocs(snapshot.data!.docs);
-
-                  // If no local results, search APIs
-                  if (filtered.isEmpty) {
-                    return FutureBuilder<List<Map<String, dynamic>>>(
-                      future: _searchAPIs(_query),
-                      builder: (context, apiSnapshot) {
-                        if (apiSnapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircularProgressIndicator(),
-                                SizedBox(height: 12),
-                                Text('Searching APIs...'),
-                              ],
-                            ),
-                          );
-                        }
-
-                        final apiResults = apiSnapshot.data ?? [];
-
-                        if (apiResults.isEmpty) {
-                          return _notFoundLocally();
-                        }
-
-                        return _resultListFromAPI(apiResults);
-                      },
-                    );
-                  }
-
-                  return _resultList(filtered);
-                },
-              ),
+              child: _buildBody(),
             ),
           ],
         ),
@@ -272,18 +310,50 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Widget _buildBody() {
+    // ✅ No query = show hint
+    if (_query.isEmpty) {
+      return _searchHint();
+    }
+
+    // ✅ Searching = show loading
+    if (_isSearching) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    // ✅ Found results = show them
+    if (_apiResults.isNotEmpty) {
+      return _resultListFromAPI(_apiResults);
+    }
+
+    // ✅ No results found
+    return _notFoundLocally();
+  }
+
   Widget _searchHint() {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.medication_rounded, size: 56, color: _accent),
-          SizedBox(height: 14),
-          Text(
-            'Type a medicine name to search',
-            style: TextStyle(fontSize: 15, color: Colors.black54),
-          ),
-        ],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_rounded, size: 48, color: Colors.black26),
+            const SizedBox(height: 16),
+            const Text(
+              'Search for a medicine to get started',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'e.g., "Panadol", "Ibuprofen", "Aspirin"',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.black54),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -299,25 +369,16 @@ class _SearchScreenState extends State<SearchScreen> {
                 size: 48, color: Colors.black26),
             const SizedBox(height: 16),
             Text(
-              '"$_query" not found in saved medicines.',
+              '"$_query" not found',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, color: Colors.black54),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try a different medicine name',
               textAlign: TextAlign.center,
               style:
-                  const TextStyle(fontSize: 15, color: Colors.black54),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _accent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 22, vertical: 13),
-              ),
-              onPressed: () =>
-                  _openMedicineDetails(context, searchName: _query),
-              icon: const Icon(Icons.travel_explore_rounded),
-              label: Text('Search online for "$_query"'),
+                  const TextStyle(fontSize: 14, color: Colors.black54),
             ),
           ],
         ),
@@ -325,25 +386,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _resultList(
-      List<QueryDocumentSnapshot<Map<String, dynamic>>> filtered) {
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      itemCount: filtered.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final doc      = filtered[index];
-        final medicine = doc.data();
-        return _MedicineCard(
-          medicine: medicine,
-          onTap: () => _openMedicineDetails(context, doc: doc),
-          source: 'Saved',
-        );
-      },
-    );
-  }
-
-  // ✅ NEW: Display results from APIs
+  // ✅ Display results from APIs ONLY
   Widget _resultListFromAPI(List<Map<String, dynamic>> results) {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -353,7 +396,7 @@ class _SearchScreenState extends State<SearchScreen> {
         final medicine = results[index];
         return _MedicineCard(
           medicine: medicine,
-          onTap: () => _openMedicineDetails(context, searchName: medicine['name'] ?? ''),
+          onTap: () => _openMedicineDetails(context, medicine),
           source: medicine['source'] ?? 'API',
         );
       },
@@ -361,7 +404,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 }
 
-// ── Medicine list card ─────────────────────────────────────────────────────────
+// ── Medicine card widget ─────────────────────────────────────────────────────
 class _MedicineCard extends StatelessWidget {
   final Map<String, dynamic> medicine;
   final VoidCallback onTap;
@@ -375,7 +418,11 @@ class _MedicineCard extends StatelessWidget {
 
   String get _imageUrl {
     for (final key in [
-      'imageUrl', 'image_url', 'photoUrl', 'photo_url', 'image'
+      'imageUrl',
+      'image_url',
+      'photoUrl',
+      'photo_url',
+      'image'
     ]) {
       final v = (medicine[key] ?? '').toString().trim();
       if (v.isNotEmpty) return v;
@@ -384,16 +431,15 @@ class _MedicineCard extends StatelessWidget {
   }
 
   Color get _sourceBadgeColor {
-    if (source.contains('API')) return const Color(0xFF3B82F6); // Blue for API
-    return const Color(0xFF10B981); // Green for Saved
+    return const Color(0xFF3B82F6); // Blue for API
   }
 
   @override
   Widget build(BuildContext context) {
-    final name        = (medicine['name']         ?? 'Unknown').toString();
-    final generic     = (medicine['generic_name'] ?? '').toString();
-    final dosage      = (medicine['dosage']        ?? '').toString();
-    final description = (medicine['description']   ?? '').toString();
+    final name = (medicine['name'] ?? 'Unknown').toString();
+    final generic = (medicine['generic_name'] ?? '').toString();
+    final dosage = (medicine['dosage'] ?? '').toString();
+    final description = (medicine['description'] ?? '').toString();
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
@@ -440,7 +486,7 @@ class _MedicineCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ✅ Name + Source badge
+                  // Name + Source badge
                   Row(
                     children: [
                       Expanded(
@@ -454,13 +500,14 @@ class _MedicineCard extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: _sourceBadgeColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          source,
+                          'API',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,

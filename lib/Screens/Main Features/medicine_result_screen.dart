@@ -39,7 +39,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     _simplifyDescriptionOnLoad();
   }
 
-  // ✅ ENHANCED: Generate explanation + personalized dosage based on user health
+  /// Generate smart explanation of what the medicine does (personalized)
   Future<void> _simplifyDescriptionOnLoad() async {
     setState(() {
       _isSimplifying = true;
@@ -53,13 +53,11 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
       } catch (_) {}
     }
 
-    double? weightInKg;
-
     final simplified = await DescriptionSimplifierService.generateDetailedExplanation(
       medicineName: _name,
       genericName: _generic,
       ageInYears: ageInYears,
-      weightInKg: weightInKg,
+      weightInKg: null,
       allergies: widget.medicineData['allergies'] ?? '',
       chronicConditions: widget.medicineData['chronicConditions'] ?? '',
       specialConditions: widget.medicineData['specialConditions'] ?? '',
@@ -75,13 +73,12 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
 
   Future<void> _trackMedication() async {
     try {
-      // ✅ FIXED: Use 'name' field (brand name), not generic name
       final name = (widget.medicineData['name'] ?? '').toString();
       if (name.isEmpty) return;
       
       await FirebaseFirestore.instance.collection('medication_events').add({
-        'medication_name': name,  // ✅ Brand name (e.g., "Panadol Extra")
-        'generic_name': widget.medicineData['generic_name'] ?? '',  // Also save generic for reference
+        'medication_name': name,
+        'generic_name': widget.medicineData['generic_name'] ?? '',
         'event_type': widget.imagePath != null ? 'scan/upload' : 'search',
         'timestamp': FieldValue.serverTimestamp(),
       });
@@ -90,8 +87,6 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
 
   // ── Parsed data ─────────────────────────────────────────────────────────────
 
-  // Brand label as printed on the box. Already cleaned & title-cased by
-  // the lookup service, so we display it as-is (preserves "500mg", "5%", etc.)
   String get _name {
     final raw = (widget.medicineData['name'] ?? 'Unknown Medicine').toString().trim();
     return raw.isEmpty ? 'Unknown Medicine' : raw;
@@ -99,9 +94,6 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
 
   String get _generic =>
       _cap((widget.medicineData['generic_name'] ?? '').toString());
-
-  String get _dosage =>
-      (widget.medicineData['dosage'] ?? '').toString().trim();
 
   String get _status =>
       (widget.medicineData['status'] ?? 'unknown').toString().toLowerCase();
@@ -115,7 +107,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   String get _pregnancyWarning =>
       (widget.medicineData['pregnancy_warning'] ?? '').toString().trim().toLowerCase();
 
-  // ✅ UPDATED: Always show simplified description
+  /// Smart description from AI or fallback
   String get _description {
     if (_simplifiedDescription != null && _simplifiedDescription!.isNotEmpty) {
       return _simplifiedDescription!;
@@ -210,7 +202,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
               const SizedBox(height: 16),
             ],
 
-            // ✅ MODERN CARD: Brand Name + Dosage + Status + Generic Name
+            // ✅ MODERN CARD: Status + Brand Name + Generic Name (NO DOSAGE)
             _modernMedicineCard(),
             const SizedBox(height: 16),
 
@@ -242,7 +234,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     );
   }
 
-  // ✅ Card: Status FIRST (big banner) → Brand from box → Generic → Dosage
+  /// ✅ UPDATED: Card with Status + Brand Name + Generic Name (REMOVED DOSAGE)
   Widget _modernMedicineCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -306,7 +298,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
 
           // ── 2️⃣ BRAND NAME (as printed on the box) ──────────────────────
           Text(
-            'Name on box',
+            'Medicine name',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -328,59 +320,32 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
           const SizedBox(height: 14),
 
           // ── 3️⃣ GENERIC NAME (from drug databases) ──────────────────────
-          Text(
-            'Generic name',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-              letterSpacing: 0.4,
+          if (_generic.isNotEmpty) ...[
+            Text(
+              'Generic name',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+                letterSpacing: 0.4,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _generic.isNotEmpty ? _generic : 'Not available',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: _generic.isNotEmpty ? _c2 : Colors.grey.shade500,
-              fontStyle:
-                  _generic.isNotEmpty ? FontStyle.normal : FontStyle.italic,
+            const SizedBox(height: 4),
+            Text(
+              _generic,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: _c2,
+              ),
             ),
-          ),
-
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 14),
-
-          // ── 4️⃣ DOSAGE ──────────────────────────────────────────────────
-          Text(
-            'Dosage',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-              letterSpacing: 0.4,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _dosage.isNotEmpty &&
-                    !_dosage.toLowerCase().contains('see product')
-                ? _dosage
-                : 'Check package',
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: _c1,
-            ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  // ✅ Updated: Description with loading indicator
+  /// Smart AI-generated description section
   Widget _descriptionTile() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -432,6 +397,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     );
   }
 
+  /// Flag pills for allergies and pregnancy warnings
   Widget _flagRow() {
     final hasRealAllergyConflict = _allergyTrigger.isNotEmpty && 
         _allergyTrigger != 'none' && 
@@ -496,6 +462,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     );
   }
 
+  /// Safety check reasons
   Widget _reasonsCard() {
     if (_reasons.isEmpty) return const SizedBox.shrink();
 
@@ -564,6 +531,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     );
   }
 
+  /// Action buttons: Add to Schedule & Ask Pillo
   Widget _actionButtons(BuildContext context) {
     return Row(
       children: [
@@ -629,6 +597,7 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     );
   }
 
+  /// Legal disclaimer
   Widget _disclaimer() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
@@ -661,10 +630,9 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   void _navigateToSchedule(BuildContext context) {
     final name    = widget.medicineData['name'] ?? '';
     final generic = widget.medicineData['generic_name'] ?? '';
-    final dosage  = widget.medicineData['dosage'] ?? '';
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(
-        'Adding $name${generic.isNotEmpty ? " ($generic)" : ""}${dosage.isNotEmpty ? " · $dosage" : ""} to schedule.',
+        'Adding $name${generic.isNotEmpty ? " ($generic)" : ""} to schedule.',
       ),
       backgroundColor: _c2,
       behavior: SnackBarBehavior.floating,
