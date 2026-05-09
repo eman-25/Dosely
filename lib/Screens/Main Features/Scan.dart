@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../services/medicine_lookup_service.dart';
 import 'medicine_result_screen.dart';
 
@@ -184,12 +185,12 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: const [
-              CircularProgressIndicator(),
-              SizedBox(height: 14),
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 14),
               Text(
-                'Opening camera...',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                'scan_medicine'.tr(),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -247,9 +248,9 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
                       borderRadius: BorderRadius.circular(30),
                       border: Border.all(color: Colors.white.withOpacity(0.18)),
                     ),
-                    child: const Text(
-                      'Scan Medicine',
-                      style: TextStyle(
+                    child: Text(
+                      'scan_btn'.tr(),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
                       ),
@@ -273,10 +274,10 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: Colors.white.withOpacity(0.16)),
                   ),
-                  child: const Text(
-                    'Place the medicine name and dosage inside the frame.',
+                  child: Text(
+                    'scan_subtitle'.tr(),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -339,19 +340,19 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
-                          children: const [
+                          children: [
                             Text(
-                              'Ready to scan',
-                              style: TextStyle(
+                              'scan_medicine'.tr(),
+                              style: const TextStyle(
                                 color: _dark,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              'Try to avoid blur and keep the box text clear.',
-                              style: TextStyle(
+                              'scan_subtitle'.tr(),
+                              style: const TextStyle(
                                 color: Colors.black54,
                                 height: 1.35,
                               ),
@@ -408,12 +409,12 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        CircularProgressIndicator(color: _primary),
-                        SizedBox(height: 14),
+                      children: [
+                        const CircularProgressIndicator(color: _primary),
+                        const SizedBox(height: 14),
                         Text(
-                          'Reading medicine...',
-                          style: TextStyle(
+                          'scan_medicine'.tr(),
+                          style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
                             color: _dark,

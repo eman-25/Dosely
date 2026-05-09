@@ -205,5 +205,10 @@
 "profile_updated": "Profil mis à jour avec succès",
 "failed_to_save": "Échec de la sauvegarde des modifications. Veuillez réessayer.",
 "health_update_reminder_title": "Gardez vos informations de santé à jour",
-"health_update_reminder_desc": "Pour obtenir des résultats de sécurité systématiquement précis, veuillez consulter et confirmer vos informations de santé tous les 60 jours — surtout si vos médicaments ou conditions ont changé."
+"health_update_reminder_desc": "Pour obtenir des résultats de sécurité systématiquement précis, veuillez consulter et confirmer vos informations de santé tous les 60 jours — surtout si vos médicaments ou conditions ont changé.",
+"trending": "Tendances Maintenant",
+"recent_searches": "Recherches Récentes",
+"search_reminder_title": "Conseil : Utilisez les Noms Génériques",
+"search_reminder_desc": "Pour de meilleurs résultats, recherchez en utilisant le nom générique du médicament (par exemple, ibuprofène, paracétamol). Si aucun résultat n'apparaît, téléchargez une photo de l'emballage du médicament.",
+"search_reminder_upload": "Essayez de télécharger une photo du médicament à la place"
 }

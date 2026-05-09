@@ -205,5 +205,10 @@
 "profile_updated": "Perfil actualizado correctamente",
 "failed_to_save": "No se pudo guardar los cambios. Inténtalo de nuevo.",
 "health_update_reminder_title": "Mantén actualizada tu información de salud",
-"health_update_reminder_desc": "Para obtener resultados de seguridad consistentemente precisos, por favor revisa y confirma tu información de salud cada 60 días — especialmente si tus medicamentos o condiciones han cambiado."
+"health_update_reminder_desc": "Para obtener resultados de seguridad consistentemente precisos, por favor revisa y confirma tu información de salud cada 60 días — especialmente si tus medicamentos o condiciones han cambiado.",
+"trending": "Tendencias Ahora",
+"recent_searches": "Búsquedas Recientes",
+"search_reminder_title": "Consejo: Usa Nombres Genéricos",
+"search_reminder_desc": "Para obtener mejores resultados, busca usando el nombre genérico del medicamento (p.ej., ibuprofeno, paracetamol). Si no aparecen resultados, sube una foto del empaque del medicamento.",
+"search_reminder_upload": "Intenta cargar una foto del medicamento en su lugar"
 }

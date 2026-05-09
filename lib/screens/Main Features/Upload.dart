@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../services/medicine_lookup_service.dart';
 import 'medicine_result_screen.dart';
 
@@ -132,9 +133,9 @@ class _UploadState extends State<Upload> {
                           border: Border.all(
                               color: Colors.white.withValues(alpha: 0.2)),
                         ),
-                        child: const Text(
-                          'Upload & Scan',
-                          style: TextStyle(
+                        child: Text(
+                          'upload_btn'.tr(),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                           ),
@@ -307,9 +308,9 @@ class _UploadState extends State<Upload> {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        const Text(
-                          'Analyzing medicine',
-                          style: TextStyle(
+                        Text(
+                          'scan_medicine'.tr(),
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             color: _c1,
@@ -379,19 +380,19 @@ class _EmptyState extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        const Text(
-          'Upload a Medicine Photo',
-          style: TextStyle(
+        Text(
+          'upload_title'.tr(),
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: Color(0xFF48466E),
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Choose a photo of the medicine\nlabel, box, or packaging',
+        Text(
+          'upload_subtitle'.tr(),
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 14,
             color: Colors.black45,
             height: 1.5,
