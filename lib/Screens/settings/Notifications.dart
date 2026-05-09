@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import '/theme.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -20,7 +20,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.w400, fontSize: 22)),
+        title: Text('notifications'.tr(), style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 22)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.black,
@@ -28,9 +28,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         children: [
-          _buildSectionHeader(Icons.medication, 'Critical Medication Alerts'),
+          _buildSectionHeader(Icons.medication, 'medication_reminders_title'.tr()),
           _buildSwitchTile(
-            title: 'Intake Reminders',
+            title: 'medication_reminders_subtitle'.tr(),
             desc: 'Notifications for your scheduled doses.',
             value: _intakeReminders,
             onChanged: (v) => setState(() => _intakeReminders = v),
@@ -55,9 +55,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
           
           const SizedBox(height: 32),
-          _buildSectionHeader(Icons.system_update_alt, 'Application Updates'),
+          _buildSectionHeader(Icons.system_update_alt, 'app_updates_title'.tr()),
           _buildSwitchTile(
-            title: 'New Features & Announcements',
+            title: 'health_tips_title'.tr(),
             desc: 'Be the first to know about new app capabilities.',
             value: _appUpdates,
             onChanged: (v) => setState(() => _appUpdates = v),
@@ -167,13 +167,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'System Notification Settings',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black),
+                      Text(
+                        'manage_notifications'.tr(),
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Adjust critical permissions at the system level for priority alerts and lock-screen display.',
+                        'open_device_settings'.tr(),
                         style: TextStyle(fontSize: 14.5, color: Colors.black87, height: 1.25),
                       ),
                     ],

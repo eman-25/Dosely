@@ -173,9 +173,9 @@ $suggestion
 
             /// ⭐ RATING
             const SizedBox(height: 20),
-            const Text(
-              "Rate your experience",
-              style: TextStyle(fontWeight: FontWeight.w600),
+            Text(
+              'allow_analytics'.tr(),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
 
@@ -207,14 +207,14 @@ $suggestion
 
             /// SUGGESTIONS
             const SizedBox(height: 20),
-            const Text(
-              "Suggestions for improvement",
-              style: TextStyle(fontWeight: FontWeight.w600),
+            Text(
+              'personalized_recommendations'.tr(),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
 
             CustomTextField(
-              hint: "Tell us how we can improve...",
+              hint: 'personalized_recommendations'.tr(),
               controller: _suggestionController,
               maxLines: 3,
             ),

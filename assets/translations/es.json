@@ -203,5 +203,7 @@
 "take_a_photo": "Tomar una foto",
 "remove_photo": "Eliminar foto",
 "profile_updated": "Perfil actualizado correctamente",
-"failed_to_save": "No se pudo guardar los cambios. Inténtalo de nuevo."
+"failed_to_save": "No se pudo guardar los cambios. Inténtalo de nuevo.",
+"health_update_reminder_title": "Mantén actualizada tu información de salud",
+"health_update_reminder_desc": "Para obtener resultados de seguridad consistentemente precisos, por favor revisa y confirma tu información de salud cada 60 días — especialmente si tus medicamentos o condiciones han cambiado."
 }

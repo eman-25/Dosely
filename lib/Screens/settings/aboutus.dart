@@ -43,9 +43,9 @@ class AboutUsScreen extends StatelessWidget {
             const SizedBox(height: 32),
             Text('version'.tr()),
             const SizedBox(height: 32),
-            const Text(
+            Text(
               'Contact Founders',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             ListTile(
@@ -57,7 +57,7 @@ class AboutUsScreen extends StatelessWidget {
                 ),
                 child: const Icon(Icons.email_outlined, color: AppColors.primaryBlue),
               ),
-              title: const Text('Email', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: Text('email'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('doselysupport@gmail.com'),
               onTap: () async {
                 final url = Uri.parse('mailto:doselysupport@gmail.com');

@@ -21,7 +21,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F4F7),
       appBar: AppBar(
-        title: const Text('Security & Privacy Center', style: TextStyle(fontWeight: FontWeight.w600)),
+        title: Text('privacy'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppColors.text,
@@ -62,15 +62,15 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
-                child: Text('How We Use Your Health Data',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text('data_usage'.tr(),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          const Text('Ensuring Your Medication Safety',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          Text('data_collection'.tr(),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           _buildRichBullet(
             icon: Icons.medication,
@@ -138,8 +138,8 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Exercise Your Rights',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('your_rights'.tr(),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 Icon(Icons.pan_tool_outlined, size: 28, color: const Color(0xFF3E84A8)),
               ],
             ),
@@ -170,7 +170,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-             Icon(icon, size: 28, color: const Color(0xFF3E84A8)),
+            Icon(icon, size: 28, color: const Color(0xFF3E84A8)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -204,10 +204,10 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 8),
-            child: Text('Privacy Controls',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 8),
+            child: Text('privacy'.tr(),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
           SwitchListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -253,13 +253,13 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Account Management',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('account_management'.tr(),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               Icon(Icons.manage_accounts_outlined, size: 28, color: const Color(0xFF3E84A8)),
             ],
           ),
           const SizedBox(height: 16),
-          const Text('Delete Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFD32F2F))),
+          Text('delete_account'.tr(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFD32F2F))),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -273,7 +273,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text('DELETE MY ACCOUNT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text('delete_my_account'.tr(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ],

@@ -204,6 +204,7 @@
 "take_a_photo": "Take a Photo",
 "remove_photo": "Remove Photo",
 "profile_updated": "Profile updated successfully",
-"failed_to_save": "Failed to save changes. Please try again."
+"failed_to_save": "Failed to save changes. Please try again.",
+"health_update_reminder_title": "Keep your health data up to date",
+"health_update_reminder_desc": "For consistently accurate safety results, please review and confirm your health information every 60 days — especially if your medications or conditions have changed."
 }
-

@@ -97,7 +97,7 @@ class _EditPersonalHealthInfoScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
+          SnackBar(content: Text('failed_to_save'.tr())),
         );
       }
     } finally {
@@ -169,7 +169,7 @@ class _EditPersonalHealthInfoScreenState
             ),
             const SizedBox(height: 8),
             _buildMultiDropdown(
-              hint: 'Select all that apply',
+              hint: 'select'.tr(),
               items: HealthData.allergies,
               selected: selectedAllergies,
               onChanged: (val) => setState(
@@ -185,7 +185,7 @@ class _EditPersonalHealthInfoScreenState
             ),
             const SizedBox(height: 8),
             _buildMultiDropdown(
-              hint: 'Select all that apply',
+              hint: 'select'.tr(),
               items: HealthData.chronicConditions,
               selected: selectedChronic,
               onChanged: (val) => setState(
@@ -201,7 +201,7 @@ class _EditPersonalHealthInfoScreenState
             ),
             const SizedBox(height: 8),
             _buildMultiDropdown(
-              hint: 'Select all that apply',
+              hint: 'select'.tr(),
               items: HealthData.medications,
               selected: selectedMeds,
               onChanged: (val) => setState(
@@ -248,7 +248,7 @@ class _EditPersonalHealthInfoScreenState
             ),
             const SizedBox(height: 8),
             _buildMultiDropdown(
-              hint: 'Select all that apply',
+              hint: 'select'.tr(),
               items: _filteredSpecialConditions(),
               selected: selectedSpecial,
               onChanged: (val) => setState(
@@ -358,7 +358,7 @@ class _EditPersonalHealthInfoScreenState
   }
 }
 
-// ── 20-day update reminder banner ─────────────────────────────────────────────
+// ── 60-day update reminder banner ─────────────────────────────────────────────
 class _UpdateReminderBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -369,12 +369,12 @@ class _UpdateReminderBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFFCD34D).withOpacity(0.7)),
       ),
-      child: Row(
+      child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.update_rounded, color: Color(0xFFD97706), size: 20),
-          const SizedBox(width: 10),
-          const Expanded(
+          Icon(Icons.update_rounded, color: Color(0xFFD97706), size: 20),
+          SizedBox(width: 10),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -389,7 +389,7 @@ class _UpdateReminderBanner extends StatelessWidget {
                 SizedBox(height: 3),
                 Text(
                   'For consistently accurate safety results, please review and '
-                  'confirm your health information every 20 days — especially if '
+                  'confirm your health information every 60 days — especially if '
                   'your medications or conditions have changed.',
                   style: TextStyle(
                     fontSize: 12.5,

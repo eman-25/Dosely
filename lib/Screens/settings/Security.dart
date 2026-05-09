@@ -70,8 +70,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Your health and data are secure',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text('account_protected'.tr(),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 4),
                       Text('last_password_change'.tr(),
                           style: const TextStyle(color: Colors.black87, fontSize: 13)),
@@ -86,8 +86,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Security Tips & Guidelines',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              Text('security'.tr(),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
@@ -100,24 +100,24 @@ class _SecurityScreenState extends State<SecurityScreen> {
           const SizedBox(height: 20),
           _buildInfoCard(
             icon: Icons.lock_outline,
-            title: 'Privacy Protection',
+            title: 'security'.tr(),
             subtitle: 'Medication details are encrypted and invisible to third parties.',
           ),
           _buildInfoCard(
             icon: Icons.people_outline,
-            title: 'Do Not Share PIN',
+            title: 'account_protected'.tr(),
             subtitle: 'Dosely team will never request your secret PIN.',
             badgeIcon: Icons.cancel,
             badgeColor: Colors.redAccent,
           ),
           _buildInfoCard(
             icon: Icons.sync,
-            title: 'Update App',
+            title: 'app_updates_title'.tr(),
             subtitle: 'Regular application updates protect you from vulnerabilities.',
           ),
           _buildInfoCard(
             icon: Icons.fingerprint,
-            title: 'Secure Your Phone',
+            title: 'biometric_auth'.tr(),
             subtitle: 'Ensure your phone screen is locked with a PIN or biometric.',
           ),
           const SizedBox(height: 20),

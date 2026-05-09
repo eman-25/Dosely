@@ -359,7 +359,7 @@ class _HealthUpdateReminder extends StatelessWidget {
                   SizedBox(height: 3),
                   const Text(
                     'For accurate safety results, update your health data '
-                    'every 20 days or whenever your medications or conditions change.',
+                    'every 60 days or whenever your medications or conditions change.',
                     style: TextStyle(
                       fontSize: 12.5,
                       color: Color(0xFF1E40AF),
