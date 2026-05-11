@@ -76,13 +76,34 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     try {
       final name = (widget.medicineData['name'] ?? '').toString();
       if (name.isEmpty) return;
-      
-      await FirebaseFirestore.instance.collection('medication_events').add({
+
+      final db = FirebaseFirestore.instance;
+
+      // Track event (trending, history)
+      await db.collection('medication_events').add({
         'medication_name': name,
         'generic_name': widget.medicineData['generic_name'] ?? '',
         'event_type': widget.imagePath != null ? 'scan/upload' : 'search',
         'timestamp': FieldValue.serverTimestamp(),
       });
+
+      // Save medicine to the shared `medicines` collection so it appears
+      // in future searches even when APIs are unavailable.
+      final docId = name.toLowerCase().replaceAll(RegExp(r'\s+'), '_');
+      await db.collection('medicines').doc(docId).set({
+        'name': name,
+        'generic_name': widget.medicineData['generic_name'] ?? '',
+        'dosage': widget.medicineData['dosage'] ?? '',
+        'description': widget.medicineData['description'] ?? '',
+        'avoid_combinations': widget.medicineData['avoid_combinations'] ?? <String>[],
+        'allergy_trigger': widget.medicineData['allergy_trigger'] ?? '',
+        'pregnancy_warning': widget.medicineData['pregnancy_warning'] ?? 'none',
+        'aliases': <String>[
+          name.toLowerCase(),
+          ((widget.medicineData['generic_name'] ?? '') as String).toLowerCase(),
+        ].where((s) => s.isNotEmpty).toList(),
+        '_saved_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     } catch (_) {}
   }
 

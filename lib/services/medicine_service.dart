@@ -16,7 +16,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:dosely/models/medicine_model.dart';
+import 'package:dosely/Screens/Main Features/api_key.dart';
 import 'medicine_cache_service.dart';
 import 'firebase_medicine_checker.dart';
 
@@ -132,6 +134,35 @@ class MedicineService {
   }
 
   // =========================================================================
+  //  AI-POWERED NAME EXTRACTION
+  //  Uses Gemini to identify the medicine name from raw OCR text.
+  //  Returns null on failure so callers can fall back to the heuristic.
+  // =========================================================================
+  static Future<String?> aiExtractMedicineName(String ocrText) async {
+    if (ocrText.trim().isEmpty) return null;
+    try {
+      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
+      final prompt = '''The following text was scanned from a medicine box using OCR:
+
+"""
+$ocrText
+"""
+
+What is the medicine name? Return ONLY the medicine brand name or generic name (e.g. "Panadol", "Amoxicillin", "Ibuprofen"). No explanation, no extra text, just the name.''';
+
+      final response = await model
+          .generateContent([Content.text(prompt)])
+          .timeout(const Duration(seconds: 8));
+
+      final name = (response.text ?? '').trim().split('\n').first.trim();
+      if (name.isEmpty || name.length > 40) return null;
+      return name;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // =========================================================================
   //  3. BAHRAIN MOH DRUG DICTIONARY LOOKUP
   //
   //  The Ministry of Health Bahrain publishes a searchable drug dictionary at:
@@ -191,7 +222,13 @@ class MedicineService {
   //    d. First successful result is returned; auto-saved by CacheService
   // =========================================================================
   static Future<MedicineModel?> lookupFromOcr(String ocrText) async {
-    final candidates = extractMedicineCandidates(ocrText);
+    // Try AI extraction first — it understands context better than heuristics
+    final aiName = await aiExtractMedicineName(ocrText);
+
+    final candidates = [
+      if (aiName != null) aiName,
+      ...extractMedicineCandidates(ocrText),
+    ];
     if (candidates.isEmpty) return null;
 
     for (final candidate in candidates) {

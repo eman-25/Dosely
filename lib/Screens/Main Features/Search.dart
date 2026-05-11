@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/medicine_api_layer.dart';
+import '../../services/firebase_medicine_checker.dart';
 import '../../services/trending_service.dart';
 import 'medicine_result_screen.dart';
 import 'Upload.dart';
@@ -116,57 +118,90 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  // ✅ Search ONLY the APIs
+  // Search APIs + Firestore, then run real safety checks
   Future<void> _searchAPIs(String query) async {
     if (query.isEmpty) {
       if (mounted) setState(() => _apiResults = []);
       return;
     }
-    
+
     if (mounted) setState(() => _isSearching = true);
 
     try {
-      List<Map<String, dynamic>> results = [];
       final queryLower = query.toLowerCase().trim();
-      
-      print('🔍 Searching for: $queryLower');
 
-      // ✅ Try brand name mapping FIRST
+      // Brand → generic mapping
       final brandToGenericMap = _getBrandToGenericMap();
-      String? genericToSearch = queryLower;
-      
+      String genericToSearch = queryLower;
       for (final entry in brandToGenericMap.entries) {
         if (queryLower == entry.key || queryLower.contains(entry.key)) {
-          print('✅ Found brand match: $queryLower → ${entry.value}');
           genericToSearch = entry.value;
           break;
         }
       }
 
-      // ✅ Search API
-      print('🔎 Calling API with: $genericToSearch');
-      final medicine = await MedicineApiLayer.fetchAndEnrich(genericToSearch!).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          print('⏱️ API timeout for $genericToSearch');
-          return null;
-        },
-      );
-      
-      if (medicine != null) {
-        print('✅ API returned: ${medicine.name}');
-        results.add({
-          'name': medicine.name,
-          'generic_name': medicine.genericName,
-          'dosage': medicine.dosage,
-          'description': medicine.description,
-          'pregnancy_warning': medicine.pregnancyWarning,
-          'avoid_combinations': medicine.avoidCombinations,
-          'allergy_trigger': medicine.allergyTrigger,
-        });
-        
-        // ✅ Save search
-        await _saveSearch(query);
+      // Run API search and Firestore search in parallel
+      final futures = await Future.wait([
+        MedicineApiLayer.fetchAndEnrich(genericToSearch).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => null,
+        ),
+        _searchFirestore(query),
+      ]);
+
+      final apiMed = futures[0] as dynamic;
+      final firestoreMeds = futures[1] as List<Map<String, dynamic>>;
+
+      final seen = <String>{};
+      final results = <Map<String, dynamic>>[];
+
+      if (apiMed != null) {
+        final m = apiMed;
+        final name = (m.name as String).toLowerCase();
+        if (seen.add(name)) {
+          results.add({
+            'name': m.name,
+            'generic_name': m.genericName,
+            'dosage': m.dosage,
+            'description': m.description,
+            'pregnancy_warning': m.pregnancyWarning,
+            'avoid_combinations': m.avoidCombinations,
+            'allergy_trigger': m.allergyTrigger,
+          });
+        }
+      }
+
+      for (final med in firestoreMeds) {
+        final name = ((med['name'] as String?) ?? '').toLowerCase();
+        if (name.isNotEmpty && seen.add(name)) {
+          results.add(med);
+        }
+      }
+
+      if (results.isNotEmpty) await _saveSearch(query);
+
+      // Run safety checks for all results in parallel
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null && results.isNotEmpty) {
+        final safetyFutures = results.map((r) =>
+          FirebaseMedicineChecker.checkByName(
+            uid: uid,
+            medicineName: (r['name'] as String? ?? '').isNotEmpty
+                ? r['name'] as String
+                : r['generic_name'] as String? ?? '',
+          ).catchError((_) => null),
+        );
+        final safetyList = await Future.wait(safetyFutures);
+        for (int i = 0; i < results.length; i++) {
+          final safety = safetyList[i];
+          if (safety != null) {
+            results[i] = {
+              ...results[i],
+              'status': safety['status'] ?? 'unknown',
+              'reasons': safety['reasons'] ?? <String>[],
+            };
+          }
+        }
       }
 
       if (mounted) {
@@ -176,15 +211,60 @@ class _SearchScreenState extends State<SearchScreen> {
         });
       }
     } catch (e) {
-      print('❌ Search error: $e');
       if (mounted) {
         setState(() => _isSearching = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('error'.tr(args: [e.toString()]))),
-        );
       }
     }
   }
+
+  // Search the Firestore medicines collection by name / generic_name prefix
+  Future<List<Map<String, dynamic>>> _searchFirestore(String query) async {
+    if (query.trim().length < 2) return [];
+    final db = FirebaseFirestore.instance;
+    final cap = query.trim()[0].toUpperCase() + query.trim().substring(1).toLowerCase();
+    final end = cap + '';
+    final results = <Map<String, dynamic>>[];
+    final seen = <String>{};
+
+    Future<void> addDocs(QuerySnapshot<Map<String, dynamic>> snap) async {
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final name = (data['name'] as String? ?? '').toLowerCase();
+        if (name.isNotEmpty && seen.add(name)) {
+          results.add(_firestoreDocToMap(data));
+        }
+      }
+    }
+
+    try {
+      await Future.wait([
+        db.collection('medicines')
+            .orderBy('name')
+            .startAt([cap]).endAt([end])
+            .limit(4)
+            .get()
+            .then(addDocs),
+        db.collection('medicines')
+            .orderBy('generic_name')
+            .startAt([cap]).endAt([end])
+            .limit(4)
+            .get()
+            .then(addDocs),
+      ]);
+    } catch (_) {}
+
+    return results;
+  }
+
+  Map<String, dynamic> _firestoreDocToMap(Map<String, dynamic> d) => {
+    'name': d['name'] ?? '',
+    'generic_name': d['generic_name'] ?? '',
+    'dosage': d['dosage'] ?? '',
+    'description': d['description'] ?? '',
+    'pregnancy_warning': d['pregnancy_warning'] ?? 'none',
+    'avoid_combinations': List<String>.from(d['avoid_combinations'] ?? []),
+    'allergy_trigger': d['allergy_trigger'] ?? '',
+  };
 
   void _openMedicineDetails(BuildContext context, Map<String, dynamic> medicine) {
     Navigator.push(
@@ -640,13 +720,10 @@ class _ModernMedicineCardState extends State<_ModernMedicineCard> {
     _checkSafety();
   }
 
-  Future<void> _checkSafety() async {
-    // For now, set to 'checking' briefly then 'unknown'
-    // Full safety check requires proper Firebase setup
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (mounted) {
-      setState(() => _safetyStatus = 'unknown');
-    }
+  void _checkSafety() {
+    // Status is computed by _searchAPIs before results are shown
+    final status = (widget.medicine['status'] as String? ?? 'unknown').toLowerCase();
+    setState(() => _safetyStatus = status);
   }
 
   @override
@@ -668,12 +745,14 @@ class _ModernMedicineCardState extends State<_ModernMedicineCard> {
         safetyColor = _warning;
         safetyIcon = Icons.warning_rounded;
         break;
+      case 'not safe':
       case 'not_safe':
         safetyColor = _danger;
         safetyIcon = Icons.cancel_rounded;
         break;
       default:
-        safetyIcon = Icons.hourglass_bottom_rounded;
+        safetyColor = Colors.grey.shade400;
+        safetyIcon = Icons.help_outline_rounded;
     }
 
     return GestureDetector(

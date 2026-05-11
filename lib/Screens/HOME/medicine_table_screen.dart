@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 
 import '../Main Features/Pill_Assistant_Home.dart';
 import 'notification_service.dart';
+import '../../services/description_simplifier_service.dart';
 
 class MedicineTableScreen extends StatefulWidget {
   final Map<String, dynamic>? prefillMedicine;
@@ -54,7 +55,7 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
       body: Dismissible(
         key: const Key('medicine_table_dismissible'),
         direction: DismissDirection.down,
-        onDismissed: (_) => Navigator.of(context).pop(),
+        onDismissed: (_) => Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false),
         child: Stack(
           children: [
             Container(
@@ -219,10 +220,16 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
     setState(() => _adding = true);
 
     try {
+      // Use AI to produce a clean, short medicine name and dosage
+      final cleaned = await MedicineNameCleaner.clean(
+        rawName: (prefill['name'] ?? '').toString(),
+        rawDosage: (prefill['dosage'] ?? '').toString(),
+      );
+
       final docRef = await _tableRef.add({
-        'medicineName': (prefill['name'] ?? '').toString(),
+        'medicineName': cleaned['name'],
         'genericName': (prefill['generic_name'] ?? '').toString(),
-        'dosage': (prefill['dosage'] ?? '').toString(),
+        'dosage': cleaned['dosage'],
         'description': (prefill['description'] ?? '').toString(),
         'imageUrl': (prefill['imageUrl'] ?? '').toString(),
         'status': (prefill['_safetyStatus'] ?? 'safe').toString(),
@@ -235,18 +242,22 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
         'addedAt': FieldValue.serverTimestamp(),
       });
 
-      // Schedule notification for this medicine
-      await NotificationService.scheduleMedicine(
-        id: NotificationService.idFromDocId(docRef.id),
-        name: (prefill['name'] ?? 'Medicine').toString(),
-        hour: result['hour'] as int,
-        minute: result['minute'] as int,
-        weekdays: List<int>.from(result['days'] as List),
-      );
-
       _showMessage('Medicine added to your schedule.');
+
+      // Schedule notification — failure here does NOT undo the save
+      try {
+        await NotificationService.scheduleMedicine(
+          id: NotificationService.idFromDocId(docRef.id),
+          name: cleaned['name']!,
+          hour: result['hour'] as int,
+          minute: result['minute'] as int,
+          weekdays: List<int>.from(result['days'] as List),
+        );
+      } catch (_) {
+        // Notification scheduling failed silently; medicine is still saved
+      }
     } catch (e) {
-      _showMessage('Failed to add medicine: $e');
+      _showMessage('Failed to add medicine. Please try again.');
     } finally {
       if (mounted) setState(() => _adding = false);
     }
@@ -257,170 +268,36 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
   ) async {
     final data = doc.data();
 
-    final nameCtrl =
-        TextEditingController(text: (data['medicineName'] ?? '').toString());
-    final dosageCtrl =
-        TextEditingController(text: (data['dosage'] ?? '').toString());
-    final descCtrl =
-        TextEditingController(text: (data['description'] ?? '').toString());
-    final imageCtrl =
-        TextEditingController(text: (data['imageUrl'] ?? '').toString());
-
-    TimeOfDay selectedTime = TimeOfDay(
-      hour: ((data['timeHour'] as num?)?.toInt() ?? 8).clamp(0, 23),
-      minute: ((data['timeMinute'] as num?)?.toInt() ?? 0).clamp(0, 59),
-    );
-
-    final selectedWeekdays = _readWeekdays(data);
-
-    final ok = await showDialog<bool>(
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          title: const Text('Edit Medicine'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Medicine Name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: dosageCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Dosage',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descCtrl,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: imageCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Image URL',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Scheduled time'),
-                  subtitle: Text(selectedTime.format(ctx)),
-                  trailing: const Icon(Icons.access_time),
-                  onTap: () async {
-                    final picked = await showTimePicker(
-                      context: ctx,
-                      initialTime: selectedTime,
-                    );
-                    if (picked != null) {
-                      setLocal(() => selectedTime = picked);
-                    }
-                  },
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Repeat on days',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: List.generate(7, (index) {
-                    final weekday = index + 1;
-                    final selected = selectedWeekdays.contains(weekday);
-                    return FilterChip(
-                      selected: selected,
-                      label: Text(_weekdayShort(weekday)),
-                      onSelected: (value) {
-                        setLocal(() {
-                          if (value) {
-                            selectedWeekdays.add(weekday);
-                          } else {
-                            selectedWeekdays.remove(weekday);
-                          }
-                        });
-                      },
-                    );
-                  }),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Changes are saved directly after pressing Update.',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Update'),
-            ),
-          ],
-        ),
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditScheduleSheet(data: data),
     );
 
-    if (ok != true) return;
-
-    if (nameCtrl.text.trim().isEmpty) {
-      _showMessage('Medicine name is required.');
-      return;
-    }
-
-    if (selectedWeekdays.isEmpty) {
-      _showMessage('Choose at least one day.');
-      return;
-    }
+    if (result == null) return;
 
     try {
       await doc.reference.update({
-        'medicineName': nameCtrl.text.trim(),
-        'dosage': dosageCtrl.text.trim(),
-        'description': descCtrl.text.trim(),
-        'imageUrl': imageCtrl.text.trim(),
-        'timeHour': selectedTime.hour,
-        'timeMinute': selectedTime.minute,
-        'selectedDays': selectedWeekdays.toList()..sort(),
+        'medicineName': result['name'] as String,
+        'timeHour':    result['hour'] as int,
+        'timeMinute':  result['minute'] as int,
+        'selectedDays': result['days'] as List<int>,
       });
 
-      // Reschedule notification with updated time/days
-      await NotificationService.scheduleMedicine(
-        id: NotificationService.idFromDocId(doc.id),
-        name: nameCtrl.text.trim(),
-        hour: selectedTime.hour,
-        minute: selectedTime.minute,
-        weekdays: selectedWeekdays.toList(),
-      );
+      try {
+        await NotificationService.scheduleMedicine(
+          id: NotificationService.idFromDocId(doc.id),
+          name: result['name'] as String,
+          hour: result['hour'] as int,
+          minute: result['minute'] as int,
+          weekdays: List<int>.from(result['days'] as List),
+        );
+      } catch (_) {}
 
       _showMessage('Medicine updated.');
     } catch (e) {
-      _showMessage('Failed to update medicine: $e');
+      _showMessage('Failed to update medicine.');
     }
   }
 
@@ -513,19 +390,6 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
           .toSet();
     }
     return <int>{1, 2, 3, 4, 5, 6, 7};
-  }
-
-  static String _weekdayShort(int weekday) {
-    const map = {
-      1: 'Mon',
-      2: 'Tue',
-      3: 'Wed',
-      4: 'Thu',
-      5: 'Fri',
-      6: 'Sat',
-      7: 'Sun',
-    };
-    return map[weekday]!;
   }
 
   static String _dateKey(DateTime date) {
@@ -1714,6 +1578,443 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
   }
 
   Widget _medPlaceholder() => Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: Colors.white12,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.medication_rounded,
+            color: Colors.white54, size: 28),
+      );
+}
+
+// ── Edit schedule bottom sheet ────────────────────────────────────────────────
+
+class _EditScheduleSheet extends StatefulWidget {
+  final Map<String, dynamic> data;
+  const _EditScheduleSheet({required this.data});
+
+  @override
+  State<_EditScheduleSheet> createState() => _EditScheduleSheetState();
+}
+
+class _EditScheduleSheetState extends State<_EditScheduleSheet> {
+  static const _c1 = Color(0xFF48466E);
+  static const _c2 = Color(0xFF3E84A8);
+  static const _c3 = Color(0xFF4ACED0);
+
+  static const _dayLabels = {1: 'M', 2: 'T', 3: 'W', 4: 'T', 5: 'F', 6: 'S', 7: 'S'};
+  static const _dayFull   = {1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'};
+
+  late final TextEditingController _nameCtrl;
+  late TimeOfDay _time;
+  late Set<int> _days;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(
+      text: (widget.data['medicineName'] ?? '').toString(),
+    );
+    _time = TimeOfDay(
+      hour:   ((widget.data['timeHour']   as num?)?.toInt() ?? 8).clamp(0, 23),
+      minute: ((widget.data['timeMinute'] as num?)?.toInt() ?? 0).clamp(0, 59),
+    );
+    final raw = widget.data['selectedDays'];
+    _days = raw is List
+        ? raw.map((e) => (e as num).toInt()).toSet()
+        : {DateTime.now().weekday};
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = widget.data;
+    final generic  = (d['genericName']  ?? '').toString();
+    final dosage   = (d['dosage']       ?? '').toString();
+    final imageUrl = (d['imageUrl']     ?? '').toString().trim();
+    final status   = (d['status']       ?? 'safe').toString().toLowerCase();
+
+    final Color statusColor;
+    final String statusLabel;
+    final IconData statusIcon;
+    switch (status) {
+      case 'not safe':
+        statusColor = const Color(0xFFB3261E);
+        statusLabel = 'Not Safe';
+        statusIcon  = Icons.dangerous_rounded;
+        break;
+      case 'caution':
+        statusColor = const Color(0xFFE67E22);
+        statusLabel = 'Caution';
+        statusIcon  = Icons.warning_amber_rounded;
+        break;
+      default:
+        statusColor = const Color(0xFF2ECC71);
+        statusLabel = 'Safe';
+        statusIcon  = Icons.verified_rounded;
+    }
+
+    final hour   = _time.hourOfPeriod == 0 ? 12 : _time.hourOfPeriod;
+    final minute = _time.minute.toString().padLeft(2, '0');
+    final period = _time.period == DayPeriod.am ? 'AM' : 'PM';
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      padding: EdgeInsets.only(
+        left: 24, right: 24, top: 14,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            // ── Medicine card (same gradient style as Add sheet) ──────────
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [_c1, _c2],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            width: 56, height: 56, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _placeholder(),
+                          )
+                        : _placeholder(),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _nameCtrl.text.isNotEmpty
+                              ? _nameCtrl.text
+                              : 'Medicine',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (generic.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(generic,
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 12)),
+                        ],
+                        if (dosage.isNotEmpty) ...[
+                          const SizedBox(height: 1),
+                          Text(dosage,
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 12)),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: statusColor.withValues(alpha: 0.55), width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(statusIcon, color: statusColor, size: 13),
+                        const SizedBox(width: 4),
+                        Text(
+                          statusLabel,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 22),
+
+            // ── Name field ────────────────────────────────────────────────
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'MEDICINE NAME',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black38,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _nameCtrl,
+              textCapitalization: TextCapitalization.words,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                hintText: 'Medicine name',
+                filled: true,
+                fillColor: const Color(0xFFF4FDFD),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18, vertical: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                      color: _c3.withValues(alpha: 0.45), width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                      color: _c3.withValues(alpha: 0.45), width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _c3, width: 2),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ── Time picker ───────────────────────────────────────────────
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'SCHEDULED TIME',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black38,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () async {
+                final picked = await showTimePicker(
+                    context: context, initialTime: _time);
+                if (picked != null) setState(() => _time = picked);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4FDFD),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                      color: _c3.withValues(alpha: 0.45), width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.access_time_rounded,
+                        color: _c3, size: 22),
+                    const SizedBox(width: 14),
+                    Text(
+                      '$hour:$minute',
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      period,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black38,
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: Colors.black26, size: 22),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 26),
+
+            // ── Day circles ───────────────────────────────────────────────
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'REPEAT ON DAYS',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black38,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(7, (i) {
+                final weekday = i + 1;
+                final selected = _days.contains(weekday);
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    if (selected) {
+                      _days.remove(weekday);
+                    } else {
+                      _days.add(weekday);
+                    }
+                  }),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: selected ? _c3 : const Color(0xFFF2F2F2),
+                      shape: BoxShape.circle,
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: _c3.withValues(alpha: 0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        _dayLabels[weekday]!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: selected ? Colors.white : Colors.black38,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(7, (i) {
+                final weekday = i + 1;
+                return SizedBox(
+                  width: 40,
+                  child: Center(
+                    child: Text(
+                      _dayFull[weekday]!,
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Colors.black38,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+
+            const SizedBox(height: 30),
+
+            // ── Buttons ───────────────────────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _c1,
+                      side: const BorderSide(color: _c1, width: 1.5),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18)),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: _nameCtrl.text.trim().isEmpty || _days.isEmpty
+                        ? null
+                        : () => Navigator.pop(context, {
+                              'name':   _nameCtrl.text.trim(),
+                              'hour':   _time.hour,
+                              'minute': _time.minute,
+                              'days':   _days.toList()..sort(),
+                            }),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _c1,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.black12,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18)),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Update',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
         width: 56,
         height: 56,
         decoration: BoxDecoration(

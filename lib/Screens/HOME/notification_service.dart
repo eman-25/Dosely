@@ -7,31 +7,25 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
+  static const _channelId          = 'medicine_reminders';
+  static const _channelName        = 'Medicine Reminders';
+  static const _channelDescription = 'Reminds you to take your medicines on time';
+
   // ── Init — call once in main.dart before runApp() ────────────────────────
   static Future<void> init() async {
     if (_initialized) return;
 
     tz_data.initializeTimeZones();
 
-    // Use device's UTC offset to find the right timezone
-    final offsetHours = DateTime.now().timeZoneOffset.inHours;
-    final offsetMinutes = DateTime.now().timeZoneOffset.inMinutes % 60;
-    final sign = offsetHours >= 0 ? '+' : '-';
-    final h = offsetHours.abs().toString().padLeft(2, '0');
-    final m = offsetMinutes.abs().toString().padLeft(2, '0');
-    final tzName = 'Etc/GMT${sign == '+' ? '-' : '+'}${offsetHours.abs()}';
-
+    final tzName = 'Etc/GMT${DateTime.now().timeZoneOffset.inHours >= 0 ? '-' : '+'}${DateTime.now().timeZoneOffset.inHours.abs()}';
     try {
       tz.setLocalLocation(tz.getLocation(tzName));
     } catch (_) {
-      // fallback to UTC if timezone not found
       tz.setLocalLocation(tz.UTC);
     }
 
-    const AndroidInitializationSettings android =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const DarwinInitializationSettings ios = DarwinInitializationSettings(
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const ios = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
@@ -41,11 +35,31 @@ class NotificationService {
       const InitializationSettings(android: android, iOS: ios),
     );
 
-    // Ask for permission on Android 13+
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+    final androidImpl = _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidImpl != null) {
+      // Create the notification channel so Dosely appears in system settings
+      // immediately — even before the first notification is shown.
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _channelId,
+          _channelName,
+          description: _channelDescription,
+          importance: Importance.high,
+          enableVibration: true,
+          playSound: true,
+          showBadge: true,
+        ),
+      );
+
+      // Request POST_NOTIFICATIONS permission (Android 13+)
+      await androidImpl.requestNotificationsPermission();
+
+      // Request SCHEDULE_EXACT_ALARM permission (Android 12+)
+      // Without this exact alarms silently fall back to inexact.
+      await androidImpl.requestExactAlarmsPermission();
+    }
 
     _initialized = true;
   }
@@ -63,30 +77,48 @@ class NotificationService {
     for (final weekday in weekdays) {
       final int notifId = id * 10 + weekday;
 
-      await _plugin.zonedSchedule(
-        notifId,
-        'Time to take $name 💊',
-        "Don't forget your medication!",
-        _nextWeekdayTime(weekday, hour, minute),
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'medicine_reminders',
-            'Medicine Reminders',
-            channelDescription: 'Reminds you to take your medicines on time',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
+      const details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+          enableVibration: true,
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       );
+      final scheduledTime = _nextWeekdayTime(weekday, hour, minute);
+      try {
+        await _plugin.zonedSchedule(
+          notifId,
+          'Time to take $name 💊',
+          "Don't forget your medication!",
+          scheduledTime,
+          details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        );
+      } catch (_) {
+        // Exact alarms not permitted — fall back to inexact scheduling
+        await _plugin.zonedSchedule(
+          notifId,
+          'Time to take $name 💊',
+          "Don't forget your medication!",
+          scheduledTime,
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexact,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        );
+      }
     }
   }
 

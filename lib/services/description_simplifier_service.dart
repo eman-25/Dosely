@@ -29,46 +29,19 @@ class DescriptionSimplifierService {
           ? '$medicineName (generic: $genericName)' 
           : medicineName;
 
-      // ✅ SMART PROMPT - Focuses on WHAT it does, not HOW to take it
-      final String prompt = '''You are a friendly health educator and pharmacist. A patient scanned a medicine and wants to understand what it does.
+      final String prompt = '''Medicine: $fullName
+Patient profile — Age: ${ageInYears != null ? '$ageInYears years old' : 'unknown'}, Allergies: ${allergies.isEmpty || allergies.toLowerCase() == 'none' ? 'none' : allergies}, Chronic conditions: ${chronicConditions.isEmpty || chronicConditions.toLowerCase() == 'none' ? 'none' : chronicConditions}, Special conditions: ${specialConditions.isEmpty || specialConditions.toLowerCase() == 'none' ? 'none' : specialConditions}.
 
-MEDICINE: $fullName
+Write 2–3 plain sentences about what this medicine does and how it helps the patient. Use simple everyday language.
 
-PATIENT PROFILE:
-- Age: ${ageInYears != null ? '$ageInYears years old' : 'Not provided'}
-- Weight: ${weightInKg != null ? '${weightInKg.toStringAsFixed(1)} kg' : 'Not provided'}
-- Known allergies: ${allergies.isEmpty || allergies.toLowerCase() == 'none' ? 'None reported' : allergies}
-- Chronic health conditions: ${chronicConditions.isEmpty || chronicConditions.toLowerCase() == 'none' ? 'None reported' : chronicConditions}
-- Special conditions: ${specialConditions.isEmpty || specialConditions.toLowerCase() == 'none' ? 'None' : specialConditions}
+Rules:
+- Start DIRECTLY with the medicine's purpose — no greeting, no "Hello", no "I", no introduction
+- Focus only on what health problem it treats and how it works in the body
+- Add one note relevant to this patient's profile if applicable
+- Never mention dosage, frequency, or how to take it
+- Never say "consult a doctor" or give medical advice
 
-YOUR JOB - Generate a simple, friendly explanation (2-3 sentences) about:
-1. What health problem(s) this medicine helps with
-2. How it works in the body (in very simple terms)
-3. Any important special notes for THIS PATIENT based on their profile
-
-IMPORTANT RULES:
-✅ DO:
-- Use VERY simple everyday language (explain like talking to a 10-year-old)
-- Be SPECIFIC about what conditions it treats (e.g., "helps lower blood pressure")
-- Mention if it's safe for the patient's age/situation
-- Note any special cautions relevant to THEIR health conditions
-- Be encouraging and reassuring
-
-❌ DON'T:
-- Mention ANY dosage, frequency, or how many tablets
-- Suggest when/how to take it (with food, etc.)
-- Recommend exact doses for any age/weight
-- Give medical advice or tell them to skip doctor
-- Include anything the doctor/pharmacist should tell them
-
-GOOD EXAMPLES:
-"This medicine helps ease fevers and body pain by reducing inflammation in your body. It works quickly and is generally safe for adults. Since you have a history of stomach sensitivity, mention that to your pharmacist."
-
-"This blood pressure medicine helps your heart pump more efficiently, bringing your blood pressure down. It's especially safe for people with your age and health profile. Take it exactly as your doctor prescribed."
-
-"This antibiotic fights bacterial infections by stopping bacteria from growing. It's safe for children your age. Make sure to complete the full course even if you feel better."
-
-NOW generate the explanation for $fullName:''';
+Output the sentences only, nothing else.''';
 
       print('📤 Sending smart prompt to Gemini for: $fullName');
 
@@ -256,5 +229,99 @@ NOW generate the explanation for $fullName:''';
       chronicConditions: '',
       specialConditions: '',
     );
+  }
+}
+
+// ── AI-powered medicine name + dosage cleaner ─────────────────────────────────
+class MedicineNameCleaner {
+  /// Takes raw name/dosage strings from drug databases (e.g. OpenFDA) and
+  /// returns a clean, short, human-readable name and dosage using Gemini.
+  static Future<Map<String, String>> clean({
+    required String rawName,
+    required String rawDosage,
+  }) async {
+    // Fast path: already short and clean
+    final trimmedName = rawName.trim();
+    final trimmedDosage = rawDosage.trim();
+    if (trimmedName.length <= 30 && !trimmedName.contains('•') &&
+        !trimmedName.contains('\n') && !trimmedName.contains('[')) {
+      return {
+        'name': _capitalize(trimmedName),
+        'dosage': _extractShortDosage(trimmedDosage),
+      };
+    }
+
+    try {
+      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
+
+      final prompt = '''You are extracting clean medicine data from raw drug-database text.
+
+Raw name: "$rawName"
+Raw dosage: "$rawDosage"
+
+Return ONLY a JSON object with two keys:
+- "name": the clean, short brand or generic medicine name (e.g. "Panadol", "Acetaminophen", "Amoxicillin"). Max 4 words. No store brand prefixes like "basic care" or "good sense". No dosage in the name.
+- "dosage": just the strength (e.g. "500mg", "250mg/5ml", "10mg"). Empty string if unknown.
+
+Example output: {"name":"Acetaminophen","dosage":"500mg"}
+
+Output JSON only, no explanation.''';
+
+      final response = await model
+          .generateContent([Content.text(prompt)])
+          .timeout(const Duration(seconds: 8));
+
+      final text = (response.text ?? '').trim();
+      // Strip markdown code fences if present
+      final jsonStr = text.replaceAll(RegExp(r'```[a-z]*'), '').replaceAll('```', '').trim();
+      final decoded = jsonStr.isNotEmpty
+          ? Map<String, dynamic>.from(
+              (jsonStr.startsWith('{') ? _parseJson(jsonStr) : null) ?? {})
+          : <String, dynamic>{};
+
+      final name = (decoded['name'] as String? ?? '').trim();
+      final dosage = (decoded['dosage'] as String? ?? '').trim();
+
+      return {
+        'name': name.isNotEmpty ? _capitalize(name) : _capitalize(trimmedName),
+        'dosage': dosage.isNotEmpty ? dosage : _extractShortDosage(trimmedDosage),
+      };
+    } catch (_) {
+      return {
+        'name': _capitalize(trimmedName),
+        'dosage': _extractShortDosage(trimmedDosage),
+      };
+    }
+  }
+
+  static Map<String, dynamic>? _parseJson(String s) {
+    try {
+      // Simple JSON decode — dart:convert
+      // ignore: avoid_dynamic_calls
+      final result = <String, dynamic>{};
+      final nameMatch = RegExp(r'"name"\s*:\s*"([^"]*)"').firstMatch(s);
+      final dosageMatch = RegExp(r'"dosage"\s*:\s*"([^"]*)"').firstMatch(s);
+      if (nameMatch != null) result['name'] = nameMatch.group(1);
+      if (dosageMatch != null) result['dosage'] = dosageMatch.group(1);
+      return result.isNotEmpty ? result : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _extractShortDosage(String raw) {
+    if (raw.isEmpty) return '';
+    // Pull first mg/ml/mcg/g strength from the string
+    final match = RegExp(r'\d+\.?\d*\s*(mg|ml|mcg|g|%)', caseSensitive: false)
+        .firstMatch(raw);
+    if (match != null) return match.group(0)!.trim();
+    // If the raw dosage is already short, return it
+    if (raw.length <= 15) return raw;
+    return '';
+  }
+
+  static String _capitalize(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
   }
 }
