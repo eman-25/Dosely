@@ -230,8 +230,8 @@ class _UploadState extends State<Upload> {
                               Expanded(
                                 child: Text(
                                   _image == null
-                                      ? 'Tap the card above to choose a photo of a medicine label or box.'
-                                      : 'Photo selected. Tap "Analyze" to check if it\'s safe for you.',
+                                      ? 'tap_card_instructions'.tr()
+                                      : 'photo_selected_desc'.tr(),
                                   style: const TextStyle(
                                     color: _c1,
                                     fontSize: 13,
@@ -251,7 +251,7 @@ class _UploadState extends State<Upload> {
                             // Change photo
                             if (_image != null) ...[
                               _OutlineBtn(
-                                label: 'Change Photo',
+                                label: 'change_photo'.tr(),
                                 icon: Icons.photo_library_rounded,
                                 onTap: _processing ? null : _pickImage,
                               ),
@@ -263,7 +263,7 @@ class _UploadState extends State<Upload> {
                               child: _PrimaryBtn(
                                 label: _image == null
                                     ? 'Upload Photo'
-                                    : 'Analyze',
+                                    : 'analyze'.tr(),
                                 icon: _image == null
                                     ? Icons.upload_rounded
                                     : Icons.biotech_rounded,

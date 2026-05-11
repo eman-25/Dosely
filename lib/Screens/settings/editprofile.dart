@@ -338,29 +338,28 @@ class _HealthUpdateReminder extends StatelessWidget {
           border: Border.all(
               color: AppColors.primaryBlue.withOpacity(0.30)),
         ),
-        child: const Row(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Icon(Icons.health_and_safety_rounded,
                 color: AppColors.primaryBlue, size: 20),
             const SizedBox(width: 10),
-            const Expanded(
-              child: const Column(
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Review your health information',
-                    style: TextStyle(
+                  Text(
+                    'review_health_info'.tr(),
+                    style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF1E40AF),
                     ),
                   ),
-                  SizedBox(height: 3),
-                  const Text(
-                    'For accurate safety results, update your health data '
-                    'every 60 days or whenever your medications or conditions change.',
-                    style: TextStyle(
+                  const SizedBox(height: 3),
+                  Text(
+                    'review_health_info_desc'.tr(),
+                    style: const TextStyle(
                       fontSize: 12.5,
                       color: Color(0xFF1E40AF),
                       height: 1.45,

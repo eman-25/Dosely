@@ -68,48 +68,38 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Text('data_collection'.tr(),
+          Text('data_collection_section'.tr(),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           _buildRichBullet(
             icon: Icons.medication,
-            title: 'AI Medication Safety:',
-            text: ' Analyzes your medical history and allergies against new medications to predict potential adverse reactions and ensure safety.',
+            title: 'ai_medication_safety'.tr(),
           ),
           const SizedBox(height: 12),
           _buildRichBullet(
             icon: Icons.error,
-            title: 'Personalized Alerts:',
-            text: ' Notifies you about potential drug-drug interactions specific to your current medication regimen.',
+            title: 'personalized_alerts'.tr(),
           ),
           const SizedBox(height: 12),
           _buildRichBullet(
             icon: Icons.sync,
-            title: 'App Improvement:',
-            text: ' We use anonymized usage data (if enabled below) to refine our features. ',
-            boldTail: 'We never sell your data.',
+            title: 'app_improvement'.tr(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRichBullet({required IconData icon, required String title, required String text, String? boldTail}) {
+  Widget _buildRichBullet({required IconData icon, required String title}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 20, color: const Color(0xFF3E84A8)),
         const SizedBox(width: 8),
         Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
-              children: [
-                TextSpan(text: title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                TextSpan(text: text),
-                if (boldTail != null) TextSpan(text: boldTail, style: const TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
           ),
         ),
       ],
@@ -145,15 +135,15 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           ),
           _buildRightTile(
             icon: Icons.picture_as_pdf_outlined,
-            title: 'Download Health Report',
-            subtitle: 'Request a copy of your health data as a PDF report.',
-            onTap: () => _handleAction(context, 'Generating PDF report...', 'PDF report downloaded successfully!'),
+            title: 'download_health_report'.tr(),
+            subtitle: 'download_health_report_desc'.tr(),
+            onTap: () => _handleAction(context, 'pdf_generating'.tr(), 'pdf_generated'.tr()),
           ),
           _buildRightTile(
             icon: Icons.delete_outline,
-            title: 'Manage/Clear History',
-            subtitle: 'Review and clear parts of your search history without deleting the account.',
-            onTap: () => _handleAction(context, 'Clearing history...', 'History cleared successfully!'),
+            title: 'manage_clear_history'.tr(),
+            subtitle: 'manage_clear_history_desc'.tr(),
+            onTap: () => _handleAction(context, 'clearing_history'.tr(), 'history_cleared'.tr()),
             bottomRounded: true,
           ),
         ],
@@ -211,8 +201,8 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           SwitchListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             secondary: const Icon(Icons.bar_chart, size: 28, color: Color(0xFF3E84A8)),
-            title: const Text('Allow analytics', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-            subtitle: const Text('Help us build safer features (anonymized data only)', style: TextStyle(fontSize: 13)),
+            title: Text('allow_analytics'.tr(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+            subtitle: Text('allow_analytics_desc'.tr(), style: const TextStyle(fontSize: 13)),
             value: _allowAnalytics,
             activeColor: const Color(0xFF3E84A8),
             onChanged: (v) => setState(() => _allowAnalytics = v),
@@ -220,8 +210,8 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           SwitchListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             secondary: const Icon(Icons.accessibility_new, size: 28, color: Color(0xFF3E84A8)),
-            title: const Text('Personalized recommendations', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-            subtitle: const Text('Use my medical history for customized safety alerts and predictions', style: TextStyle(fontSize: 13)),
+            title: Text('personalized_recommendations'.tr(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+            subtitle: Text('personalized_recommendations'.tr(), style: const TextStyle(fontSize: 13)),
             value: _personalizedRecommendations,
             activeColor: const Color(0xFF3E84A8),
             onChanged: (v) => setState(() => _personalizedRecommendations = v),
@@ -295,11 +285,10 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
       ),
     );
 
-    // Simulate network/processing delay
     await Future.delayed(const Duration(seconds: 2));
 
     if (!context.mounted) return;
-    Navigator.of(context).pop(); // dismiss dialog
+    Navigator.of(context).pop();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
