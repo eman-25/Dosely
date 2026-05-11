@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:easy_localization/easy_localization.dart';
 import '/theme.dart';
 import '../../models/user_data.dart';
 import 'package:dosely/services/user_service.dart';
@@ -20,7 +19,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen>
 
   List<String> selectedAllergies = [];
   List<String> selectedChronic = [];
-  List<String> selectedMeds = [];
   List<String> selectedSpecial = [];
 
   bool _isMale = false;
@@ -75,16 +73,12 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen>
       _showSnackBar('Please select at least one option');
       return;
     }
-    if (_currentStep == 2 && selectedMeds.isEmpty) {
-      _showSnackBar('Please select at least one option');
-      return;
-    }
-    if (_currentStep == 3 && selectedSpecial.isEmpty) {
+    if (_currentStep == 2 && selectedSpecial.isEmpty) {
       _showSnackBar('Please select at least one option');
       return;
     }
 
-    if (_currentStep == 3) {
+    if (_currentStep == 2) {
       await _submitHealthData();
     } else {
       _animationController.reset();
@@ -106,14 +100,13 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen>
 
     final allergies = selectedAllergies.join(', ');
     final chronic = selectedChronic.join(', ');
-    final meds = selectedMeds.join(', ');
     final special = selectedSpecial.join(', ');
 
     try {
       await UserService.saveHealthInfo(
         allergies: allergies.isEmpty ? 'None' : allergies,
         chronicConditions: chronic.isEmpty ? 'None' : chronic,
-        currentMedications: meds.isEmpty ? 'None' : meds,
+        currentMedications: 'None',
         specialConditions: special.isEmpty ? 'None' : special,
       );
 
@@ -121,7 +114,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen>
         Provider.of<UserData>(context, listen: false).updateHealthInfo(
           allergies: allergies,
           chronicConditions: chronic,
-          currentMedications: meds,
+          currentMedications: '',
           specialConditions: special,
         );
 
@@ -201,8 +194,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen>
                   children: [
                     if (_currentStep == 0) _buildAllergyStep(),
                     if (_currentStep == 1) _buildChronicStep(),
-                    if (_currentStep == 2) _buildMedicationStep(),
-                    if (_currentStep == 3) _buildSpecialStep(),
+                    if (_currentStep == 2) _buildSpecialStep(),
                   ],
                 ),
               ),
@@ -223,10 +215,10 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen>
       child: Column(
         children: [
           Row(
-            children: List.generate(4, (index) {
+            children: List.generate(3, (index) {
               return Expanded(
                 child: Container(
-                  margin: EdgeInsets.only(right: index < 3 ? 8 : 0),
+                  margin: EdgeInsets.only(right: index < 2 ? 8 : 0),
                   height: 6,
                   decoration: BoxDecoration(
                     color: index <= _currentStep
@@ -240,7 +232,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen>
           ),
           const SizedBox(height: 12),
           Text(
-            'Step ${_currentStep + 1} of 4',
+            'Step ${_currentStep + 1} of 3',
             style: TextStyle(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.9),
@@ -290,26 +282,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen>
     );
   }
 
-  // ✅ Step 3: Medications
-  Widget _buildMedicationStep() {
-    return _buildStepCard(
-      icon: Icons.medication_rounded,
-      iconColor: AppColors.primaryBlue,
-      title: 'Current Medications',
-      subtitle: 'Medicines you take regularly',
-      hint: "Can't find your medicine? You can add it later by searching, scanning, or uploading a photo.",
-      dropdown: _buildModernDropdown(
-        hint: 'Tap to select medications',
-        items: HealthData.medications,
-        selected: selectedMeds,
-        onChanged: (val) => setState(() {
-          selectedMeds = _enforceNoneRule(selectedMeds, val);
-        }),
-      ),
-    );
-  }
-
-  // ✅ Step 4: Special
+  // ✅ Step 3: Special
   Widget _buildSpecialStep() {
     return _buildStepCard(
       icon: Icons.person_pin_circle_rounded,

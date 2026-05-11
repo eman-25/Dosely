@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:dropdown_search/dropdown_search.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../models/user_data.dart';
 import 'package:dosely/services/user_service.dart';
@@ -20,7 +19,6 @@ class _EditPersonalHealthInfoScreenState
     extends State<EditPersonalHealthInfoScreen> {
   List<String> selectedAllergies = [];
   List<String> selectedChronic   = [];
-  List<String> selectedMeds      = [];
   List<String> selectedSpecial   = [];
   bool _isLoading = false;
   bool _isMale    = false;
@@ -33,7 +31,6 @@ class _EditPersonalHealthInfoScreenState
 
     selectedAllergies = _splitToList(user.allergies);
     selectedChronic   = _splitToList(user.chronicConditions);
-    selectedMeds      = _splitToList(user.currentMedications);
     selectedSpecial   = _splitToList(user.specialConditions);
 
     _isMale = user.gender.toLowerCase() == 'male' ||
@@ -74,20 +71,19 @@ class _EditPersonalHealthInfoScreenState
     setState(() => _isLoading = true);
     final allergies = selectedAllergies.join(', ');
     final chronic   = selectedChronic.join(', ');
-    final meds      = selectedMeds.join(', ');
     final special   = selectedSpecial.join(', ');
 
     try {
       await UserService.updateHealthInfo(
         allergies:          allergies.isEmpty ? 'None' : allergies,
         chronicConditions:  chronic.isEmpty   ? 'None' : chronic,
-        currentMedications: meds.isEmpty      ? 'None' : meds,
+        currentMedications: 'None',
         specialConditions:  special.isEmpty   ? 'None' : special,
       );
       if (mounted) {
         Provider.of<UserData>(context, listen: false).updateHealthInfo(
           allergies: allergies, chronicConditions: chronic,
-          currentMedications: meds, specialConditions: special,
+          currentMedications: '', specialConditions: special,
         );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('health_info_saved'.tr())),
@@ -119,6 +115,7 @@ class _EditPersonalHealthInfoScreenState
         ),
         title: Text(
           'personal_health_info'.tr(),
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: AppColors.text,
             fontWeight: FontWeight.w800,
@@ -193,54 +190,7 @@ class _EditPersonalHealthInfoScreenState
             ),
             const SizedBox(height: 20),
 
-            // ── 3. Current Medications ──────────────────────────────────
-            _SectionHeader(
-              icon: Icons.medication_rounded,
-              label: 'current_medications'.tr(),
-              color: AppColors.primaryBlue,
-            ),
-            const SizedBox(height: 8),
-            _buildMultiDropdown(
-              hint: 'select'.tr(),
-              items: HealthData.medications,
-              selected: selectedMeds,
-              onChanged: (val) => setState(
-                  () => selectedMeds = _enforceNoneRule(selectedMeds, val)),
-            ),
-            const SizedBox(height: 8),
-            // Medication hint
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F7FF),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppColors.primaryBlue.withOpacity(0.25)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.lightbulb_outline_rounded,
-                      size: 15,
-                      color: AppColors.primaryBlue.withOpacity(0.8)),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      "Can't find your medication in the list? You can add it "
-                      'by searching by name, uploading a photo, or scanning its box.',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        height: 1.45,
-                        color: Color(0xFF1E40AF),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // ── 4. Special Conditions ───────────────────────────────────
+            // ── 3. Special Conditions ───────────────────────────────────
             _SectionHeader(
               icon: Icons.person_pin_circle_rounded,
               label: 'special_conditions'.tr(),
@@ -274,86 +224,295 @@ class _EditPersonalHealthInfoScreenState
     required List<String> selected,
     required Function(List<String>) onChanged,
   }) {
-    return DropdownSearch<String>.multiSelection(
-      items: (filter, _) => items
-          .where((i) => i.toLowerCase().contains(filter.toLowerCase()))
-          .toList(),
-      selectedItems: selected,
-      onChanged: onChanged,
-      popupProps: PopupPropsMultiSelection.modalBottomSheet(
-        showSearchBox: true,
-        modalBottomSheetProps: const ModalBottomSheetProps(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
+    return GestureDetector(
+      onTap: () => _showCustomBottomSheet(
+        hint: hint,
+        items: items,
+        currentSelection: selected,
+        onChanged: onChanged,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200, width: 1.5),
         ),
-        constraints: const BoxConstraints(maxHeight: 520),
-        searchFieldProps: TextFieldProps(
-          decoration: InputDecoration(
-            hintText: 'search'.tr(),
-            prefixIcon: const Icon(Icons.search_rounded),
-            filled: true,
-            fillColor: Colors.grey.shade100,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+        child: Row(
+          children: [
+            Expanded(
+              child: selected.isEmpty
+                  ? Text(
+                      hint,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey.shade500,
+                      ),
+                    )
+                  : Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: selected.map((item) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            item,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryBlue,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
             ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.arrow_drop_down_rounded,
+              color: Colors.grey.shade600,
+              size: 28,
+            ),
+          ],
         ),
-        itemBuilder: (context, item, isSelected, isHighlighted) => ListTile(
-          dense: true,
-          leading: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primaryBlue : Colors.transparent,
-              border: Border.all(
-                color: isSelected
-                    ? AppColors.primaryBlue
-                    : Colors.grey.shade400,
-                width: 1.5,
+      ),
+    );
+  }
+
+  void _showCustomBottomSheet({
+    required String hint,
+    required List<String> items,
+    required List<String> currentSelection,
+    required Function(List<String>) onChanged,
+  }) {
+    List<String> tempSelection = List.from(currentSelection);
+    String searchQuery = '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final filteredItems = items
+                .where((i) =>
+                    i.toLowerCase().contains(searchQuery.toLowerCase()))
+                .toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              padding: const EdgeInsets.only(top: 12),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Select Options',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                        ),
+                        if (tempSelection.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '${tempSelection.length} selected',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryBlue,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: TextField(
+                      onChanged: (value) {
+                        setModalState(() => searchQuery = value);
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'search'.tr(),
+                        hintStyle: TextStyle(color: Colors.grey.shade500),
+                        prefixIcon: Icon(Icons.search_rounded,
+                            color: Colors.grey.shade600),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: filteredItems.length,
+                      itemBuilder: (context, index) {
+                        final item = filteredItems[index];
+                        final isSelected = tempSelection.contains(item);
+                        final hasNone = tempSelection.contains('None');
+                        final isDisabledByNone = hasNone && item != 'None';
+
+                        return Opacity(
+                          opacity: isDisabledByNone ? 0.4 : 1.0,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: isDisabledByNone
+                                  ? null
+                                  : () {
+                                      setModalState(() {
+                                        if (isSelected) {
+                                          tempSelection.remove(item);
+                                        } else {
+                                          if (item == 'None') {
+                                            tempSelection = ['None'];
+                                          } else {
+                                            tempSelection.remove('None');
+                                            tempSelection.add(item);
+                                          }
+                                        }
+                                      });
+                                      onChanged(List.from(tempSelection));
+                                    },
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primaryBlue.withValues(alpha: 0.08)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? AppColors.primaryBlue
+                                            : Colors.transparent,
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? AppColors.primaryBlue
+                                              : Colors.grey.shade400,
+                                          width: 2,
+                                        ),
+                                        borderRadius: BorderRadius.circular(7),
+                                      ),
+                                      child: isSelected
+                                          ? const Icon(Icons.check_rounded,
+                                              size: 16, color: Colors.white)
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Text(
+                                        item,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: item == 'None'
+                                              ? FontWeight.w700
+                                              : FontWeight.w500,
+                                          color: item == 'None'
+                                              ? Colors.grey.shade700
+                                              : (isSelected
+                                                  ? AppColors.primaryBlue
+                                                  : Colors.black87),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, -2),
+                        ),
+                      ],
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryBlue,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'done'.tr(),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: isSelected
-                ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-                : null,
-          ),
-          title: Text(
-            item,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: item == 'None' ? FontWeight.w700 : FontWeight.normal,
-              color: item == 'None' ? Colors.grey.shade600 : Colors.black87,
-            ),
-          ),
-        ),
-      ),
-      decoratorProps: DropDownDecoratorProps(
-        decoration: InputDecoration(
-          hintText: hint,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide:
-                const BorderSide(color: AppColors.primaryBlue, width: 1.5),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -367,7 +526,7 @@ class _UpdateReminderBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8EB),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFCD34D).withOpacity(0.7)),
+        border: Border.all(color: const Color(0xFFFCD34D).withValues(alpha: 0.7)),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,7 +585,7 @@ class _SectionHeader extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.10),
+            color: color.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 17, color: color),
