@@ -32,16 +32,18 @@ class DescriptionSimplifierService {
       final String prompt = '''Medicine: $fullName
 Patient profile — Age: ${ageInYears != null ? '$ageInYears years old' : 'unknown'}, Allergies: ${allergies.isEmpty || allergies.toLowerCase() == 'none' ? 'none' : allergies}, Chronic conditions: ${chronicConditions.isEmpty || chronicConditions.toLowerCase() == 'none' ? 'none' : chronicConditions}, Special conditions: ${specialConditions.isEmpty || specialConditions.toLowerCase() == 'none' ? 'none' : specialConditions}.
 
-Write 2–3 plain sentences about what this medicine does and how it helps the patient. Use simple everyday language.
+Write ONE short sentence saying only what this medicine is used for. Use simple everyday language.
 
 Rules:
-- Start DIRECTLY with the medicine's purpose — no greeting, no "Hello", no "I", no introduction
-- Focus only on what health problem it treats and how it works in the body
-- Add one note relevant to this patient's profile if applicable
-- Never mention dosage, frequency, or how to take it
-- Never say "consult a doctor" or give medical advice
+- Start with "Used to treat..." or "Used for..."
+- Name the SPECIFIC conditions it treats (e.g. "acne, chest infections, urinary tract infections")
+- NO explanation of how it works
+- NO patient-profile notes
+- NO dosage, frequency, or instructions
+- NO "consult a doctor" or "talk to your pharmacist"
+- NO extra commentary
 
-Output the sentences only, nothing else.''';
+Output one sentence only, nothing else.''';
 
       print('📤 Sending smart prompt to Gemini for: $fullName');
 
@@ -81,138 +83,173 @@ Output the sentences only, nothing else.''';
     // PAIN & FEVER RELIEVERS
     // ═══════════════════════════════════════════════════════════════════════
     if (lower.contains('acetaminophen') || lower.contains('paracetamol')) {
-      String warning = '';
-      if (chronicConditions.toLowerCase().contains('liver')) {
-        warning = ' Important: Tell your doctor about your liver condition before taking this.';
-      }
-      return 'This medicine helps ease fevers and body aches by reducing pain signals in your brain. It works gently and is safe for most ages.$warning Ask your pharmacist if you have any health concerns.';
+      return 'Used to relieve mild to moderate pain and reduce fever.';
     }
 
     if (lower.contains('ibuprofen') || lower.contains('brufen')) {
-      String warning = '';
-      if (chronicConditions.toLowerCase().contains('stomach') || 
-          chronicConditions.toLowerCase().contains('ulcer')) {
-        warning = ' ⚠️ Since you have a history of stomach issues, talk to your doctor about whether this is safe for you.';
-      }
-      return 'This medicine reduces pain, swelling, and fever by blocking inflammation in your body. It works well for headaches, muscle aches, and period pain.$warning Take it with food or milk to protect your stomach.';
+      return 'Used to relieve pain, reduce inflammation, and lower fever — including headaches, muscle aches, and period pain.';
     }
 
     if (lower.contains('aspirin')) {
-      String warning = '';
-      if (allergies.toLowerCase().contains('aspirin')) {
-        warning = ' ⚠️ You may have an aspirin allergy — check with your pharmacist.';
-      }
-      return 'This medicine helps ease pain and can reduce fever. It also helps prevent blood clots, so some people take it for heart health.$warning Always take it with food.';
+      return 'Used to relieve pain and fever, and in low doses to help prevent blood clots, heart attacks, and strokes.';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // ANTIBIOTICS
     // ═══════════════════════════════════════════════════════════════════════
     if (lower.contains('amoxicillin') || lower.contains('augmentin')) {
-      return 'This is an antibiotic that kills bacteria causing infections like ear infections, throat infections, and pneumonia. It\'s been used safely for decades. Always take the complete course even if you feel better after 2-3 days.';
+      return 'Used to treat bacterial infections such as ear infections, throat infections, chest infections, and pneumonia.';
     }
 
     if (lower.contains('azithromycin') || lower.contains('zithromax')) {
-      return 'This antibiotic fights bacterial infections by stopping bacteria from multiplying. It\'s used for chest infections, throat infections, and other bacterial diseases. Complete the full treatment even if you feel better.';
+      return 'Used to treat bacterial infections such as chest infections, throat infections, ear infections, and some sexually transmitted infections.';
     }
 
     if (lower.contains('ciprofloxacin') || lower.contains('cipro')) {
-      return 'This is a strong antibiotic for serious bacterial infections. It works by preventing bacteria from making DNA, so they die. It\'s commonly used for urinary and respiratory infections.';
+      return 'Used to treat bacterial infections such as urinary tract infections, kidney infections, and some respiratory and stomach infections.';
+    }
+
+    if (lower.contains('doxycycline') || lower.contains('tabocine') || lower.contains('vibramycin')) {
+      return 'Used to treat acne, chest and lung infections, urinary tract infections, Lyme disease, and some sexually transmitted infections, and to prevent malaria when traveling.';
+    }
+
+    if (lower.contains('clarithromycin') || lower.contains('klacid')) {
+      return 'Used to treat chest infections, ear infections, throat infections, and stomach ulcers caused by H. pylori bacteria.';
+    }
+
+    if (lower.contains('cephalexin') || lower.contains('keflex')) {
+      return 'Used to treat skin infections, ear infections, urinary tract infections, and respiratory infections.';
+    }
+
+    if (lower.contains('clindamycin') || lower.contains('dalacin')) {
+      return 'Used to treat skin infections, dental infections, bone infections, and severe acne.';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // BLOOD PRESSURE & HEART
     // ═══════════════════════════════════════════════════════════════════════
     if (lower.contains('bisoprol') || lower.contains('concor')) {
-      return 'This medicine helps lower blood pressure and makes your heart work more efficiently by slowing your heart rate. It\'s especially helpful for people with heart disease. It helps prevent heart attacks and strokes.';
+      return 'Used to treat high blood pressure, heart failure, and irregular heartbeat.';
     }
 
     if (lower.contains('amlodipine') || lower.contains('norvasc')) {
-      return 'This blood pressure medicine relaxes blood vessels, allowing blood to flow easier. This lowers your blood pressure and reduces the workload on your heart. It\'s safe to take for years.';
+      return 'Used to treat high blood pressure and chest pain (angina).';
     }
 
     if (lower.contains('losartan') || lower.contains('cozaar')) {
-      return 'This medicine helps lower blood pressure by relaxing blood vessels. It\'s particularly helpful if you have kidney disease or diabetes. Taking it regularly prevents heart attacks and strokes.';
+      return 'Used to treat high blood pressure and to protect the kidneys in people with diabetes.';
     }
 
     if (lower.contains('atorvastatin') || lower.contains('lipitor')) {
-      return 'This medicine helps lower cholesterol by reducing the amount your body makes. High cholesterol can block arteries, so this medicine protects your heart and blood vessels. Many people take it every day for years.';
+      return 'Used to lower high cholesterol and reduce the risk of heart attacks and strokes.';
     }
 
     if (lower.contains('furosemide') || lower.contains('lasix')) {
-      return 'This water pill helps remove extra salt and water from your body through urine. It\'s used for heart failure, high blood pressure, and swelling. It reduces the workload on your heart.';
+      return 'Used to treat fluid retention (swelling) and high blood pressure, often in heart failure and kidney problems.';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // STOMACH & DIGESTION
     // ═══════════════════════════════════════════════════════════════════════
     if (lower.contains('omeprazole') || lower.contains('losec')) {
-      return 'This medicine reduces stomach acid, helping heal ulcers and acid reflux. It works by blocking the cells that make acid. Many people take it regularly for chronic heartburn.';
+      return 'Used to treat acid reflux, heartburn, and stomach ulcers.';
     }
 
     if (lower.contains('esomeprazole') || lower.contains('nexium')) {
-      return 'This medicine reduces stomach acid to help with acid reflux, heartburn, and ulcers. It\'s very effective and safe for long-term use. Take it before meals for best results.';
+      return 'Used to treat acid reflux, heartburn, and stomach ulcers.';
     }
 
     if (lower.contains('metronidazole') || lower.contains('flagyl')) {
-      return 'This antibiotic fights infections caused by parasites and certain bacteria. It\'s commonly used for stomach infections and traveler\'s diarrhea. Complete the full course to avoid the infection returning.';
+      return 'Used to treat infections caused by certain bacteria and parasites, including stomach infections and dental infections.';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // RESPIRATORY
     // ═══════════════════════════════════════════════════════════════════════
     if (lower.contains('salbutamol') || lower.contains('ventolin')) {
-      return 'This "rescue" inhaler quickly opens your airways during asthma attacks or when you\'re short of breath. It works within minutes by relaxing the muscles around your airways. Keep it with you when you might need it.';
+      return 'Used to relieve asthma attacks and shortness of breath by opening the airways.';
     }
 
     if (lower.contains('montelukast') || lower.contains('singulair')) {
-      return 'This medicine prevents asthma attacks by reducing inflammation in your airways. It also helps with allergies. Take it regularly even when you feel fine to keep attacks from happening.';
+      return 'Used to prevent asthma attacks and relieve allergy symptoms.';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // ALLERGIES
     // ═══════════════════════════════════════════════════════════════════════
     if (lower.contains('cetirizine') || lower.contains('zyrtec')) {
-      return 'This antihistamine stops your body\'s allergic reactions to pollen, dust, and pet dander. It reduces sneezing, itching, and watery eyes. It\'s non-drowsy and safe for regular use.';
+      return 'Used to relieve allergy symptoms such as sneezing, itching, runny nose, and watery eyes.';
     }
 
     if (lower.contains('loratadine') || lower.contains('claritin')) {
-      return 'This allergy medicine blocks histamine, which causes sneezing, itching, and runny nose. It\'s gentle and non-drowsy, so you can take it anytime. Works best when taken every day during allergy season.';
+      return 'Used to relieve allergy symptoms such as sneezing, itching, and runny nose.';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // DIABETES
     // ═══════════════════════════════════════════════════════════════════════
     if (lower.contains('metformin') || lower.contains('glucophage')) {
-      return 'This medicine helps control blood sugar by reducing how much sugar your body makes and improving how it uses insulin. It\'s the first medicine doctors try for type 2 diabetes. It helps prevent diabetes complications.';
+      return 'Used to control blood sugar in type 2 diabetes.';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // THYROID
     // ═══════════════════════════════════════════════════════════════════════
     if (lower.contains('levothyroxine') || lower.contains('eltroxin') || lower.contains('euthyrox')) {
-      return 'This replaces thyroid hormone your body isn\'t making enough of. Without thyroid hormone, your metabolism slows down and you feel tired. This medicine helps you feel energetic and normal again.';
+      return 'Used to treat an underactive thyroid (hypothyroidism).';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // MENTAL HEALTH
     // ═══════════════════════════════════════════════════════════════════════
     if (lower.contains('alprazolam') || lower.contains('xanax')) {
-      return 'This medicine reduces anxiety by calming your nervous system. It\'s used for anxiety disorders and panic attacks. Work with your doctor for safe use, as dependence is possible with long-term use.';
+      return 'Used to treat anxiety disorders and panic attacks.';
     }
 
     if (lower.contains('escitalopram') || lower.contains('cipralex')) {
-      return 'This medicine helps depression and anxiety by balancing chemicals in your brain. It takes 2-4 weeks to feel better, so be patient. It\'s one of the safest antidepressants and very effective.';
+      return 'Used to treat depression and anxiety.';
     }
 
     if (lower.contains('sertraline') || lower.contains('zoloft')) {
-      return 'This antidepressant helps with depression, anxiety, and panic disorder by balancing brain chemicals. Most people feel better after 4-6 weeks. It\'s well-tolerated and has few side effects.';
+      return 'Used to treat depression, anxiety, panic disorder, and OCD.';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // DEFAULT FALLBACK
+    // DEFAULT FALLBACK — try to detect drug class from name suffix
     // ═══════════════════════════════════════════════════════════════════════
-    return 'This medicine is used to treat health conditions and is available in many countries. To understand exactly what it does and how to take it safely, talk to your pharmacist or doctor who knows your full health history.';
+    // Antibiotic suffixes
+    if (lower.endsWith('cycline') || lower.endsWith('mycin') ||
+        lower.endsWith('cillin') || lower.endsWith('oxacin') ||
+        lower.endsWith('cef') || lower.startsWith('cef')) {
+      return 'Used to treat bacterial infections.';
+    }
+    // Antifungals
+    if (lower.endsWith('azole') || lower.endsWith('conazole')) {
+      return 'Used to treat fungal infections.';
+    }
+    // Painkillers / NSAIDs
+    if (lower.endsWith('profen') || lower.endsWith('fenac')) {
+      return 'Used to relieve pain, swelling, and fever.';
+    }
+    // Blood pressure / heart
+    if (lower.endsWith('olol')) {
+      return 'Used to treat high blood pressure and heart conditions.';
+    }
+    if (lower.endsWith('sartan') || lower.endsWith('ipril')) {
+      return 'Used to treat high blood pressure.';
+    }
+    // Cholesterol
+    if (lower.endsWith('statin') || lower.endsWith('vastatin')) {
+      return 'Used to lower high cholesterol.';
+    }
+    // Stomach acid
+    if (lower.endsWith('prazole')) {
+      return 'Used to reduce stomach acid and treat heartburn, acid reflux, and ulcers.';
+    }
+
+    // Generic last-resort fallback
+    final displayName = name.isNotEmpty ? name : 'This medicine';
+    return 'Information about what $displayName is used for is not available.';
   }
 
   /// Simple version when user has no health data
