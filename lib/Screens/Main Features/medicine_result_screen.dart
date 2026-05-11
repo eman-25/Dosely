@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'Pill_Assistant_Home.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/description_simplifier_service.dart';
+import '../HOME/medicine_table_screen.dart';
 
 class MedicineResultScreen extends StatefulWidget {
   final Map<String, dynamic> medicineData;
@@ -628,16 +629,21 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
   }
 
   void _navigateToSchedule(BuildContext context) {
-    final name    = widget.medicineData['name'] ?? '';
-    final generic = widget.medicineData['generic_name'] ?? '';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-        'Adding $name${generic.isNotEmpty ? " ($generic)" : ""} to schedule.',
+    final prefill = {
+      'name': widget.medicineData['name'] ?? '',
+      'generic_name': widget.medicineData['generic_name'] ?? '',
+      'dosage': widget.medicineData['dosage'] ?? '',
+      'description': widget.medicineData['description'] ?? '',
+      'imageUrl': widget.medicineData['imageUrl'] ?? '',
+      '_safetyStatus': widget.medicineData['status'] ?? 'safe',
+    };
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MedicineTableScreen(prefillMedicine: prefill),
       ),
-      backgroundColor: _c2,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ));
+    );
   }
 
   static String _cap(String s) => s

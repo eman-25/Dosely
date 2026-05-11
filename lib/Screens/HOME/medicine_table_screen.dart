@@ -7,7 +7,9 @@ import '../Main Features/Pill_Assistant_Home.dart';
 import 'notification_service.dart';
 
 class MedicineTableScreen extends StatefulWidget {
-  const MedicineTableScreen({super.key});
+  final Map<String, dynamic>? prefillMedicine;
+
+  const MedicineTableScreen({super.key, this.prefillMedicine});
 
   @override
   State<MedicineTableScreen> createState() => _MedicineTableScreenState();
@@ -24,6 +26,16 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
   bool _adding = false;
 
   User? get _user => FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.prefillMedicine != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showAddMedicineDialog(prefill: widget.prefillMedicine);
+      });
+    }
+  }
 
   CollectionReference<Map<String, dynamic>> get _tableRef {
     final uid = _user?.uid;
