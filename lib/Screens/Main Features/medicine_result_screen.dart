@@ -649,9 +649,32 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
     );
   }
 
-  void _navigateToSchedule(BuildContext context) {
+  Future<void> _navigateToSchedule(BuildContext context) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final medicineName = (widget.medicineData['name'] ?? '').toString().trim();
+
+    if (uid != null && medicineName.isNotEmpty) {
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('medicine_table')
+            .get();
+        final nameLower = medicineName.toLowerCase();
+        final exists = snap.docs.any((doc) =>
+            (doc.data()['medicineName'] ?? '').toString().toLowerCase().trim() ==
+            nameLower);
+        if (exists && context.mounted) {
+          _showAlreadyScheduledDialog(context, medicineName);
+          return;
+        }
+      } catch (_) {}
+    }
+
+    if (!context.mounted) return;
+
     final prefill = {
-      'name': widget.medicineData['name'] ?? '',
+      'name': medicineName,
       'generic_name': widget.medicineData['generic_name'] ?? '',
       'dosage': widget.medicineData['dosage'] ?? '',
       'description': widget.medicineData['description'] ?? '',
@@ -663,6 +686,62 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => MedicineTableScreen(prefillMedicine: prefill),
+      ),
+    );
+  }
+
+  void _showAlreadyScheduledDialog(BuildContext context, String name) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72, height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF0E6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.event_available_rounded,
+                    color: Color(0xFFE67E22), size: 36),
+              ),
+              const SizedBox(height: 20),
+              const Text('Already Scheduled',
+                  style: TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.w800,
+                      color: Color(0xFF48466E))),
+              const SizedBox(height: 10),
+              Text(
+                '$name is already in your medicine schedule.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 14, color: Colors.black54, height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF48466E),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Got it',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

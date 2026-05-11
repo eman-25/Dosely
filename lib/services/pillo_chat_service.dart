@@ -1,21 +1,26 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../Screens/Main Features/api_key.dart'; // your const apiKey = 'YOUR_KEY';
+import '../Screens/Main Features/api_key.dart';
+
+// ── Return type ───────────────────────────────────────────────────────────────
+class PilloResponse {
+  final String text;
+
+  /// Non-null when Pillo recommends a specific medicine the user can schedule.
+  final Map<String, String>? suggestedMedicine;
+
+  const PilloResponse(this.text, {this.suggestedMedicine});
+}
 
 class PilloChatService {
   static final _firestore = FirebaseFirestore.instance;
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Load user context (profile + scan history) from Firestore
-  // Called on app init to populate Pillo's context
-  // ──────────────────────────────────────────────────────────────────────────
+  // ── Load user context ─────────────────────────────────────────────────────
   static Future<PilloContext> loadUserContext(String uid) async {
     try {
-      // Fetch user profile document
       final userDoc = await _firestore.collection('users').doc(uid).get();
       final userProfile = userDoc.data() ?? {};
 
-      // Fetch scan history (last 10 scans)
       final scansSnap = await _firestore
           .collection('users')
           .doc(uid)
@@ -24,33 +29,25 @@ class PilloChatService {
           .limit(10)
           .get();
 
-      final scanHistory = scansSnap.docs
-          .map((doc) => doc.data())
-          .toList();
-
       return PilloContext(
         userProfile: userProfile,
-        scanHistory: scanHistory,
+        scanHistory: scansSnap.docs.map((d) => d.data()).toList(),
         memory: {},
       );
-    } catch (e) {
-      // Return empty context on error — app will still work
-      print('⚠️ Error loading user context: $e');
+    } catch (_) {
       return const PilloContext();
     }
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Send message to Gemini with patient context
-  // ──────────────────────────────────────────────────────────────────────────
-  static Future<String> send(
+  // ── Send message to Gemini ────────────────────────────────────────────────
+  static Future<PilloResponse> send(
     String message, {
     List<Map<String, String>> previousMessages = const [],
     Map<String, dynamic> userProfile = const {},
     List<Map<String, dynamic>> scanHistory = const [],
     bool hasImage = false,
+    String? ocrResultText, // OCR scan result from an uploaded image
   }) async {
-    // ── Trim conversation history to last 10 messages ──────────────────────
     final trimmedHistory = previousMessages.length > 10
         ? previousMessages.sublist(previousMessages.length - 10)
         : previousMessages;
@@ -60,13 +57,12 @@ class PilloChatService {
         .where((l) => l.trim().isNotEmpty)
         .join('\n');
 
-    // ── Extract and format user profile ────────────────────────────────────
-    final health = userProfile['healthInfo'] as Map<String, dynamic>? ?? {};
+    // ── User profile ──────────────────────────────────────────────────────
+    final health   = userProfile['healthInfo'] as Map<String, dynamic>? ?? {};
     final username = (userProfile['username'] ?? userProfile['name'] ?? '').toString().trim();
     final dob      = (userProfile['dob'] ?? '').toString().trim();
     final gender   = (userProfile['gender'] ?? '').toString().trim();
 
-    // Calculate age from DOB
     String age = '';
     if (dob.isNotEmpty) {
       try {
@@ -75,104 +71,90 @@ class PilloChatService {
       } catch (_) {}
     }
 
-    String healthVal(String key) => (health[key] ?? '').toString().trim();
+    String hv(String key) => (health[key] ?? '').toString().trim();
 
-    final allergies         = healthVal('allergies');
-    final chronicConditions = healthVal('chronicConditions');
-    final currentMeds       = healthVal('currentMedications');
-    final specialConditions = healthVal('specialConditions');
-
-    // Build profile section for Pillo
     final profileLines = <String>[];
     if (username.isNotEmpty) profileLines.add('- Name: $username');
     if (age.isNotEmpty)      profileLines.add('- Age: $age');
     if (gender.isNotEmpty)   profileLines.add('- Gender: $gender');
-    if (allergies.isNotEmpty && allergies.toLowerCase() != 'none')
+    final allergies = hv('allergies');
+    final chronic   = hv('chronicConditions');
+    final special   = hv('specialConditions');
+    if (allergies.isNotEmpty && allergies.toLowerCase() != 'none') {
       profileLines.add('- ALLERGIES: $allergies');
-    if (chronicConditions.isNotEmpty && chronicConditions.toLowerCase() != 'none')
-      profileLines.add('- Chronic conditions: $chronicConditions');
-    if (currentMeds.isNotEmpty && currentMeds.toLowerCase() != 'none')
-      profileLines.add('- Current medications: $currentMeds');
-    if (specialConditions.isNotEmpty && specialConditions.toLowerCase() != 'none')
-      profileLines.add('- Special conditions: $specialConditions');
-    
-    final profileText = profileLines.isEmpty ? '- No profile data yet.' : profileLines.join('\n');
+    }
+    if (chronic.isNotEmpty && chronic.toLowerCase() != 'none') {
+      profileLines.add('- Chronic conditions: $chronic');
+    }
+    if (special.isNotEmpty && special.toLowerCase() != 'none') {
+      profileLines.add('- Special conditions: $special');
+    }
+    final profileText = profileLines.isEmpty ? '- No profile data.' : profileLines.join('\n');
 
-    // ── Build scanned medicines section ────────────────────────────────────
+    // ── Scan history ──────────────────────────────────────────────────────
     String scanText = '- No medicines scanned yet.';
     if (scanHistory.isNotEmpty) {
-      final lines = <String>[];
-      for (final s in scanHistory) {
-        final name    = (s['medicineName'] ?? '').toString();
-        final generic = (s['genericName'] ?? '').toString();
-        final dosage  = (s['dosage'] ?? '').toString();
-        final status  = (s['status'] ?? '').toString();
-        final score   = (s['score']?.toString() ?? '');
-        final reasons = (s['reasons'] as List?)?.map((r) => r.toString()).join(', ') ?? '';
-        final matched = (s['matchedDosages'] as List?)?.map((d) => d.toString()).join(', ') ?? '';
-        
-        lines.add(
-          '- $name ($generic) | dosage: $dosage | matched dosages: $matched'
-          ' | status: $status | safety score: $score'
-          '${reasons.isNotEmpty ? " | notes: $reasons" : ""}',
-        );
-      }
+      final lines = scanHistory.map((s) {
+        final name    = s['medicineName'] ?? '';
+        final generic = s['genericName'] ?? '';
+        final dosage  = s['dosage'] ?? '';
+        final status  = s['status'] ?? '';
+        final reasons = (s['reasons'] as List?)?.join(', ') ?? '';
+        return '- $name ($generic) | $dosage | status: $status${reasons.isNotEmpty ? " | $reasons" : ""}';
+      });
       scanText = lines.join('\n');
     }
 
-    // ── Compose the system prompt for Pillo ────────────────────────────────
-    final promptText = '''
-You are Pillo, a clinical medicine assistant in a mobile health app.
-You reason like an experienced doctor — thorough, caring, and specific to this patient.
+    // ── OCR context ───────────────────────────────────────────────────────
+    final ocrSection = ocrResultText != null && ocrResultText.isNotEmpty
+        ? '\nSCANNED MEDICINE FROM IMAGE:\n$ocrResultText\n'
+        : '';
+
+    // ── System prompt ─────────────────────────────────────────────────────
+    final promptText = '''You are Pillo 🌿, a warm and caring medicine companion in a health app.
+You're like a knowledgeable friend — reassuring, clear, and never overwhelming.
+Always personalise to this patient. Keep responses concise and uplifting.
 
 PATIENT PROFILE:
 $profileText
 
-PATIENT SCANNED MEDICINES (their personal medicine history):
+PATIENT SCAN HISTORY:
 $scanText
+$ocrSection
+RULES:
+1. Cross-check every medicine against the patient's allergies, conditions, age, gender.
+2. When recommending, prefer options from their scan history and explain why.
+3. Warn clearly (⚠️) for any conflict with allergies, conditions, or other meds.
+4. If pregnant: apply strict pregnancy safety. If hypertension: warn about NSAIDs.
+5. Never say a medicine is 100% safe.
+6. Be warm and encouraging — the patient should feel supported, not scared.
 
-CLINICAL RULES:
-1. Always cross-check any medicine against the patient's allergies, conditions, age, gender, and special conditions.
-2. When recommending, pick the BEST option from their scanned history if relevant, explain why it fits them personally.
-3. ALWAYS specify: how many TABLETS/CAPSULES per dose (e.g. '1 tablet', '2 tablets'), the strength per tablet (mg), how many times per day, hours apart, and for how many days. Use the matchedDosages from their scan history to determine the right tablet count.
-4. ALWAYS mention what to take it with (food, water, milk) and what to avoid (alcohol, other drugs, foods).
-5. Warn clearly (with ⚠️) if a medicine conflicts with their allergies, conditions, or other medications.
-6. If pregnant: apply strict pregnancy safety rules — flag anything unsafe.
-7. If hypertension: warn about NSAIDs, decongestants, high-sodium drugs.
-8. Mention how long until the medicine starts working.
-9. Mention what to do if they miss a dose.
-10. Never say a medicine is 100% safe.
+RESPONSE FORMAT for medicine questions (keep it short and friendly):
+✅ [medicine name] — [why it suits THIS patient, 1 sentence]
 
-RESPONSE FORMAT — USE THIS EXACT STRUCTURE FOR MEDICINE QUESTIONS:
-✅ Best option: [medicine name] — [why it suits THIS patient specifically]
+💊 How to take it:
+• [dose, strength, frequency, duration — all in 1-2 bullet points]
+• Take with: [water/food]
 
-💊 Dosage:
-• Tablets: [e.g. 1 tablet / 2 tablets per dose]
-• Strength: [e.g. 500mg per tablet]
-• Frequency: [e.g. every 6–8 hours, max 4 tablets/day]
-• Duration: [e.g. 3–5 days, or as needed]
-• Take with: [e.g. a full glass of water, with food]
+⏱ Kicks in: [e.g. 30–60 min]
+🚫 Avoid: [key interactions, brief]
+⚠️ Watch out: [only if specific risk for THIS patient]
+🩺 Always double-check with your doctor or pharmacist. You've got this! 💙
 
-⏱ Works in: [e.g. 30–60 minutes]
+IMPORTANT: If you recommend a specific medicine, append this EXACT line at the very end (no text after it):
+MEDICINE_SUGGEST:MedicineName|GenericName|Dosage
 
-🚫 Avoid: [alcohol / specific foods / other medicines that interact]
+Example: MEDICINE_SUGGEST:Panadol|Acetaminophen|500mg
 
-⚠️ Watch out: [specific risk for THIS patient based on their profile, or "No major concerns for your profile"]
-
-📋 If you miss a dose: [what to do]
-
-🩺 Always confirm with your doctor or pharmacist before use.
-
-For simple conversational questions (greetings, non-medicine topics): reply in 1-3 friendly sentences only, no format needed.
+For simple conversational questions: reply in 1-3 warm, friendly sentences only.
 
 CONVERSATION SO FAR:
 ${historyText.isEmpty ? 'None.' : historyText}
 
 PATIENT SAYS:
-$message${hasImage ? '\n[Patient attached an image]' : ''}
+$message${hasImage && ocrResultText == null ? '\n[Patient attached an image — described above if scanned]' : ''}
 ''';
 
-    // ── Try multiple models with graceful fallback ──────────────────────────
     const modelsToTry = [
       'gemini-2.5-flash-lite',
       'gemini-2.5-flash',
@@ -181,41 +163,56 @@ $message${hasImage ? '\n[Patient attached an image]' : ''}
 
     for (final modelName in modelsToTry) {
       try {
-        final model = GenerativeModel(
-          model: modelName,
-          apiKey: apiKey,
-        );
+        final model = GenerativeModel(model: modelName, apiKey: apiKey);
         final response = await model.generateContent([Content.text(promptText)]);
-        final text = response.text;
-        if (text != null && text.trim().isNotEmpty) return text.trim();
+        final raw = response.text;
+        if (raw != null && raw.trim().isNotEmpty) {
+          return _parseResponse(raw.trim());
+        }
       } catch (e) {
         final err = e.toString().toLowerCase();
-        
-        // Check if it's a quota/rate limit error (temporary)
-        final isQuotaOrBusy = err.contains('quota') ||
+        final isTemporary = err.contains('quota') ||
             err.contains('429') ||
             err.contains('resource exhausted') ||
             err.contains('overloaded') ||
             err.contains('503') ||
             err.contains('unavailable');
-        
-        // If it's not temporary, report immediately instead of trying next model
-        if (!isQuotaOrBusy) {
-          return 'Pillo error: $e';
-        }
-        // Otherwise try next model
+        if (!isTemporary) return PilloResponse('Pillo error: $e');
       }
     }
 
-    // All models failed due to quota
-    return 'Pillo is very busy right now. Please try again in a moment.';
+    return const PilloResponse(
+        'Pillo is very busy right now. Please try again in a moment.');
+  }
+
+  // ── Parse MEDICINE_SUGGEST marker from response ───────────────────────────
+  static PilloResponse _parseResponse(String raw) {
+    const marker = 'MEDICINE_SUGGEST:';
+    final idx = raw.lastIndexOf(marker);
+    if (idx == -1) return PilloResponse(raw);
+
+    final text       = raw.substring(0, idx).trim();
+    final suggestion = raw.substring(idx + marker.length).trim();
+    final parts      = suggestion.split('|');
+
+    final name    = parts.isNotEmpty ? parts[0].trim() : '';
+    final generic = parts.length > 1 ? parts[1].trim() : '';
+    final dosage  = parts.length > 2 ? parts[2].trim() : '';
+
+    if (name.isEmpty) return PilloResponse(text);
+
+    return PilloResponse(
+      text,
+      suggestedMedicine: {
+        'name':         name,
+        'generic_name': generic,
+        'dosage':       dosage,
+      },
+    );
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Data model: Holds user context for Pillo
-// ──────────────────────────────────────────────────────────────────────────
-
+// ── Context model ─────────────────────────────────────────────────────────────
 class PilloContext {
   final Map<String, dynamic> userProfile;
   final List<Map<String, dynamic>> scanHistory;
@@ -226,15 +223,4 @@ class PilloContext {
     this.scanHistory = const [],
     this.memory = const {},
   });
-
-  factory PilloContext.fromFirestore({
-    required Map<String, dynamic> userData,
-    required List<Map<String, dynamic>> scans,
-  }) {
-    return PilloContext(
-      userProfile: userData,
-      scanHistory: scans,
-      memory: {},
-    );
-  }
 }

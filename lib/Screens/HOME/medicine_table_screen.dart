@@ -226,6 +226,18 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
         rawDosage: (prefill['dosage'] ?? '').toString(),
       );
 
+      // Duplicate check — block if same medicine name already in schedule
+      final existingDocs = await _tableRef.get();
+      final cleanedNameLower = (cleaned['name'] ?? '').toLowerCase().trim();
+      final isDuplicate = existingDocs.docs.any((doc) {
+        final existing = (doc.data()['medicineName'] ?? '').toString().toLowerCase().trim();
+        return existing == cleanedNameLower;
+      });
+      if (isDuplicate) {
+        if (mounted) _showAlreadyScheduledDialog(cleaned['name'] ?? (prefill['name'] ?? '').toString());
+        return;
+      }
+
       final docRef = await _tableRef.add({
         'medicineName': cleaned['name'],
         'genericName': (prefill['generic_name'] ?? '').toString(),
@@ -397,6 +409,58 @@ class _MedicineTableScreenState extends State<MedicineTableScreen> {
     final m = date.month.toString().padLeft(2, '0');
     final d = date.day.toString().padLeft(2, '0');
     return '$y-$m-$d';
+  }
+
+  void _showAlreadyScheduledDialog(String name) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72, height: 72,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF0E6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.event_available_rounded,
+                    color: Color(0xFFE67E22), size: 36),
+              ),
+              const SizedBox(height: 20),
+              const Text('Already Scheduled',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
+                      color: c1)),
+              const SizedBox(height: 10),
+              Text('$name is already in your medicine schedule.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14,
+                      color: Colors.black54, height: 1.5)),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: c1,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Got it',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showMessage(String message) {
