@@ -39,7 +39,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
       }
     } else {
        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No email found for current user.')),
+          SnackBar(content: Text('no_email_found'.tr())),
        );
     }
   }
@@ -73,7 +73,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                       Text('account_protected'.tr(),
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 4),
-                      Text('last_password_change'.tr(),
+                      Text('password_changed'.tr(),
                           style: const TextStyle(color: Colors.black87, fontSize: 13)),
                     ],
                   ),
@@ -100,33 +100,33 @@ class _SecurityScreenState extends State<SecurityScreen> {
           const SizedBox(height: 20),
           _buildInfoCard(
             icon: Icons.lock_outline,
-            title: 'security'.tr(),
-            subtitle: 'Medication details are encrypted and invisible to third parties.',
+            title: 'security_encryption'.tr(),
+            subtitle: 'encryption_desc'.tr(),
           ),
           _buildInfoCard(
             icon: Icons.people_outline,
-            title: 'account_protected'.tr(),
-            subtitle: 'Dosely team will never request your secret PIN.',
+            title: 'no_pin_request'.tr(),
+            subtitle: 'no_pin_request_desc'.tr(),
             badgeIcon: Icons.cancel,
             badgeColor: Colors.redAccent,
           ),
           _buildInfoCard(
             icon: Icons.sync,
-            title: 'app_updates_title'.tr(),
-            subtitle: 'Regular application updates protect you from vulnerabilities.',
+            title: 'app_security'.tr(),
+            subtitle: 'app_security_desc'.tr(),
           ),
           _buildInfoCard(
             icon: Icons.fingerprint,
-            title: 'biometric_auth'.tr(),
-            subtitle: 'Ensure your phone screen is locked with a PIN or biometric.',
+            title: 'biometric_security'.tr(),
+            subtitle: 'biometric_security_desc'.tr(),
           ),
           const SizedBox(height: 20),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.password, color: Color(0xFF3E84A8), size: 28),
-            title: Text('change_password_title'.tr(),
+            title: Text('change_password'.tr(),
                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            subtitle: Text('change_password_subtitle'.tr(), style: const TextStyle(fontSize: 14)),
+            subtitle: Text('change_password'.tr(), style: const TextStyle(fontSize: 14)),
             trailing: const Icon(Icons.chevron_right, color: Colors.black, size: 28),
             onTap: _sendResetLink,
           ),
