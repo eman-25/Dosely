@@ -1,25 +1,299 @@
 <!-- login.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Admin Login</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dosely Admin Login</title>
 <script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+:root {
+  --c1: #48466E;      /* Purple */
+  --c2: #3E84A8;      /* Blue */
+  --c3: #4ACED0;      /* Teal */
+  --c4: #ACEDD9;      /* Light teal */
+  --c5: #E0FBF4;      /* Mint background */
+}
+
+body {
+  background: linear-gradient(135deg, var(--c5) 0%, #D4F8F0 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  animation: gradientShift 15s ease infinite;
+  background-size: 200% 200%;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.login-container {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  animation: slideUp 0.6s ease-out, fadeIn 0.6s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.logo-section {
+  text-align: center;
+  margin-bottom: 40px;
+  animation: slideDown 0.8s ease-out 0.1s backwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logo-icon {
+  height: 60px;
+  width: auto;
+  margin-bottom: 15px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.logo-text {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--c1);
+  margin: 0;
+  animation: textGlow 2s ease-in-out infinite;
+}
+
+@keyframes textGlow {
+  0%, 100% {
+    text-shadow: 0 0 0 rgba(72, 70, 110, 0);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(72, 70, 110, 0.3);
+  }
+}
+
+.form-group {
+  margin-bottom: 20px;
+  animation: slideUp 0.6s ease-out backwards;
+}
+
+.form-group:nth-child(1) { animation-delay: 0.2s; }
+.form-group:nth-child(2) { animation-delay: 0.3s; }
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c1);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: color 0.3s ease;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  position: relative;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--c3);
+  box-shadow: 0 0 0 3px rgba(74, 206, 208, 0.1), 0 0 15px rgba(74, 206, 208, 0.2);
+  transform: translateY(-2px);
+}
+
+.form-input::placeholder {
+  transition: opacity 0.3s ease;
+}
+
+.form-input:focus::placeholder {
+  opacity: 0.5;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, var(--c3) 0%, var(--c2) 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  animation: slideUp 0.6s ease-out backwards 0.4s;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.2);
+  transition: left 0.5s ease;
+  z-index: 1;
+}
+
+.login-btn:hover::before {
+  left: 100%;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(74, 206, 208, 0.3);
+  background: linear-gradient(135deg, #35c9d6 0%, #4a9ec1 100%);
+}
+
+.login-btn:active {
+  transform: translateY(0);
+}
+
+.login-btn:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 15px;
+  padding: 12px;
+  background: #fee2e2;
+  border-radius: 8px;
+  border-left: 4px solid #ef4444;
+  display: none;
+  animation: shake 0.5s ease-in-out, slideUp 0.4s ease-out;
+}
+
+.error-message.show {
+  display: block;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.loading {
+  display: none;
+  margin-right: 8px;
+}
+
+.loading.show {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.footer-text {
+  text-align: center;
+  color: #999;
+  font-size: 12px;
+  margin-top: 20px;
+  animation: fadeIn 1s ease-out 0.6s backwards;
+}
+</style>
 
 </head>
 
-<body class="flex items-center justify-center h-screen bg-gray-100">
+<body class="flex items-center justify-center min-h-screen p-4">
 
-<div class="bg-white p-6 rounded-xl shadow w-80">
-<h2 class="text-xl font-bold mb-4">Admin Login</h2>
+<div class="login-container">
+  <!-- Logo Section -->
+  <div class="logo-section">
+    <img src="/assets/images/dosely_white_logo.png" alt="Dosely" class="logo-icon mx-auto">
+    <p style="color: var(--c2); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px;">Admin Dashboard</p>
+  </div>
 
-<input id="email" type="email" placeholder="Email" class="w-full mb-3 p-2 border">
-<input id="password" type="password" placeholder="Password" class="w-full mb-3 p-2 border">
+  <!-- Login Form -->
+  <form onsubmit="login(event)">
+    <div class="form-group">
+      <label class="form-label">Email Address</label>
+      <input 
+        id="email" 
+        type="email" 
+        placeholder="admin@dosely.com"
+        class="form-input"
+        required
+        autofocus
+      >
+    </div>
 
-<button onclick="login()" class="w-full bg-blue-500 text-white p-2 rounded">
-    Login
-</button>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input 
+        id="password" 
+        type="password" 
+        placeholder="••••••••"
+        class="form-input"
+        required
+      >
+    </div>
 
-<p id="error" class="text-red-500 mt-2"></p>
+    <button type="submit" class="login-btn">
+      <span class="loading" id="spinner"></span>
+      <span id="btn-text">Login</span>
+    </button>
+  </form>
+
+  <!-- Error Message -->
+  <div id="error" class="error-message"></div>
+
+  <!-- Footer -->
+  <div class="footer-text">
+    Secure login for Dosely administrators only
+  </div>
 </div>
 
 <!-- Firebase -->
@@ -28,24 +302,66 @@
 
 <script>
 const firebaseConfig = {
-apiKey: "AIzaSyBJ_FUCYzXVDGEAQP4D9KLOjFhgjT56lZ8",
-authDomain: "dosley-76bd1.firebaseapp.com",
-projectId: "dosley-76bd1",
+  apiKey: "AIzaSyBJ_FUCYzXVDGEAQP4D9KLOjFhgjT56lZ8",
+  authDomain: "dosley-76bd1.firebaseapp.com",
+  projectId: "dosley-76bd1",
 };
 
 firebase.initializeApp(firebaseConfig);
 
-function login() {
-const email = document.getElementById("email").value;
-const password = document.getElementById("password").value;
+function login(event) {
+  event.preventDefault();
+  
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const errorDiv = document.getElementById("error");
+  const spinner = document.getElementById("spinner");
+  const btnText = document.getElementById("btn-text");
+  const btn = event.target.querySelector('button');
 
-    firebase.auth().signInWithEmailAndPassword(email, password)
+  // Clear previous error
+  errorDiv.classList.remove("show");
+  errorDiv.innerText = "";
+
+  // Show loading state
+  spinner.classList.add("show");
+  btnText.innerText = "Logging in...";
+  btn.disabled = true;
+
+  firebase.auth().signInWithEmailAndPassword(email, password)
     .then(() => {
-    window.location.href = "index.html";    })
+      window.location.href = "index.html";
+    })
     .catch(err => {
-    document.getElementById("error").innerText = err.message;
+      // Hide loading state
+      spinner.classList.remove("show");
+      btnText.innerText = "Login";
+      btn.disabled = false;
+
+      // Show error
+      errorDiv.classList.add("show");
+      
+      // Friendly error messages
+      if (err.code === 'auth/invalid-email') {
+        errorDiv.innerText = "Invalid email address";
+      } else if (err.code === 'auth/user-not-found') {
+        errorDiv.innerText = "Admin account not found";
+      } else if (err.code === 'auth/wrong-password') {
+        errorDiv.innerText = "Incorrect password";
+      } else if (err.code === 'auth/too-many-requests') {
+        errorDiv.innerText = "Too many login attempts. Please try again later.";
+      } else {
+        errorDiv.innerText = err.message || "Login failed. Please try again.";
+      }
     });
 }
+
+// Allow Enter key to submit
+document.getElementById("password").addEventListener("keypress", function(event) {
+  if (event.key === "Enter") {
+    document.querySelector("form").dispatchEvent(new Event("submit"));
+  }
+});
 </script>
 
 </body>
