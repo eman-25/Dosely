@@ -29,34 +29,39 @@ class DescriptionSimplifierService {
           ? '$medicineName (generic: $genericName)' 
           : medicineName;
 
-      final String prompt = '''Medicine: $fullName
+      final String prompt = '''You are Pillo, a friendly medicine assistant. Explain what the medicine below is used for in plain, everyday language that anyone can understand.
+
+Medicine: $fullName
 Patient profile — Age: ${ageInYears != null ? '$ageInYears years old' : 'unknown'}, Allergies: ${allergies.isEmpty || allergies.toLowerCase() == 'none' ? 'none' : allergies}, Chronic conditions: ${chronicConditions.isEmpty || chronicConditions.toLowerCase() == 'none' ? 'none' : chronicConditions}, Special conditions: ${specialConditions.isEmpty || specialConditions.toLowerCase() == 'none' ? 'none' : specialConditions}.
 
-Write ONE short sentence saying only what this medicine is used for. Use simple everyday language.
+Write 2–3 short, friendly sentences:
+1. What this medicine is mainly used for (be specific — name the conditions it treats).
+2. One helpful fact about it (e.g. how quickly it works, or a common situation it helps with).
+3. If the patient profile has a relevant condition or allergy, add a brief, friendly note about it (otherwise skip this sentence).
 
 Rules:
-- Start with "Used to treat..." or "Used for..."
-- Name the SPECIFIC conditions it treats (e.g. "acne, chest infections, urinary tract infections")
-- NO explanation of how it works
-- NO patient-profile notes
-- NO dosage, frequency, or instructions
-- NO "consult a doctor" or "talk to your pharmacist"
-- NO extra commentary
+- Use simple, friendly, everyday words — no medical jargon
+- Be warm and helpful, like a knowledgeable friend
+- Cover ALL relevant medicine types: antibiotics, painkillers, heart/blood pressure, diabetes, thyroid, mental health, skin, eye drops, vitamins, supplements, hormones, antivirals, antifungals, inhalers, etc.
+- NO dosage or frequency instructions
+- NO "consult a doctor" or "talk to your pharmacist" phrases
+- NO bullet points — write in flowing sentences
+- Keep it concise (under 60 words total)
 
-Output one sentence only, nothing else.''';
+Output the 2–3 sentences only, nothing else.''';
 
       print('📤 Sending smart prompt to Gemini for: $fullName');
 
       // ✅ CALL GEMINI API
       final response = await model.generateContent([
         Content.text(prompt)
-      ]).timeout(const Duration(seconds: 15));
+      ]).timeout(const Duration(seconds: 20));
 
       final text = response.text?.trim() ?? '';
-      
+
       print('✅ Gemini returned: "$text"');
 
-      if (text.isNotEmpty && text.length > 20) {
+      if (text.isNotEmpty && text.length > 15) {
         return text;
       }
       

@@ -5,7 +5,11 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Liihj\\\\OneDrive\\\\Desktop\\\\personal\\\\sdk\\\\Dosely\" -Directory)",
       "Bash(Select-Object Name)",
       "Bash(python3 -c \"import json; json.load\\(open\\(r'c:/Users/Liihj/OneDrive/Desktop/personal/sdk/Dosely/assets/translations/ar.json', encoding='utf-8'\\)\\); print\\('ar.json OK'\\)\")",
-      "Bash(python3 -c \"import json; json.load\\(open\\(r'c:/Users/Liihj/OneDrive/Desktop/personal/sdk/Dosely/assets/translations/en.json', encoding='utf-8'\\)\\); print\\('en.json OK'\\)\")"
+      "Bash(python3 -c \"import json; json.load\\(open\\(r'c:/Users/Liihj/OneDrive/Desktop/personal/sdk/Dosely/assets/translations/en.json', encoding='utf-8'\\)\\); print\\('en.json OK'\\)\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Liihj\\\\OneDrive\\\\Desktop\\\\personal\\\\sdk\\\\Dosely\" -Recurse -Directory)",
+      "Bash(Select-Object -First 50 FullName)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Liihj\\\\OneDrive\\\\Desktop\\\\personal\\\\sdk\\\\Dosely\\\\lib\" -Directory)",
+      "Bash(Sort-Object Name)"
     ]
   }
 }

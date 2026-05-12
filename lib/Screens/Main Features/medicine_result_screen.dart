@@ -402,6 +402,38 @@ class _MedicineResultScreenState extends State<MedicineResultScreen> {
                   ),
                 ),
               ],
+              const Spacer(),
+              // AI by Pillo badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEEF6FF),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _c2.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 11,
+                      color: Color(0xFF3E84A8),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'AI by Pillo',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF3E84A8),
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),

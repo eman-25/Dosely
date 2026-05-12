@@ -117,6 +117,21 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
         return;
       }
 
+      final medicineName =
+          (medicineResult['name'] ?? 'Unknown Medicine').toString().trim();
+
+      setState(() {
+        _isTakingPhoto = false;
+      });
+
+      final confirmed = await _showMedicineConfirmDialog(medicineName);
+      if (!mounted) return;
+
+      if (confirmed != true) {
+        // User said "No" — stay on scan screen so they can try again
+        return;
+      }
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -144,6 +159,112 @@ class _ScanState extends State<Scan> with WidgetsBindingObserver {
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.red.shade400,
         content: Text(message),
+      ),
+    );
+  }
+
+  Future<bool?> _showMedicineConfirmDialog(String medicineName) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE8F4FB),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.medication_rounded,
+                color: _primary,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Did we get it right?',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: _dark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            RichText(
+              textAlign: TextAlign.center,
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Colors.black54,
+                  height: 1.5,
+                ),
+                children: [
+                  const TextSpan(text: 'Is this medicine '),
+                  TextSpan(
+                    text: medicineName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: _dark,
+                    ),
+                  ),
+                  const TextSpan(text: '?'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _dark,
+                      side: BorderSide(color: _dark.withValues(alpha: 0.3)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text(
+                      'No, try again',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text(
+                      'Yes, that\'s it!',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

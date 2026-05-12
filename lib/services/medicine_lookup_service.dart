@@ -20,8 +20,10 @@
 
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:http/http.dart' as http;
+import '../Screens/Main Features/api_key.dart';
 
 class MedicineLookupService {
   static final _db = FirebaseFirestore.instance;
@@ -108,20 +110,18 @@ class MedicineLookupService {
     required String ocrText,
   }) async {
     final candidates = _extractCandidates(ocrText);
-    if (candidates.isEmpty) return null;
 
     for (final candidate in candidates) {
       final medicine = await _fetchMedicine(candidate);
       if (medicine != null) {
-        // ✅ Override `name` with the actual label printed on the box
-        // (the line of OCR text that contains this candidate),
-        // not the generic FDA name. Generic name stays in `generic_name`.
         final boxLabel = _extractBoxLabel(ocrText, candidate);
         if (boxLabel.isNotEmpty) medicine['name'] = boxLabel;
         return _runSafetyCheck(uid: uid, medicine: medicine, ocrText: ocrText);
       }
     }
-    return null;
+
+    // All external APIs failed — let Gemini identify the medicine directly
+    return _aiLookup(ocrText: ocrText, uid: uid);
   }
 
   /// Called by Upload.dart — processes image then does lookup.
@@ -145,7 +145,6 @@ class MedicineLookupService {
       onStatus?.call('Looking up $candidate…');
       final medicine = await _fetchMedicine(candidate);
       if (medicine != null) {
-        // ✅ Use the actual box label, not the FDA generic name
         final boxLabel = _extractBoxLabel(ocrText, candidate);
         if (boxLabel.isNotEmpty) medicine['name'] = boxLabel;
 
@@ -156,7 +155,12 @@ class MedicineLookupService {
         return result;
       }
     }
-    return null;
+
+    // All external APIs failed — let Gemini identify the medicine directly
+    onStatus?.call('Using AI to identify medicine…');
+    final aiResult = await _aiLookup(ocrText: ocrText, uid: uid);
+    if (aiResult != null) aiResult['_ocrText'] = ocrText;
+    return aiResult;
   }
 
   /// Called by Search.dart — takes a typed name, returns full result map.
@@ -917,6 +921,93 @@ class MedicineLookupService {
       'status': status,
       'reasons': reasons,
     };
+  }
+
+  // =========================================================================
+  //  GEMINI AI FALLBACK
+  //  Called when all external APIs (DailyMed, OpenFDA, RxNorm) return null.
+  //  Gemini reads the raw OCR text, identifies the medicine, and generates
+  //  the name, generic name, and description from its own knowledge base.
+  // =========================================================================
+  static Future<Map<String, dynamic>?> _aiLookup({
+    required String ocrText,
+    required String uid,
+  }) async {
+    try {
+      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
+
+      final prompt = '''You are a medicine identification assistant.
+The following text was scanned from a medicine box using OCR:
+
+"""
+$ocrText
+"""
+
+Identify the medicine and return ONLY valid JSON with these exact fields:
+{
+  "name": "brand name as printed on the box",
+  "generic_name": "generic or scientific name (e.g. amoxicillin, paracetamol)",
+  "description": "2 to 3 friendly sentences in simple everyday language about what this medicine is used to treat"
+}
+
+If you cannot identify any medicine from this text, return: {"error":"not_found"}
+Output JSON only. No markdown. No code fences. No explanation.''';
+
+      final response = await model
+          .generateContent([Content.text(prompt)])
+          .timeout(const Duration(seconds: 18));
+
+      String text = (response.text ?? '').trim();
+      text = text
+          .replaceAll(RegExp(r'```[a-z]*\n?', caseSensitive: false), '')
+          .replaceAll('```', '')
+          .trim();
+
+      if (text.isEmpty || text.contains('"error"')) return null;
+
+      // Parse JSON — try dart:convert first, then regex fallback
+      Map<String, dynamic> decoded;
+      try {
+        decoded = Map<String, dynamic>.from(jsonDecode(text) as Map);
+      } catch (_) {
+        final nameMatch = RegExp(r'"name"\s*:\s*"([^"]+)"').firstMatch(text);
+        final genericMatch =
+            RegExp(r'"generic_name"\s*:\s*"([^"]*)"').firstMatch(text);
+        final descMatch =
+            RegExp(r'"description"\s*:\s*"([\s\S]+?)"(?=\s*[,}])')
+                .firstMatch(text);
+        if (nameMatch == null) return null;
+        decoded = {
+          'name': nameMatch.group(1)!,
+          'generic_name': genericMatch?.group(1) ?? '',
+          'description': descMatch?.group(1) ?? '',
+        };
+      }
+
+      final name = (decoded['name'] as String? ?? '').trim();
+      if (name.isEmpty) return null;
+
+      final genericName = (decoded['generic_name'] as String? ?? '').trim();
+      final description = (decoded['description'] as String? ?? '').trim();
+
+      final medicine = <String, dynamic>{
+        'name': name,
+        'generic_name': genericName,
+        'dosage': 'See product label',
+        'description': description,
+        'aliases': <String>[_norm(name), if (genericName.isNotEmpty) _norm(genericName)],
+        'avoid_combinations': <String>[],
+        'allergy_trigger': genericName.isNotEmpty ? genericName : name,
+        'pregnancy_warning': 'caution',
+        '_source': 'Gemini AI',
+        '_cached_at': DateTime.now().toIso8601String(),
+      };
+
+      await _saveToFirestore(medicine);
+      return _runSafetyCheck(uid: uid, medicine: medicine, ocrText: ocrText);
+    } catch (_) {
+      return null;
+    }
   }
 
   // =========================================================================
