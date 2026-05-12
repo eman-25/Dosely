@@ -12,24 +12,156 @@
 
 <style>
 :root {
-  --c1: #48466E;
-  --c2: #3E84A8;
-  --c3: #4ACED0;
-  --c4: #ACEDD9;
-  --c5: #E0FBF4;
+  --c1: #48466E;      /* Purple sidebar */
+  --c2: #3E84A8;      /* Blue */
+  --c3: #4ACED0;      /* Teal */
+  --c4: #ACEDD9;      /* Light teal */
+  --c5: #E0FBF4;      /* Mint background */
 }
 
-body { background: var(--c5); }
+body { 
+  background: var(--c5);
+  color: #333;
+}
 
-.fade { animation: fadeIn 0.4s ease-in-out; }
+/* Page transitions */
+.fade { 
+  animation: fadeIn 0.5s ease-in-out;
+}
+
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px);}
-  to { opacity: 1; transform: translateY(0);}
+  from { 
+    opacity: 0; 
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0);
+  }
+}
+
+/* Sidebar animations */
+.sidebar-item {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.1);
+  transition: left 0.4s ease;
+  z-index: -1;
 }
 
 .sidebar-item:hover {
   background: var(--c2);
   color: white;
+  transform: translateX(5px);
+}
+
+.sidebar-item:hover::before {
+  left: 100%;
+}
+
+/* Card animations */
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  animation: scaleIn 0.4s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.card:hover {
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  transform: translateY(-4px);
+}
+
+/* Heading animations */
+h1, h2, h3, h4 {
+  color: var(--c1);
+  font-weight: 700;
+  animation: slideInLeft 0.5s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Chart animations */
+canvas {
+  animation: fadeIn 0.8s ease-out;
+}
+
+/* Button animations */
+button {
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Table row animations */
+tr {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Select dropdown animation */
+select {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+select:hover {
+  box-shadow: 0 2px 8px rgba(62, 132, 168, 0.2);
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--c3);
+  box-shadow: 0 0 0 3px rgba(74, 206, 208, 0.1);
+  transform: scale(1.02);
 }
 </style>
 </head>
@@ -38,17 +170,18 @@ body { background: var(--c5); }
 
 <!-- SIDEBAR -->
 <div class="w-64 text-white flex flex-col" style="background: var(--c1)">
-  <div class="p-6 text-2xl font-bold border-b border-white/20">
-    Dosely
+  <div class="p-4 border-b border-white/10 flex items-center gap-3">
+    <img src="/assets/images/icon_transparent.png" alt="Dosely Logo" style="height: 45px; width: auto;">
+    <span class="text-xl font-black">Dosely</span>
   </div>
 
   <div class="flex-1 p-3 space-y-2">
-    <div onclick="showPage('dashboard')" class="sidebar-item p-3 rounded cursor-pointer">Dashboard</div>
-    <div onclick="showPage('feedback')" class="sidebar-item p-3 rounded cursor-pointer">Feedback</div>
-    <div onclick="showPage('analytics')" class="sidebar-item p-3 rounded cursor-pointer">Analytics</div>
+    <div onclick="showPage('dashboard')" class="sidebar-item p-3 rounded cursor-pointer transition-all">Dashboard</div>
+    <div onclick="showPage('feedback')" class="sidebar-item p-3 rounded cursor-pointer transition-all">Feedback</div>
+    <div onclick="showPage('analytics')" class="sidebar-item p-3 rounded cursor-pointer transition-all">Analytics</div>
   </div>
 
-  <button onclick="logout()" class="m-4 p-2 rounded" style="background: var(--c2)">
+  <button onclick="logout()" class="m-4 p-3 rounded font-semibold transition-all" style="background: var(--c2); color: white; hover: opacity-90;">
     Logout
   </button>
 </div>
@@ -59,32 +192,36 @@ body { background: var(--c5); }
 <!-- DASHBOARD -->
 <div id="dashboardPage" class="fade">
 
-<h1 class="text-3xl font-bold mb-6" style="color: var(--c1)">Dashboard</h1>
+<h1 class="text-4xl font-black mb-6" style="color: var(--c1)">Dashboard</h1>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
 
-  <div class="bg-white p-4 rounded-xl shadow">
-    <h2>Total Feedback</h2>
-    <p id="totalFeedback" class="text-2xl font-bold">0</p>
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+    <h2 class="text-xs font-medium text-gray-600">Total Feedback</h2>
+    <p id="totalFeedback" class="text-xl font-bold mt-1">0</p>
   </div>
 
-  <div class="bg-white p-4 rounded-xl shadow">
-    <h2>Average Rating</h2>
-    <p id="avgRating" class="text-2xl font-bold">0</p>
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+    <h2 class="text-xs font-medium text-gray-600">Average Rating</h2>
+    <p id="avgRating" class="text-xl font-bold mt-1">0</p>
   </div>
 
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
-  <div class="bg-white p-4 rounded-xl shadow">
-    <h3 class="mb-2 font-semibold">Feedback Over Time</h3>
-    <canvas id="lineChart"></canvas>
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+    <h3 class="mb-1 text-xs font-medium text-gray-600">Feedback Over Time</h3>
+    <div style="height: 180px;">
+      <canvas id="lineChart"></canvas>
+    </div>
   </div>
 
-  <div class="bg-white p-4 rounded-xl shadow">
-    <h3 class="mb-2 font-semibold">Issue Categories</h3>
-    <canvas id="pieChart"></canvas>
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+    <h3 class="mb-1 text-xs font-medium text-gray-600">Issue Categories</h3>
+    <div style="height: 180px; display: flex; justify-content: center;">
+      <canvas id="pieChart"></canvas>
+    </div>
   </div>
 
 </div>
@@ -94,20 +231,20 @@ body { background: var(--c5); }
 <!-- FEEDBACK -->
 <div id="feedbackPage" class="hidden fade">
 
-<h1 class="text-3xl font-bold mb-6" style="color: var(--c1)">Feedback</h1>
+<h1 class="text-4xl font-black mb-4" style="color: var(--c1)">Feedback</h1>
 
 <input type="text" placeholder="Search..."
-  class="mb-4 p-2 border w-full rounded"
+  class="mb-3 p-2 border w-full rounded text-sm"
   onkeyup="searchTable(this.value)">
 
-<table class="w-full bg-white rounded-xl shadow">
+<table class="w-full bg-white rounded-xl shadow text-sm">
 <thead>
 <tr class="border-b">
-<th>User</th>
-<th>Issue</th>
-<th>Rating</th>
-<th>Status</th>
-<th>Actions</th>
+<th class="p-2">User</th>
+<th class="p-2">Issue</th>
+<th class="p-2">Rating</th>
+<th class="p-2">Status</th>
+<th class="p-2">Actions</th>
 </tr>
 </thead>
 <tbody id="tableBody"></tbody>
@@ -117,19 +254,23 @@ body { background: var(--c5); }
 
 <!-- ANALYTICS -->
 <div id="analyticsPage" class="hidden fade">
-<h1 class="text-3xl font-bold mb-6" style="color: var(--c1)">Analytics</h1>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<h1 class="text-4xl font-black mb-4" style="color: var(--c1)">Analytics</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
   <!-- TOP 5 TRENDING -->
-  <div class="bg-white p-6 rounded-xl shadow md:col-span-2">
-    <h3 class="text-lg font-semibold mb-4">Top 5 Most Searched Medicines</h3>
-    <canvas id="trendingChart"></canvas>
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 md:col-span-2">
+    <h3 class="text-xs font-medium mb-2 uppercase tracking-wider" style="color: var(--c1)">Top 5 Most Searched Medicines</h3>
+    <div style="height: 220px;">
+      <canvas id="trendingChart"></canvas>
+    </div>
   </div>
 
-  <!-- FUTURE: USER ACTIVITY -->
-  <div class="bg-white p-6 rounded-xl shadow">
-    <h3 class="text-lg font-semibold mb-3">User Activity</h3>
-    <p class="text-gray-500">Coming soon...</p>
+  <!-- USER ACTIVITY BY SPECIAL CONDITIONS -->
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 md:col-span-2">
+    <h3 class="text-xs font-medium mb-2 uppercase tracking-wider" style="color: var(--c1)">User Activity by Special Conditions</h3>
+    <div style="height: 220px;">
+      <canvas id="conditionsChart"></canvas>
+    </div>
   </div>
 
 </div></div>
@@ -157,7 +298,9 @@ firebase.auth().onAuthStateChanged(user => {
     window.location.href = "login.html";
   } else {
     loadData();
+    loadFeedbackTable(); // 📋 Real-time table updates
     loadTrendingChart(); // 🔥 important
+    loadUserActivityByConditions(); // 📊 important
   }
 });
 
@@ -203,20 +346,22 @@ function loadData() {
         dates[date] = (dates[date] || 0) + 1;
       }
 
+      const currentStatus = data.status || "Pending";
+
       const row = `
       <tr class="border-b">
-        <td>${data.user || "-"}</td>
-        <td>${type}</td>
-        <td>${data.rating || "-"}</td>
-        <td>
-          <select onchange="updateStatus('${id}', this.value)">
-            <option>Pending</option>
-            <option>In Review</option>
-            <option>Completed</option>
+        <td class="p-2 text-sm">${data.user || "-"}</td>
+        <td class="p-2 text-sm">${type}</td>
+        <td class="p-2 text-sm">${data.rating || "-"}</td>
+        <td class="p-2 text-sm">
+          <select onchange="updateStatus('${id}', this.value)" class="px-2 py-1 border rounded text-xs">
+            <option value="Pending" ${currentStatus === "Pending" ? "selected" : ""}>Pending</option>
+            <option value="In Review" ${currentStatus === "In Review" ? "selected" : ""}>In Review</option>
+            <option value="Completed" ${currentStatus === "Completed" ? "selected" : ""}>Completed</option>
           </select>
         </td>
-        <td>
-          <button onclick="deleteFeedback('${id}')" class="text-red-500">Delete</button>
+        <td class="p-2 text-sm">
+          <button onclick="deleteFeedback('${id}')" class="text-red-500 text-xs hover:text-red-700">Delete</button>
         </td>
       </tr>`;
       table.innerHTML += row;
@@ -239,8 +384,25 @@ function loadData() {
         labels: Object.keys(dates),
         datasets: [{
           data: Object.values(dates),
-          borderColor: "#3E84A8"
+          borderColor: "var(--accent-cyan)",
+          fill: false
         }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            grid: { color: '#f0f0f0' },
+            ticks: { font: { size: 11 } }
+          },
+          x: {
+            ticks: { font: { size: 11 } }
+          }
+        }
       }
     });
 
@@ -252,6 +414,13 @@ function loadData() {
           data: Object.values(issueCounts),
           backgroundColor: ["#48466E","#3E84A8","#4ACED0","#ACEDD9"]
         }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } }
+        }
       }
     });
 
@@ -288,20 +457,183 @@ async function loadTrendingChart() {
         labels: labels,
         datasets: [{
           data: values,
-          borderRadius: 10,
+          borderRadius: 6,
           backgroundColor: "#4ACED0"
         }]
       },
       options: {
-        plugins: { legend: { display: false } }
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'x',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            ticks: { stepSize: 1, font: { size: 11 } },
+            grid: { color: '#f0f0f0' }
+          },
+          x: {
+            ticks: { font: { size: 10 } },
+            grid: { display: false }
+          }
+        }
       }
     }
   );
 }
 
+/* 📊 USER ACTIVITY BY SPECIAL CONDITIONS */
+let conditionsChart;
+
+async function loadUserActivityByConditions() {
+  try {
+    const usersSnapshot = await db.collection("users").get();
+
+    let conditionCounts = {
+      'Pregnant': 0,
+      'Breastfeeding': 0,
+      'Elderly (65+)': 0,
+      'Child / Pediatric': 0,
+      'Immunocompromised': 0,
+      'Post-Surgery': 0,
+      'Other': 0
+    };
+
+    // Count users by special conditions
+    usersSnapshot.forEach(doc => {
+      const data = doc.data();
+      const uid = doc.id;
+      const specialConditions = data.healthInfo?.specialConditions || '';
+
+      let foundCondition = false;
+
+      if (specialConditions.toLowerCase().includes('pregnant')) {
+        conditionCounts['Pregnant']++;
+        foundCondition = true;
+      }
+      if (specialConditions.toLowerCase().includes('breastfeed')) {
+        conditionCounts['Breastfeeding']++;
+        foundCondition = true;
+      }
+      if (specialConditions.toLowerCase().includes('elderly') || specialConditions.toLowerCase().includes('65+')) {
+        conditionCounts['Elderly (65+)']++;
+        foundCondition = true;
+      }
+      if (specialConditions.toLowerCase().includes('child') || specialConditions.toLowerCase().includes('pediatric')) {
+        conditionCounts['Child / Pediatric']++;
+        foundCondition = true;
+      }
+      if (specialConditions.toLowerCase().includes('immunocompromised')) {
+        conditionCounts['Immunocompromised']++;
+        foundCondition = true;
+      }
+      if (specialConditions.toLowerCase().includes('post-surgery') || specialConditions.toLowerCase().includes('surgery')) {
+        conditionCounts['Post-Surgery']++;
+        foundCondition = true;
+      }
+
+      if (!foundCondition && specialConditions.trim() && specialConditions.toLowerCase() !== 'none') {
+        conditionCounts['Other']++;
+      }
+    });
+
+    // Prepare chart data - filter out zero conditions
+    const conditions = Object.keys(conditionCounts).filter(c => conditionCounts[c] > 0);
+    const users = conditions.map(c => conditionCounts[c]);
+
+    if (conditionsChart) conditionsChart.destroy();
+
+    conditionsChart = new Chart(
+      document.getElementById("conditionsChart"),
+      {
+        type: "bar",
+        data: {
+          labels: conditions,
+          datasets: [
+            {
+              label: "Users",
+              data: users,
+              backgroundColor: "#4ACED0",
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'x',
+          plugins: {
+            legend: { 
+              position: 'bottom',
+              labels: { font: { size: 11 }, padding: 10 }
+            }
+          },
+          scales: {
+            y: {
+              ticks: { stepSize: 1, font: { size: 11 } },
+              grid: { color: '#f0f0f0' }
+            },
+            x: {
+              ticks: { font: { size: 10 } },
+              grid: { display: false }
+            }
+          }
+        }
+      }
+    );
+  } catch (error) {
+    console.error("Error loading user activity by conditions:", error);
+  }
+}
+
 /* ACTIONS */
 function updateStatus(id, status) {
-  db.collection("feedback").doc(id).update({ status });
+  db.collection("feedback").doc(id).update({ 
+    status: status,
+    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    console.log(`Status updated to ${status}`);
+    // Refresh the feedback table immediately
+    setTimeout(() => {
+      loadFeedbackTable();
+    }, 500);
+  }).catch(error => {
+    console.error("Error updating status:", error);
+    alert("Failed to update status. Please try again.");
+  });
+}
+
+function loadFeedbackTable() {
+  db.collection("feedback").onSnapshot(snapshot => {
+    const table = document.getElementById("tableBody");
+    table.innerHTML = "";
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const id = doc.id;
+      const type = data.issue_type || "Other";
+      const currentStatus = data.status || "Pending";
+
+      const row = `
+      <tr class="border-b">
+        <td class="p-2 text-sm">${data.user || "-"}</td>
+        <td class="p-2 text-sm">${type}</td>
+        <td class="p-2 text-sm">${data.rating || "-"}</td>
+        <td class="p-2 text-sm">
+          <select onchange="updateStatus('${id}', this.value)" class="px-2 py-1 border rounded text-xs">
+            <option value="Pending" ${currentStatus === "Pending" ? "selected" : ""}>Pending</option>
+            <option value="In Review" ${currentStatus === "In Review" ? "selected" : ""}>In Review</option>
+            <option value="Completed" ${currentStatus === "Completed" ? "selected" : ""}>Completed</option>
+          </select>
+        </td>
+        <td class="p-2 text-sm">
+          <button onclick="deleteFeedback('${id}')" class="text-red-500 text-xs hover:text-red-700">Delete</button>
+        </td>
+      </tr>`;
+      table.innerHTML += row;
+    });
+  });
 }
 
 function deleteFeedback(id) {
